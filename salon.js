@@ -22,6 +22,8 @@ S.STATIONS = [
   {id:'zuckerwatte',icon:'🍬', name:'Zuckerwatte'},
   {id:'ballon',   icon:'🎈', name:'Ballons'},
   {id:'zauber',   icon:'🌈', name:'Zauber'},
+  {id:'geschenke',icon:'🎁', name:'Geschenke'},
+  {id:'keks',     icon:'🍪', name:'Kekse'},
   {id:'karussell', icon:'🎠', name:'Karussell'},
   {id:'geburtstag',icon:'🎂', name:'Geburtstag'},
   {id:'disco',     icon:'🪩', name:'Disco'},
@@ -132,6 +134,8 @@ S.buildUI = function(){
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
   else if(st==='zauber') buildZauber();
+  else if(st==='geschenke') buildGeschenke();
+  else if(st==='keks') buildKeks();
   else if(st==='karussell') buildKarussell();
   else if(st==='geburtstag') buildGeburtstag();
   else if(st==='disco') buildDisco();
@@ -150,10 +154,10 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // Reihen à 10 Tabs (20 Stationen), 2 Reihen — kompakt
+  // Reihen à 11 Tabs (22 Stationen), 2 Reihen — kompakt
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(6+(j%10)*89, S.VH-118+Math.floor(j/10)*56, 85, 52, st.icon+' '+st.name, function(){
+      btn(6+(j%11)*81, S.VH-118+Math.floor(j/11)*56, 77, 52, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1, tiny:1});
     })(S.STATIONS[j],j);
@@ -307,6 +311,7 @@ function buildFinish(){
   btn(330,470,240,70,'🎉 Fertig!',function(){
     S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1; S.rainbow=1;
     startFeuerwerk();
+    S.vorhang=3.4; S.finale=1.6; // Grand Finale: goldener Vorhang + Verbeugung mit Hut-Zug
     S.save(); S.buildUI();
   },{big:1});
 }
@@ -351,6 +356,33 @@ function buildBallon(){
   },{active:function(){return S.ballon.pust>0;}, big:1});
   btn(30,246,190,52,'🧽 Neuer Ballon',function(){
     S.ballon={farb:S.ballon.farb,gr:0,pust:0,fertig:false,schweb:null,schreck:0}; S.buildUI();
+  });
+}
+// ---- Neu Runde 8: Geschenke-Station ------------------------------------
+var GESCHENK_INHALT = ['konfetti','herz','stern','blume','regenbogen'];
+Art.PAKET_FARBEN = ['#e91e63','#3498db','#f4c20d','#2ecc71','#9b59b6'];
+function buildGeschenke(){
+  stationTabs();
+  S.hinweis = 'Paket antippen = schütteln, nochmal = aufmachen! Was ist drin? 🎁';
+  if(!S.geschenk) S.geschenk = {idx:0, offen:false, schuettel:0, strahl:0};
+}
+// ---- Neu Runde 8: Keks-Backen-Station -----------------------------------
+Art.KEKS_FOERMCHEN = ['stern','herz','baer'];
+function buildKeks(){
+  stationTabs();
+  S.hinweis = 'Streiche über den Teig zum Ausrollen, wähle ein Förmchen, tippe den Teig an — dann backen! 🍪';
+  if(!S.keks) S.keks = {teig:0, form:null, stich:null, glow:0, biss:0, roll:[]};
+  var kk=S.keks;
+  var FN=[['⭐ Stern','stern'],['❤️ Herz','herz'],['🧸 Bär','baer']];
+  FN.forEach(function(f,i){
+    btn(30+i*150, 100, 140, 54, f[0], function(){ kk.form=f[1]; S.buildUI(); },
+      {active:function(){return kk.form===f[1];}, small:1});
+  });
+  btn(30,168,150,58,'🔥 Backen!',function(){
+    if(kk.stich && kk.glow<=0 && kk.biss<=0){ kk.glow=1.6; S.buildUI(); }
+  },{active:function(){return kk.glow>0;}, big:1});
+  btn(190,168,150,58,'🧽 Neuer Teig',function(){
+    S.keks={teig:0,form:null,stich:null,glow:0,biss:0,roll:[]}; S.buildUI();
   });
 }
 function buildZauber(){
@@ -441,6 +473,30 @@ S.draw = function(g){
     g.lineWidth=8; g.strokeStyle='#fff';
     g.strokeText('Perfekt! ✨', W/2, 72);
     g.fillStyle='#7a4b8f'; g.fillText('Perfekt! ✨', W/2, 72);
+    // GRAND FINALE: goldener Bühnen-Vorhang blendet hinter dem Bären kurz ein
+    if(S.vorhang>0){
+      var va=Math.min(1,S.vorhang/0.6, (3.4-S.vorhang)/0.6);
+      g.save();
+      g.globalAlpha=Math.max(0,va)*0.95;
+      var vgrd=g.createLinearGradient(0,0,0,H*0.66);
+      vgrd.addColorStop(0,'#8a5a00'); vgrd.addColorStop(0.25,'#d4a017'); vgrd.addColorStop(1,'#f5d76e');
+      g.fillStyle=vgrd; g.fillRect(0,0,W,H*0.66);
+      // Vorhang-Falten
+      g.globalAlpha=Math.max(0,va)*0.35; g.fillStyle='#6e4400';
+      for(var vf=0;vf<9;vf++) g.fillRect(vf*(W/8)-8,0,16,H*0.66);
+      // Volant oben
+      g.globalAlpha=Math.max(0,va);
+      g.fillStyle='#c0392b';
+      for(var vv=0;vv<8;vv++){
+        g.beginPath(); g.arc(vv*(W/7)+W/14,0,W/14,0,Math.PI); g.fill();
+      }
+      g.fillStyle='#ffd24d'; g.fillRect(0,0,W,10);
+      // Funkelsterne am Vorhang
+      var tV=performance.now()/1000;
+      for(var vs2=0;vs2<8;vs2++)
+        Art.drawSticker(g,'stern',(vs2*211)%W,40+((vs2*131)%320),(8+4*Math.sin(tV*4+vs2)),'rgba(255,255,200,'+(0.5+0.5*Math.sin(tV*3+vs2))+')');
+      g.restore();
+    }
     if(S.rainbow) drawRegenbogen(g, W/2, 250, 190);
     // 10/10 Badge mit Sternen-Animation über dem Bär
     if(S.badge){
@@ -466,10 +522,41 @@ S.draw = function(g){
     g.save();
     g.translate(0,-34);
     S.baer.jubel = Math.min(1,(S.baer.jubel||0)+0); // Wert kommt aus update()
+    // Grand Finale: Bär verbeugt sich (bow statt jubel) während S.finale läuft
+    if(S.finale>0){
+      var bjPhase=1.6-S.finale; // 0..1.6
+      S.baer.bow=Math.sin(Math.min(1,bjPhase/0.7)*Math.PI)*0.9; // rein+raus
+      S.baer.jubel=0;
+    }
     Art.drawBear(g,S.baer,{w:W,h:H});
     drawStickers(g);
     if(S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
     if(S.glitzerRing) drawGlitzerRing(g);
+    // Hut-Zug: eleganter Hut schwingt neben der verbeugten Pfote, Sternchen-Spur folgt
+    if(S.finale>0){
+      var tF=performance.now()/1000;
+      var bj=Math.sin(Math.min(1,(1.6-S.finale)/0.7)*Math.PI);
+      var sF=Math.min(W,H)/420;
+      var hbX=W/2+140*sF+Math.sin(tF*3)*6*bj;
+      var hbY=H*0.58-40*sF+bj*70*sF;
+      g.save();
+      g.translate(hbX,hbY); g.rotate(Math.sin(tF*4)*0.3*bj);
+      ell2(g,0,0,58*sF*bj+1,12*sF*bj+1,'#2b2b3a');
+      g.fillStyle='#2b2b3a';
+      g.beginPath(); g.moveTo(-34*sF*bj,0); g.lineTo(-26*sF*bj,-52*sF*bj); g.lineTo(26*sF*bj,-52*sF*bj); g.lineTo(34*sF*bj,0); g.closePath(); g.fill();
+      g.fillStyle='#ffd24d'; g.fillRect(-30*sF*bj,-16*sF*bj,60*sF*bj,8*sF*bj);
+      Art.drawSticker(g,'stern',0,-58*sF*bj,9*sF,'#ffd24d');
+      g.restore();
+      // Sternchen-Spur folgt der Hutbahn
+      for(var hs=0;hs<7;hs++){
+        var hq=((tF*1.4+hs/7)%1);
+        var hx2=hbX-110*sF+hq*110*sF+Math.sin(hq*7+hs)*10*sF;
+        var hy3=hbY-20*sF-hq*60*sF+Math.sin(hq*9+hs*2)*8*sF;
+        g.globalAlpha=(1-hq)*bj;
+        Art.drawSticker(g,'stern',hx2,hy3,(4+6*(1-hq))*sF,'#ffe9a8');
+      }
+      g.globalAlpha=1;
+    }
     drawShootingStar(g);
     g.restore();
     drawFeuerwerk(g);
@@ -557,6 +644,10 @@ S.draw = function(g){
     S.baer.jubel=jAlt;
     drawStickers(g);
     drawZauberStation(g);
+  } else if(S.state==='geschenke'){
+    drawGeschenke(g);
+  } else if(S.state==='keks'){
+    drawKeks(g);
   } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
@@ -679,7 +770,7 @@ function drawMenu(g){
 // ---- Bären-Auswahl: Raster dynamisch aus MODELS -------
 function kacheln(){
   var n=Art.MODELS.length, cols=5, rows=Math.ceil(n/cols);
-  var pitchX=150, w=136;
+  var pitchX=152, w=138;
   // Reihen wachsen dynamisch: Höhe anpassen, damit alle sichtbar bleiben
   var y0=118;
   var pitchY=Math.min(94, Math.floor((S.VH-y0-26)/rows));
@@ -1134,6 +1225,39 @@ S.tapBear = function(x,y){
     }
     return false;
   }
+  if(S.state==='geschenke' && S.geschenk){
+    // Paket antippen: schütteln → Deckel fliegt mit Überraschungs-Puff; danach neues Paket
+    var gpak=S._pakHit;
+    if(gpak && x>=gpak.x&&x<=gpak.x+gpak.w&&y>=gpak.y&&y<=gpak.y+gpak.h){
+      var ge=S.geschenk;
+      if(ge.offen){
+        // erneut antippen = neues Paket
+        ge.offen=false; ge.schuettel=0; ge.idx=(ge.idx+1)%5;
+        window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(gpak.x+gpak.w/2,gpak.y+gpak.h/2);
+        return true;
+      }
+      if(ge.schuettel<=0){
+        ge.schuettel=0.8; // erst schütteln
+      } else {
+        ge.offen=true; ge.schuettel=0;
+        geschenkPuff(ge.idx);
+      }
+      return true;
+    }
+    return true;
+  }
+  if(S.state==='keks' && S.keks){
+    var kk=S.keks, s9=Math.min(S.VW,S.VH)/420;
+    // Teig-Tap: mit gewähltem Förmchen ausstechen
+    if(kk.form!==null && S._teigHit && !kk.stich && kk.teig>0.6 &&
+      x>=S._teigHit.x&&x<=S._teigHit.x+S._teigHit.w&&y>=S._teigHit.y&&y<=S._teigHit.y+S._teigHit.h){
+      kk.stich={form:kk.form, gebacken:0};
+      window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S._teigHit.x+S._teigHit.w/2,S._teigHit.y);
+      S.buildUI();
+      return true;
+    }
+    return true;
+  }
   if(S.state==='zuckerwatte' && S.watte){
     var wt2=S.watte;
     // Watte-Stab antippen = Drag aktiv
@@ -1171,8 +1295,18 @@ S.tapBear = function(x,y){
     if(S._ballHit && S.ballon.fertig &&
       x>=S._ballHit.x&&x<=S._ballHit.x+S._ballHit.w&&y>=S._ballHit.y&&y<=S._ballHit.y+S._ballHit.h){
       var bl2=S.ballon;
-      window.BSGame && window.BSGame.konfettiBurst(S._ballHit.x+S._ballHit.w/2, S._ballHit.y+S._ballHit.h/2);
+      var mpx=S._ballHit.x+S._ballHit.w/2, mpy=S._ballHit.y+S._ballHit.h/2;
+      window.BSGame && window.BSGame.konfettiBurst(mpx, mpy);
+      window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(mpx,mpy);
+      var cAlt=bl2.farb;
       bl2.schweb=null; bl2.fertig=false; bl2.gr=0; bl2.schreck=1; // Bär zuckt
+      // danach schwebt automatisch ein neuer Ballon in anderer Farbe neben den Bären
+      setTimeout(function(){
+        if(S.state==='ballon' && S.ballon && !S.ballon.fertig && S.ballon.gr===0){
+          S.ballon.farb=(cAlt+1)%Art.BALLON_FARBEN.length;
+          S.ballon.gr=1; S.ballon.fertig=true; S.ballon.schweb=null; S.buildUI();
+        }
+      },2600);
       S.buildUI();
       return true;
     }
@@ -1324,6 +1458,149 @@ function drawRegenbogen(g,cx,cy,R){
     g.beginPath(); g.arc(wx+16,wy+5,14,0,Math.PI*2); g.fill();
   });
   g.restore();
+}
+
+function geschenkPuff(idx){
+  var gx=S.VW*0.5+230, gy=S.VH*0.58+40;
+  var p=gesPos(); gx=p.x; gy=p.y;
+  var G2=window.BSGame; if(!G2) return;
+  var typ=GESCHENK_INHALT[idx%5];
+  if(typ==='konfetti') G2.konfettiBurst(gx,gy);
+  else if(typ==='herz') G2.herzPuff(gx,gy);
+  else if(typ==='stern') G2.sternExplosion(gx,gy);
+  else if(typ==='blume') G2.blumenPuff(gx,gy);
+  else G2.regenbogenPuff(gx,gy);
+  if(S.baer) S.baer.jubelT2=Math.max(S.baer.jubelT2||0,1.6);
+}
+function gesPos(){
+  return {x:S.VW*0.5+215, y:S.VH*0.58+60};
+}
+// ---- Zeichnen der neuen Stationen ---------------------------------------
+function drawPaket(g,x,y,w2,offen,idx,t){
+  var s=w2/100;
+  // Körper
+  g.fillStyle=Art.PAKET_FARBEN[idx%Art.PAKET_FARBEN.length];
+  g.fillRect(x-w2*0.5,y-w2*0.32,w2,w2*0.72);
+  g.strokeStyle='rgba(0,0,0,0.22)'; g.lineWidth=3*s*3; g.strokeRect(x-w2*0.5,y-w2*0.32,w2,w2*0.72);
+  // Band
+  g.fillStyle='rgba(255,255,255,0.9)';
+  g.fillRect(x-w2*0.09,y-w2*0.32,w2*0.18,w2*0.72);
+  g.fillRect(x-w2*0.5,y-w2*0.05,w2,w2*0.14);
+  if(!offen){
+    // Deckel
+    g.fillStyle=Art.shade(Art.PAKET_FARBEN[idx%5],-28);
+    g.fillRect(x-w2*0.56,y-w2*0.5,w2*1.12,w2*0.2);
+    g.strokeRect(x-w2*0.56,y-w2*0.5,w2*1.12,w2*0.2);
+    // Schleife
+    g.fillStyle='#fff';
+    g.beginPath(); g.moveTo(x,y-w2*0.5); g.lineTo(x-w2*0.3,y-w2*0.72); g.lineTo(x-w2*0.3,y-w2*0.5); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(x,y-w2*0.5); g.lineTo(x+w2*0.3,y-w2*0.72); g.lineTo(x+w2*0.3,y-w2*0.5); g.closePath(); g.fill();
+    circle2(g,x,y-w2*0.5,w2*0.12,'#ffe9f2');
+  } else {
+    // offen: Deckel liegt fliegend daneben, dunkler Innenraum glitzert
+    g.fillStyle='rgba(40,20,60,0.85)';
+    g.fillRect(x-w2*0.5,y-w2*0.32,w2,w2*0.16);
+    for(var s2=0;s2<3;s2++)
+      Art.drawSticker(g,'stern',x-w2*0.3+s2*w2*0.3,y-w2*0.26,(7+2*Math.sin(t*6+s2*2))*s*0.5,'#ffd24d');
+    var dy=-w2*(0.55+0.12*Math.sin(t*3));
+    drawPaketDeckel(g,x+w2*0.55,y+dy,w2*0.9,t);
+  }
+}
+function drawPaketDeckel(g,x,y,w2,t){
+  g.save(); g.translate(x,y); g.rotate(0.5+Math.sin(t*4)*0.12);
+  g.fillStyle=Art.shade(Art.PAKET_FARBEN[S.geschenk.idx%5]||'#e91e63',-28);
+  g.fillRect(-w2*0.56,-w2*0.1,w2*1.12,w2*0.2);
+  g.strokeStyle='rgba(0,0,0,0.2)'; g.lineWidth=6; g.strokeRect(-w2*0.56,-w2*0.1,w2*1.12,w2*0.2);
+  g.restore();
+}
+function drawGeschenke(g){
+  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
+  var ge=S.geschenk; if(!ge) return;
+  // Bär strahlt beim Öffnen
+  var strahlAlt=S.baer.jubel;
+  if(ge.offen|| (S.baer.jubelT2||0)>0) S.baer.jubel=Math.max(S.baer.jubel||0, Math.min(1,(S.baer.jubelT2||0))/1.2);
+  Art.drawBear(g,S.baer,{w:S.VW,h:S.VH, spaTarget:S.spaTarget});
+  S.baer.jubel=strahlAlt;
+  drawStickers(g);
+  // aktives Paket neben dem Bären (schüttelt sich)
+  var p=gesPos();
+  var wob = ge.schuettel>0 ? Math.sin(t*22)*10*ge.schuettel : 0;
+  S._pakHit={x:p.x-80,y:p.y-80,w:170,h:170}; // Hit immer, auch beim Schütteln
+  g.save(); g.translate(p.x+wob,p.y); g.rotate(wob*0.01);
+  drawPaket(g,0,0,120,ge.offen,ge.idx,t);
+  g.restore();
+  S._pakHit={x:p.x-80,y:p.y-80,w:170,h:170};
+  // Regenbogen-Aura bei Regenbogen-Inhalt
+  if(ge.offen && GESCHENK_INHALT[ge.idx%5]==='regenbogen')
+    drawRegenbogen(g,p.x,p.y+30,90);
+  // Schleifen-Regen Deko oben
+  for(var d=0;d<5;d++){
+    var dy2=(t*24+d*97)%(S.VH*0.5);
+    Art.drawSticker(g,d%2?'herz':'stern',60+d*170,dy2+40,7,'rgba(154,107,181,0.5)');
+  }
+}
+function drawKeks(g){
+  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
+  var kk=S.keks; if(!kk) return;
+  // Backofen-Backwand rechts
+  var ox=S.VW-270, oy=S.VH*0.42, ow=210, oh=170;
+  g.fillStyle='#5a4a3a'; g.beginPath(); g.roundRect?g.roundRect(ox,oy,ow,oh,18):g.rect(ox,oy,ow,oh); g.fill();
+  g.fillStyle='#3a2f24'; g.beginPath(); g.roundRect?g.roundRect(ox+18,oy+18,ow-36,oh-72,10):g.rect(ox+18,oy+18,ow-36,oh-72); g.fill();
+  // Ofen-Glow wenn gebacken wird
+  if(kk.glow>0){
+    g.save(); g.globalAlpha=Math.min(1,kk.glow);
+    var grd=g.createRadialGradient(ox+ow/2,oy+oh/2-24,8,ox+ow/2,oy+oh/2-24,110);
+    grd.addColorStop(0,'#ffd24d'); grd.addColorStop(1,'rgba(255,120,40,0)');
+    g.fillStyle=grd; g.fillRect(ox+18,oy+8,ow-36,oh-52);
+    g.restore();
+  }
+  g.fillStyle='#c8a06a'; g.font='13px sans-serif'; g.textAlign='center';
+  g.fillText('Ofen',ox+ow/2,oy+oh-18);
+  // Bär
+  Art.drawBear(g,S.baer,{w:S.VW,h:S.VH, spaTarget:S.spaTarget});
+  drawStickers(g);
+  // Teigbrett links-vor dem Bären
+  var bx=S.VW*0.28, by=S.VH*0.68, bw=250, bh=110;
+  g.fillStyle='#c49a6c'; g.beginPath(); g.roundRect?g.roundRect(bx-bw/2,by,bw,bh,16):g.rect(bx-bw/2,by,bw,bh); g.fill();
+  g.strokeStyle='#8a6238'; g.lineWidth=3; g.strokeRect(bx-bw/2+6,by+6,bw-12,bh-12);
+  var flach=0.55+kk.teig*0.45;
+  if(!kk.stich){
+    g.save();
+    g.translate(bx,by+bh*0.5); g.scale(1,flach);
+    g.fillStyle='#f0d8a8';
+    g.beginPath(); g.ellipse(0,0,bw*0.42,bh*0.7,0,0,Math.PI*2); g.fill();
+    g.strokeStyle='#d9bd85'; g.lineWidth=2.5;
+    g.beginPath(); g.ellipse(0,0,bw*0.42,bh*0.7,0,0,Math.PI*2); g.stroke();
+    // Mehl-Sprenkel
+    g.fillStyle='rgba(255,255,255,0.7)';
+    for(var m=0;m<8;m++) circle2(g,-70+m*20-((m*37)%14),((m*53)%40)-20,2,'#fff');
+    g.restore();
+    S._teigHit={x:bx-bw*0.45,y:by+bh*0.5-bh*0.75*flach,w:bw*0.9,h:bh*1.5*flach};
+    if(kk.teig>0.6 && kk.form===null){
+      g.fillStyle='#9c6bb5'; g.font='15px sans-serif';
+      g.fillText('Teig ist glatt! Wähle ein Förmchen 👆',bx,by-16);
+    }
+  } else S._teigHit=null;
+  // Ausgestochener Keks im Ofen: Farbe hell→goldbraun mit glow
+  if(kk.stich){
+    var kx6=ox+ow/2, ky6=oy+oh/2-26;
+    var col=kk.glow>0.5?'#c98a3a':(kk.glow>0?'#dfae62':'#f0d8a8');
+    g.fillStyle=col;
+    if(kk.stich.form==='baer'){
+      circle2(g,kx6,ky6,24,col); circle2(g,kx6-19,ky6-19,9,col); circle2(g,kx6+19,ky6-19,9,col);
+    } else {
+      Art.drawSticker(g,kk.stich.form,kx6,ky6,26,col);
+    }
+    // Schokotröpfchen
+    circle2(g,kx6-8,ky6-4,3,'#6b4226'); circle2(g,kx6+7,ky6+6,3,'#6b4226'); circle2(g,kx6+2,ky6-10,2.5,'#6b4226');
+    // Dampf beim Naschen (nach glow)
+    if(kk.biss>0){
+      g.globalAlpha=Math.min(1,kk.biss);
+      Art.drawSticker(g,'herz',kx6-30,ky6-50,9,'rgba(255,150,170,0.9)');
+      Art.drawSticker(g,'herz',kx6+34,ky6-58,7,'rgba(255,150,170,0.8)');
+      g.globalAlpha=1;
+    }
+  }
 }
 
 function drawSchmetterlinge(g){
@@ -1506,9 +1783,12 @@ function drawBallonStation(g){
     // Zipfel
     g.fillStyle=Art.shade(Art.BALLON_FARBEN[sw.c],-40);
     g.beginPath(); g.moveTo(sx2-6,sy2+br*1.05); g.lineTo(sx2+6,sy2+br*1.05); g.lineTo(sx2,sy2+br*1.05+10); g.closePath(); g.fill();
-    S._ballHit={x:sx2-br,y:sy2-br*1.05,w:br*2,h:br*2.2};
-    // Hinweis-Platzer-Stern
-    Art.drawSticker(g,'stern',sx2+br*0.6,sy2-br*0.7,8+2*Math.sin(t*5),'rgba(255,230,120,0.9)');
+    // großzügige Hit-Zone (QA-Fix): deutlich größer als der Ballon
+    S._ballHit={x:sx2-br-26,y:sy2-br*1.05-26,w:br*2+52,h:br*2.2+52};
+    // Hinweis-Platzer-Stern pulsierend groß
+    Art.drawSticker(g,'stern',sx2+br*0.9,sy2-br*1.1,12+4*Math.sin(t*5),'rgba(255,230,120,0.95)');
+    g.font='bold 15px sans-serif'; g.textAlign='center'; g.fillStyle='#7a4b8f';
+    g.fillText('Antippen = PLATZ!',sx2,sy2+br*1.5+30);
   }
 }
 // ---- Zauber-Station: Stab + 3 Zauber + mystischer Boden-Nebel ----

@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 10;
-console.log('BS v10');
+window.BS_VER = 11;
+console.log('BS v11');
 
 var Art = window.BSArt = {};
 
@@ -36,6 +36,10 @@ Art.MODELS = [
   {name:'Ninja-Bär', fell:'#4a4f58', schnauze:'#8b929e', muster:'ninja', kontur:'#2c3037'},
   {name:'Küsten-Bär', fell:'#e6d3a3', schnauze:'#f7ecd2', muster:'kueste', hell:1},
   {name:'Gala-Bär', fell:'#33477a', schnauze:'#7d90c4', muster:'gala', kontur:'#1e2a4e'},
+  {name:'Astronaut-Bär', fell:'#e8ecf2', schnauze:'#cfd8e2', muster:'astro', kontur:'#8d99a8', hell:1},
+  {name:'Feuerwehr-Bär', fell:'#c0392b', schnauze:'#f0b8a8', muster:'feuer', kontur:'#7e2318'},
+  {name:'Blumen-Bär', fell:'#f2d24b', schnauze:'#fdf0b8', muster:'blumenb', kontur:'#b89b22'},
+  {name:'Mond-Bär', fell:'#4a5270', schnauze:'#8d97b5', muster:'mond', kontur:'#2c3248'},
   {name:'Überraschung?', fell:'#dcc9f2', schnauze:'#f3e9ff', muster:'frage', kontur:'#a37fd1', hell:1}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
@@ -520,6 +524,62 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
     }
     circle(g,cx,hy+128*s+bowOff*0.5,9*s,'#e8c34d');
     circle(g,cx,hy+128*s+bowOff*0.5,4.5*s,'#fdf3b8');
+  } else if(typ==='astro'){
+    // Weißer Raumanzug: dunkle Overall-Streifen + Knöpfe + Erd-Fenster-Emblem
+    g.save();
+    g.strokeStyle='rgba(90,105,125,0.55)'; g.lineWidth=3*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(cx-80*s,cy+40*s+bowOff); g.lineTo(cx+80*s,cy+40*s+bowOff); g.stroke();
+    g.beginPath(); g.moveTo(cx,cy-30*s+bowOff); g.lineTo(cx,cy+150*s+bowOff); g.stroke();
+    // dunkler Overall-Block unten
+    g.fillStyle='rgba(60,70,90,0.75)';
+    g.beginPath(); g.ellipse(cx,cy+140*s+bowOff,90*s,40*s,0,0,Math.PI*2); g.fill();
+    // Knöpfe
+    for(i=0;i<3;i++) circle(g,cx,cy+(0+i*34)*s+bowOff,5*s,'#5a6a80');
+    // Erd-Emblem auf der Brust
+    circle(g,cx-40*s,cy+70*s+bowOff,14*s,'#3f7fd6');
+    g.fillStyle='#7ec850';
+    g.beginPath(); g.ellipse(cx-44*s,cy+66*s+bowOff,5*s,3*s,0.5,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx-36*s,cy+74*s+bowOff,4*s,2.5*s,-0.4,0,Math.PI*2); g.fill();
+    Art.drawSticker(g,'stern',cx-40*s,cy+70*s+bowOff,4*s,'rgba(255,255,255,0.9)');
+    g.restore();
+  } else if(typ==='feuer'){
+    // Reflektierender Streifen über Körper + Helm-Abzeichen
+    g.save();
+    g.fillStyle='rgba(255,224,102,0.85)';
+    g.fillRect(cx-118*s,cy+96*s+bowOff,236*s,14*s);
+    g.fillStyle='rgba(255,255,255,0.35)';
+    g.fillRect(cx-118*s,cy+96*s+bowOff,236*s,4*s);
+    // Krallen-Streifen an den Armen
+    g.fillStyle='rgba(255,224,102,0.8)';
+    g.fillRect(cx-135*s,cy+60*s+bowOff,34*s,9*s);
+    g.fillRect(cx+101*s,cy+60*s+bowOff,34*s,9*s);
+    g.restore();
+  } else if(typ==='blumenb'){
+    // Kleine Gänseblümchen im Fell (Kranz in drawKopfDeko)
+    var rb=rnd(211);
+    for(i=0;i<9;i++){
+      var ba=rb()*Math.PI*2, br3=0.3+rb()*0.6;
+      var bx5=cx+Math.cos(ba)*100*s*br3;
+      var by5=(i<6? cy+70*s+bowOff+Math.sin(ba)*90*s*br3 : hy+bowOff*0.5+Math.sin(ba)*70*s*br3);
+      Art.drawSticker(g,'blume',bx5,by5,(5+rb()*3)*s, i%2?'rgba(255,255,255,0.9)':'rgba(255,170,195,0.9)');
+    }
+  } else if(typ==='mond'){
+    // Mondsichel auf dem Bauch + Funkel-Sterne
+    var tM=performance.now()/1000;
+    g.save();
+    circle(g,cx,cy+92*s+bowOff,34*s,'rgba(255,222,120,0.92)');
+    circle(g,cx+13*s,cy+86*s+bowOff,30*s,'#4a5270');
+    Art.drawSticker(g,'stern',cx-52*s,cy+46*s+bowOff,8*s,'rgba(255,232,140,0.9)');
+    Art.drawSticker(g,'stern',cx+50*s,cy+126*s+bowOff,6*s,'rgba(255,232,140,0.85)');
+    var rm=rnd(97);
+    for(i=0;i<12;i++){
+      var ma=rm()*Math.PI*2, mr=0.25+rm()*0.6;
+      var mx2=cx+Math.cos(ma)*95*s*mr;
+      var my2=(i<8? cy+70*s+bowOff+Math.sin(ma)*88*s*mr : hy+bowOff*0.5+Math.sin(ma)*70*s*mr);
+      var tw4=0.5+0.5*Math.sin(tM*3.5+i*2.1);
+      Art.drawSticker(g,'stern',mx2,my2,(3+3*tw4)*s,'rgba(255,235,150,'+(0.4+0.5*tw4).toFixed(2)+')');
+    }
+    g.restore();
   } else if(typ==='frage'){
     // Überraschungs-Bär: viele Fragezeichen auf dem Fell + Punktdusche
     var tF=performance.now()/1000;
@@ -661,6 +721,60 @@ function drawKopfDeko(g, m, cx, hy, s){
     g.fillStyle='#e6c877';
     g.beginPath(); g.arc(cx,hy-70*s,52*s,Math.PI,0); g.closePath(); g.fill(); g.stroke();
     g.fillStyle='#7ab8f5'; g.fillRect(cx-52*s,hy-86*s,104*s,10*s);
+    g.restore();
+  } else if(m.muster==='astro'){
+    // Astronauten-Helm: gläsernes Visier rund um den Kopf
+    var tA=performance.now()/1000;
+    g.save();
+    // Helm-Ring
+    g.strokeStyle='#8d99a8'; g.lineWidth=7*s;
+    g.beginPath(); g.arc(cx,hy-4*s,100*s,0,Math.PI*2); g.stroke();
+    g.strokeStyle='#c8d2dc'; g.lineWidth=3*s;
+    g.beginPath(); g.arc(cx,hy-4*s,94*s,0,Math.PI*2); g.stroke();
+    // Sichtscheibe (halbtransparent mit Glanz)
+    g.globalAlpha=0.18; circle(g,cx,hy-4*s,92*s,'#bfe0f2'); g.globalAlpha=1;
+    g.globalAlpha=0.5;
+    g.beginPath(); g.ellipse(cx-40*s,hy-44*s,26*s,12*s,-0.6,0,Math.PI*2);
+    g.fillStyle='#fff'; g.fill();
+    g.globalAlpha=1;
+    // Funkelnder Status-Punkt am Helm
+    var faA=0.5+0.5*Math.sin(tA*4);
+    circle(g,cx+92*s,hy-60*s,(4+3*faA)*s,'rgba(120,230,255,'+(0.6+0.4*faA).toFixed(2)+')');
+    g.restore();
+  } else if(m.muster==='feuer'){
+    // Feuerwehr-Helm: rot, mit Schild und Rückkrempe
+    var hyF=hy-56*s;
+    g.save();
+    g.fillStyle='#d63026'; g.strokeStyle='#8e1f14'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath(); g.arc(cx,hyF,64*s,Math.PI,0); g.closePath(); g.fill(); g.stroke();
+    // breite Krempe (rundum, hinten länger)
+    g.beginPath(); g.ellipse(cx,hyF+2*s,74*s,12*s,0,0,Math.PI*2); g.fill(); g.stroke();
+    // goldener Mittelgrat
+    g.fillStyle='#f5c542'; g.fillRect(cx-6*s,hyF-62*s,12*s,62*s);
+    // Schild vorn
+    g.fillStyle='#f5c542'; g.strokeStyle='#b8860b'; g.lineWidth=2*s;
+    g.beginPath();
+    g.moveTo(cx-18*s,hyF-44*s); g.lineTo(cx+18*s,hyF-44*s);
+    g.lineTo(cx+14*s,hyF-16*s); g.lineTo(cx,hyF-8*s); g.lineTo(cx-14*s,hyF-16*s);
+    g.closePath(); g.fill(); g.stroke();
+    Art.drawSticker(g,'stern',cx,hyF-28*s,7*s,'#c0392b');
+    // Licht-Funkeln
+    var tF3=performance.now()/1000;
+    Art.drawSticker(g,'stern',cx+52*s,hyF-30*s,(5+3*Math.sin(tF3*5))*s,'rgba(255,240,160,0.9)');
+    g.restore();
+  } else if(m.muster==='blumenb'){
+    // Blumenkranz am Kopf: Ring aus Blümchen
+    var tB=performance.now()/1000;
+    g.save();
+    var kyK=hy-66*s;
+    for(var i3=0;i3<7;i3++){
+      // Bogen über dem oberen Kopfrand (links → rechts)
+      var ka3=Math.PI*(1.06 + i3*0.13); // ~190°..~270°..oben
+      var kx5=cx+Math.cos(ka3)*74*s;
+      var ky5=kyK+Math.sin(ka3)*30*s+8*s;
+      var wobB=1+0.06*Math.sin(tB*3+i3);
+      Art.drawSticker(g,'blume',kx5,ky5,(11+3*wobB)*s,(i3%2?'#ff9ec4':'#fff'));
+    }
     g.restore();
   } else if(m.muster==='kaktus'){
     // Rosa Blüte auf dem Kopf

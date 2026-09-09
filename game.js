@@ -1,4 +1,4 @@
-// game.js — Loop, Input (Pointer), Partikel, Letterbox — v9
+// game.js — Loop, Input (Pointer), Partikel, Letterbox
 (function(){
 'use strict';
 var S = window.BSSalon;
@@ -67,6 +67,30 @@ G.sternExplosion = function(x,y){
       c:cols[i%cols.length],life:0.9+Math.random()*0.5,t:0,size:10+Math.random()*10,star:true,wave:0});
   }
 };
+// Zuckerwatte: Spinnen
+G.blumenPuff = function(x,y){
+  // Rosa/weiße Blumen-Puffs ringförmig
+  for(var i=0;i<24;i++){
+    var a=i/24*Math.PI*2, v=130+Math.random()*120;
+    parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-140,
+      c:i%2?'#ffb8d6':'#fff',life:1.1+Math.random()*0.6,t:0,size:9+Math.random()*6,star:'blume',wave:0});
+  }
+};
+G.herzPuff = function(x,y){
+  for(var i=0;i<22;i++){
+    var a=i/22*Math.PI*2, v=120+Math.random()*110;
+    parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-150,
+      c:i%2?'#e91e63':'#ff9eb5',life:1.1+Math.random()*0.6,t:0,size:8+Math.random()*6,star:'herz',wave:0});
+  }
+};
+G.regenbogenPuff = function(x,y){
+  var cols=['#e74c3c','#f39c12','#f1c40f','#2ecc71','#3498db','#9b59b6'];
+  for(var i=0;i<30;i++){
+    var a=i/30*Math.PI*2, v=100+Math.random()*160;
+    parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-130,
+      c:cols[i%6],life:1.2+Math.random()*0.6,t:0,size:8+Math.random()*6,star:true,wave:0});
+  }
+};
 function stepParts(dt){
   for(var i=parts.length-1;i>=0;i--){
     var p=parts[i]; p.t+=dt;
@@ -83,7 +107,9 @@ function drawParts(){
   parts.forEach(function(p){
     var a=1-p.t/p.life;
     g.globalAlpha=a;
-    if(p.star) window.BSArt.drawSticker(g,'stern',p.x,p.y,p.size,p.c);
+    if(p.star===true || p.star==='stern') window.BSArt.drawSticker(g,'stern',p.x,p.y,p.size,p.c);
+    else if(p.star==='herz') window.BSArt.drawSticker(g,'herz',p.x,p.y,p.size,p.c);
+    else if(p.star==='blume') window.BSArt.drawSticker(g,'blume',p.x,p.y,p.size,p.c);
     else { g.fillStyle=p.c; g.fillRect(p.x,p.y,p.size,p.size*1.4); }
   });
   g.globalAlpha=1;
@@ -113,6 +139,13 @@ cv.addEventListener('pointermove', function(e){
   if(S.state==='waschen') S.tapBear(p[0],p[1]);
   if(S.state==='massage') S.dragBear(p[0],p[1],lastX,lastY);
   if(S.state==='zuckerwatte' && S._stabDrag && S.watte){ S.watte.sx=p[0]; S.watte.sy=p[1]; }
+  if(S.state==='keks' && S.keks && S._teigHit && !S.keks.stich){
+    // Drag über den Teig: wird flacher/gleichmäßiger
+    var th=S._teigHit;
+    if(p[0]>=th.x&&p[0]<=th.x+th.w&&p[1]>=th.y&&p[1]<=th.y+th.h){
+      S.keks.teig=Math.min(1,S.keks.teig+0.03);
+    }
+  }
   lastX=p[0]; lastY=p[1];
 }, {passive:false});
 function up(e){ e&&e.preventDefault(); down=false; holdBtn=null; S.foehn=false; S._stabDrag=false; }
@@ -202,6 +235,20 @@ function update(dt){
   } else if(b.relax>0){
     b.relax=Math.max(0,b.relax-dt*0.8);
   }
+  // Geschenke: Schüttel-Decay im dt-Takt
+  if(S.geschenk && S.geschenk.schuettel>0) S.geschenk.schuettel=Math.max(0,S.geschenk.schuettel-dt);
+  // Keks: Ofen-Glow → goldbraun, dann Biß
+  if(S.keks && S.keks.glow>0){
+    S.keks.glow=Math.max(0,S.keks.glow-dt);
+    if(S.keks.glow===0 && S.keks.stich) S.keks.biss=1.4;
+  }
+  if(S.keks && S.keks.biss>0){
+    S.keks.biss=Math.max(0,S.keks.biss-dt);
+    S.baer.jubel=Math.min(1,Math.max(S.baer.jubel||0,S.keks.biss*0.8));
+  }
+  // Grand Finale: Timer runterzählen
+  if(S.vorhang>0) S.vorhang=Math.max(0,S.vorhang-dt);
+  if(S.finale>0) S.finale=Math.max(0,S.finale-dt);
   // Verbeugen animieren (finish-done: bow auslassen, stattdessen Jubel)
   var bt=0; // Verbeugung aus, wir feiern stattdessen
   if(!b._bow) b._bow=0;
