@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>🧸 Bären-Beautysalon</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#2b1d3a;
+    -webkit-user-select:none;user-select:none;touch-action:none;
+    font-family:-apple-system,'Comic Sans MS','Chalkboard SE',sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;touch-action:none;background:#fdf0e6}
+  #err{position:fixed;left:4px;bottom:4px;color:#fff;font-size:10px;opacity:.6;z-index:9;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="err"></div>
+<script src="art.js?v=1"></script>
+<script src="salon.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
