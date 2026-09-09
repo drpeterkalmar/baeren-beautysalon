@@ -49,6 +49,15 @@ G.parfumSpray = function(c){
 G.spaTupfer = function(x,y){
   spawn(x,y,'#7ec850',8,70,0.8,5);
 };
+// Geburtstags-Konfetti-Burst
+G.konfettiBurst = function(x,y){
+  var cols=['#e91e63','#f1c40f','#2ecc71','#3498db','#9b59b6','#ff8fb3'];
+  for(var i=0;i<60;i++){
+    var a=Math.random()*Math.PI*2, v=120+Math.random()*260;
+    parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-200,
+      c:cols[i%cols.length],life:1.4+Math.random()*0.8,t:0,size:6+Math.random()*6,star:false,wave:0});
+  }
+};
 function stepParts(dt){
   for(var i=parts.length-1;i>=0;i--){
     var p=parts[i]; p.t+=dt;
@@ -169,11 +178,16 @@ function update(dt){
   } else if(b.relax>0){
     b.relax=Math.max(0,b.relax-dt*0.8);
   }
-  // Verbeugen animieren
-  var bt=S.state==='finish-done'?1:0;
+  // Verbeugen animieren (finish-done: bow auslassen, stattdessen Jubel)
+  var bt=0; // Verbeugung aus, wir feiern stattdessen
   if(!b._bow) b._bow=0;
   b._bow += (bt-b._bow)*Math.min(1,dt*2.5);
   b.bow = b._bow;
+  // Jubel in finish-done hochfahren
+  var jt = (S.state==='finish-done')?1:0;
+  if(b._j===undefined) b._j=0;
+  b._j = b._j + (jt-b._j)*Math.min(1,dt*3);
+  b.jubel = b._j;
   stepParts(dt);
 }
 

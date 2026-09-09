@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 7;
-console.log('BS v7');
+window.BS_VER = 8;
+console.log('BS v8');
 
 var Art = window.BSArt = {};
 
@@ -27,7 +27,11 @@ Art.MODELS = [
   {name:'Prinzessinnen-Bär', fell:'#f2a7c8', schnauze:'#ffd9e8', muster:'prinzessin', kontur:'#c97ea5'},
   {name:'Bauarbeiter-Bär', fell:'#c8913f', schnauze:'#e8c88f', muster:'bau'},
   {name:'Piraten-Bär', fell:'#4d5259', schnauze:'#9aa4ae', muster:'pirat', kontur:'#31353a'},
-  {name:'Zauberer-Bär', fell:'#8e6bbf', schnauze:'#cbb3ea', muster:'zauberer', kontur:'#5f3f96'}
+  {name:'Zauberer-Bär', fell:'#8e6bbf', schnauze:'#cbb3ea', muster:'zauberer', kontur:'#5f3f96'},
+  {name:'Dino-Bär', fell:'#6fae4f', schnauze:'#b8e09a', muster:'dino', kontur:'#3e6b28'},
+  {name:'Superhelden-Bär', fell:'#4a7fd6', schnauze:'#9fc0ee', muster:'superheld', kontur:'#274b8a'},
+  {name:'Schnee-Bär', fell:'#cfe6f5', schnauze:'#ffffff', muster:'schnee', kontur:'#89aec9', hell:1},
+  {name:'Kaktus-Bär', fell:'#3f9e57', schnauze:'#9fd8ae', muster:'kaktus', kontur:'#25703b'}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
 Art.LACK = ['#e91e63','#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#ffffff'];
@@ -73,9 +77,23 @@ Art.drawBear = function(g, b, opt){
   ell(g,cx,cy+150*s,150*s,22*s,'rgba(0,0,0,0.12)');
   // Körper
   ell(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,fell);
-  // Arme (Panda: schwarz)
-  ell(g,cx-(105+rx*8)*s,cy+(40+rx*30)*s+bowOff,38*s,70*s,armC);
-  ell(g,cx+(105+rx*8)*s,cy+(40+rx*30)*s+bowOff,38*s,70*s,armC);
+  // Arme (Panda: schwarz); Jubel-Pose: Arme hoch statt hängen
+  var jub = b.jubel||0;
+  var axL = cx-(105+rx*8)*s + jub*40*s, axR = cx+(105+rx*8)*s - jub*40*s;
+  var ay = cy+(40+rx*30)*s+bowOff - jub*120*s;
+  g.save();
+  if(jub>0.01){
+    // gedrehte Jubel-Arme schräg nach oben
+    g.translate(axL,ay); g.rotate(-0.7*jub);
+    ell(g,0,-20*s*jub,34*s,64*s,armC);
+    g.restore(); g.save();
+    g.translate(axR,ay); g.rotate(0.7*jub);
+    ell(g,0,-20*s*jub,34*s,64*s,armC);
+  } else {
+    ell(g,axL,ay,38*s,70*s,armC);
+    ell(g,axR,ay,38*s,70*s,armC);
+  }
+  g.restore();
   // Beine/Füße
   ell(g,cx-55*s,cy+165*s,52*s,34*s,fell);
   ell(g,cx+55*s,cy+165*s,52*s,34*s,fell);
@@ -333,6 +351,89 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
       circle(g,wx2,wy2,8*s,'rgba(255,255,255,0.8)');
       circle(g,wx2+7*s,wy2+2*s,6*s,'rgba(255,255,255,0.8)');
     }
+  } else if(typ==='dino'){
+    // Rücken-Stacheln entlang Kopf (oben) und Rücken (Körper), plus Tupfen
+    var tN=performance.now()/1000;
+    g.save();
+    g.fillStyle='#4c8033'; g.strokeStyle='#3e6b28'; g.lineWidth=1.6*s;
+    for(i=0;i<5;i++){ // Kamm über dem Kopf
+      var f=i/4, spX=cx+(f-0.5)*100*s, spY=hy+bowOff*0.5-76*s-Math.sin(f*Math.PI)*14*s;
+      var hr=(16-Math.abs(f-0.5)*10)*s*(1+0.06*Math.sin(tN*3+i));
+      g.beginPath(); g.moveTo(spX-9*s,spY);
+      g.lineTo(spX,spY-hr); g.lineTo(spX+9*s,spY); g.closePath(); g.fill(); g.stroke();
+    }
+    for(i=0;i<6;i++){ // Stacheln am Rücken (rechte Körperseite)
+      var ba=-0.9+i*0.36;
+      var bx3=cx+Math.cos(ba)*116*s, by3=cy+70*s+bowOff+Math.sin(ba)*106*s;
+      g.beginPath(); g.moveTo(bx3-6*s,by3);
+      g.lineTo(bx3+8*s,by3-18*s); g.lineTo(bx3+16*s,by3+4*s); g.closePath(); g.fill(); g.stroke();
+    }
+    var rd=rnd(59);
+    for(i=0;i<8;i++){
+      var da=rd()*Math.PI*2, dr2=0.3+rd()*0.55;
+      ell(g,cx+Math.cos(da)*95*s*dr2, cy+70*s+bowOff+Math.sin(da)*90*s*dr2,
+        (5+rd()*5)*s,(4+rd()*4)*s,'rgba(46,100,34,0.45)');
+    }
+    g.restore();
+  } else if(typ==='superheld'){
+    // Rotes Cape hinter den Schultern + Brust-Stern-Emblem
+    var tS=performance.now()/1000;
+    var wob=Math.sin(tS*2.4)*10*s;
+    g.save();
+    g.fillStyle='#d0342c'; g.strokeStyle='#9c2115'; g.lineWidth=2*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-80*s,hy+34*s+bowOff*0.5);
+    g.quadraticCurveTo(cx-150*s,cy+120*s+bowOff,cx-96*s,cy+232*s+bowOff);
+    g.quadraticCurveTo(cx,cy+270*s+bowOff+wob,cx+96*s,cy+232*s+bowOff);
+    g.quadraticCurveTo(cx+150*s,cy+120*s+bowOff,cx+80*s,hy+34*s+bowOff*0.5);
+    g.closePath(); g.fill(); g.stroke();
+    g.restore();
+    // Brust-Emblem: goldener Schild mit Stern
+    g.save();
+    ell(g,cx,cy+92*s+bowOff,34*s,38*s,'#f5c542');
+    g.strokeStyle='#b8860b'; g.lineWidth=2.5*s;
+    g.beginPath(); g.ellipse(cx,cy+92*s+bowOff,34*s,38*s,0,0,Math.PI*2); g.stroke();
+    Art.drawSticker(g,'stern',cx,cy+92*s+bowOff,22*s,'#d0342c');
+    Art.drawSticker(g,'stern',cx,cy+92*s+bowOff,9*s,'#ffe9a8');
+    g.restore();
+  } else if(typ==='schnee'){
+    // Schneeflocken-Muster + Glitzer-Funkeln
+    var tW=performance.now()/1000;
+    var fl=[[-55,20],[35,-45],[ -10,85],[70,55],[-80,95],[20,145]];
+    for(i=0;i<fl.length;i++){
+      var fx=cx+fl[i][0]*s, fy=cy+60*s+bowOff+fl[i][1]*s*0.75;
+      g.strokeStyle='rgba(255,255,255,0.9)'; g.lineWidth=2*s; g.lineCap='round';
+      for(var k6=0;k6<6;k6++){
+        var fa2=k6*Math.PI/3;
+        g.beginPath(); g.moveTo(fx,fy);
+        g.lineTo(fx+Math.cos(fa2)*11*s, fy+Math.sin(fa2)*11*s); g.stroke();
+      }
+      circle(g,fx,fy,2.4*s,'rgba(255,255,255,0.95)');
+    }
+    var rs=rnd(77);
+    for(i=0;i<12;i++){ // Funkeln
+      var sa=rs()*Math.PI*2, sr=0.2+rs()*0.65;
+      var sx2=cx+Math.cos(sa)*105*s*sr;
+      var sy2=(i<8? cy+70*s+bowOff+Math.sin(sa)*92*s*sr : hy+bowOff*0.5+Math.sin(sa)*70*s*sr);
+      var twk=0.5+0.5*Math.sin(tW*3.5+i*1.3);
+      Art.drawSticker(g,'stern',sx2,sy2,(2.5+2.5*twk)*s,'rgba(255,255,255,'+(0.4+0.55*twk).toFixed(2)+')');
+    }
+  } else if(typ==='kaktus'){
+    // Kleine V-Stacheln über Körper+Kopf (rosa Blüte: drawKopfDeko)
+    var rk2=rnd(91);
+    g.strokeStyle='rgba(255,242,220,0.85)'; g.lineWidth=1.7*s; g.lineCap='round';
+    for(i=0;i<18;i++){
+      var ka2=rk2()*Math.PI*2, kr3=0.25+rk2()*0.6;
+      var kx3=cx+Math.cos(ka2)*100*s*kr3;
+      var ky3=(i<12? cy+70*s+bowOff+Math.sin(ka2)*92*s*kr3 : hy+bowOff*0.5+Math.sin(ka2)*74*s*kr3);
+      g.beginPath(); g.moveTo(kx3-4*s,ky3+3*s); g.lineTo(kx3,ky3-2*s); g.lineTo(kx3+4*s,ky3+3*s); g.stroke();
+    }
+    // hellere Bauch-Rippen
+    g.strokeStyle='rgba(21,70,30,0.35)'; g.lineWidth=2.2*s;
+    for(i=-1;i<=1;i++){
+      g.beginPath(); g.moveTo(cx+i*40*s,cy-8*s+bowOff);
+      g.quadraticCurveTo(cx+i*52*s,cy+80*s+bowOff,cx+i*40*s,cy+160*s+bowOff); g.stroke();
+    }
   }
 }
 
@@ -441,7 +542,25 @@ function drawKopfDeko(g, m, cx, hy, s){
     }
     circle(g,cx-4*s,zy-88*s,4*s,'#ffd24d');
     g.restore();
+  } else if(m.muster==='kaktus'){
+    // Rosa Blüte auf dem Kopf
+    var tK=performance.now()/1000;
+    var byb=hy-86*s, puls=1+0.08*Math.sin(tK*2.6);
+    g.save();
+    Art.drawSticker(g,'blume',cx,byb,17*s*puls,'#ff9ec4');
+    ellipsePetals(g,cx,byb,17*s*puls,'#ff9ec4');
+    circle(g,cx,byb,5.5*s,'#ffe06e');
+    g.restore();
   }
+}
+function ellipsePetals(g,x,y,r,c){ // größere Blütenblätter für die Kaktus-Blüte
+  g.save(); g.translate(x,y); g.fillStyle=c;
+  for(var j=0;j<7;j++){ var a=j*Math.PI*2/7;
+    g.save(); g.rotate(a);
+    g.beginPath(); g.ellipse(0,-r*0.72,r*0.4,r*0.62,0,0,Math.PI*2); g.fill();
+    g.restore();
+  }
+  g.restore();
 }
 function ring(g,x,y,r,c){ g.strokeStyle=c; g.lineWidth=2; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); }
 
