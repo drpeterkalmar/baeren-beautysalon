@@ -65,18 +65,22 @@ function btn(x,y,w,h,label,fn,opt){
 S.buildUI = function(){
   buttons.length = 0;
   var st = S.state;
+  // Station-Verlassen aufräumen: kein Schaum/Tropfen-Rest im weiteren Verlauf
+  if(S._prev==='waschen' && st!=='waschen'){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
+  if(S._prev==='foehnen' && st!=='foehnen'){ S.foehn=false; }
+  S._prev = st;
   if(st==='menu'){
     if(S.saved && S.saved.fell){
-      btn(230,470,440,64,'🧸 Weiter mit meinem Bären',function(){ S.buildUI(); S.state='waschen'; },{big:1});
-      btn(230,546,440,64,'🌟 Neuer Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
+      btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.state='waschen'; S.buildUI(); },{big:1});
+      btn(230,534,440,64,'🌟 Neuer Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
     } else {
       btn(230,500,440,70,'▶️ Start',function(){ S.state='waschen'; S.buildUI(); },{big:1});
     }
     return;
   }
   if(st==='finish-done'){
-    btn(150,470,280,64,'🐻 Noch ein Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
-    btn(470,470,280,64,'🔄 Von vorne',function(){ S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1});
+    btn(150,518,280,62,'🐻 Noch ein Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
+    btn(470,518,280,62,'🔄 Von vorne',function(){ S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1});
     return;
   }
   // Stations-UI
@@ -195,6 +199,22 @@ S.draw = function(g){
 
   if(S.state==='menu'){ drawMenu(g); return; }
 
+  if(S.state==='finish-done'){
+    // Feier-Screen: großes Perfekt, Bär freudig oben, Buttons darunter
+    g.textAlign='center';
+    g.font='bold 54px sans-serif';
+    g.lineWidth=8; g.strokeStyle='#fff';
+    g.strokeText('Perfekt! ✨', W/2, 72);
+    g.fillStyle='#7a4b8f'; g.fillText('Perfekt! ✨', W/2, 72);
+    g.save();
+    g.translate(0,-34);
+    Art.drawBear(g,S.baer,{w:W,h:H});
+    drawStickers(g);
+    g.restore();
+    drawButtons(g);
+    return;
+  }
+
   // Titel + Hinweis
   g.fillStyle='#7a4b8f'; g.font='bold 26px sans-serif'; g.textAlign='center';
   var st=S.STATIONS.filter(function(x){return x.id===S.state;})[0];
@@ -217,22 +237,24 @@ function drawMenu(g){
   var grad=g.createLinearGradient(0,0,0,H);
   grad.addColorStop(0,'#ffe6f2'); grad.addColorStop(1,'#e8d5f5');
   g.fillStyle=grad; g.fillRect(0,0,W,H);
+  // deko Sterne (Hintergrund, vor Titel+Bär)
+  for(var i=0;i<14;i++){
+    var x=(i*167)%W, y=40+((i*97)%520);
+    Art.drawSticker(g,'stern',x,y,8+(i%3)*4,'rgba(255,210,77,0.45)');
+  }
   g.textAlign='center';
   g.fillStyle='#7a4b8f'; g.font='bold 52px sans-serif';
-  g.fillText('🧸 Bären-Beautysalon', W/2, 130);
+  g.fillText('🧸 Bären-Beautysalon', W/2, 64);
   g.fillStyle='#9c6bb5'; g.font='24px sans-serif';
-  g.fillText('Mach den Bären ganz hübsch!', W/2, 175);
-  g.fillStyle='#b08cc7'; g.font='16px sans-serif';
-  g.fillText('🧸 Bären-Beautysalon v'+window.BS_VER, W/2, H-24);
-  Art.drawBear(g,S.baer,{w:W,h:H*0.72});
+  g.fillText('Mach den Bären ganz hübsch!', W/2, 106);
+  g.fillStyle='#8a6aa0'; g.font='14px sans-serif';
+  g.fillText('🧸 Bären-Beautysalon v'+window.BS_VER, W/2, H-14);
+  g.save();
+  g.translate(0, H*0.10);
+  Art.drawBear(g,S.baer,{w:W,h:H*0.66});
+  g.restore();
   var oldLen = buttons.length;
   drawButtons(g);
-  // deko Sterne
-  g.fillStyle='rgba(255,215,0,0.5)';
-  for(var i=0;i<14;i++){
-    var x=(i*167)%W, y=200+((i*97)%180);
-    Art.drawSticker(g,'stern',x,y,8+(i%3)*4,'#ffd24d');
-  }
 }
 
 function drawStickers(g){
