@@ -95,8 +95,17 @@ S.buildUI = function(){
   buttons.length = 0;
   var st = S.state;
   if(st==='menu'){
-    var ri=Math.floor(Math.random()*Art.MODELS.length);
-    S.menuBaer = Object.assign(neuerBaer(ri), {breath:0});
+    // Menü-Vorschau: IMMER Braunbär (idx 0), Frisur+Haarfarbe+1 Accessoire wechseln zufällig
+    // (salon-fair und robust gegen Modell-Details, die auf dem Menü fehlplatziert wirken)
+    var mb = neuerBaer(0);
+    mb.frisur = Art.FRISEURE[Math.floor(Math.random()*Art.FRISEURE.length)];
+    mb.haar = Art.HAAR[Math.floor(Math.random()*Art.HAAR.length)];
+    var accWahl=Math.floor(Math.random()*5);
+    if(accWahl===0) mb.acc.hut=Art.HUTE[Math.floor(Math.random()*Art.HUTE.length)];
+    else if(accWahl===1) mb.acc.schleife=Art.SCHLEIFEN[Math.floor(Math.random()*Art.SCHLEIFEN.length)];
+    else if(accWahl===2) mb.acc.brille=Art.BRILLEN[Math.floor(Math.random()*Art.BRILLEN.length)];
+    else if(accWahl===3) mb.acc.kette=Art.KETTEN[Math.floor(Math.random()*Art.KETTEN.length)];
+    S.menuBaer = Object.assign(mb, {breath:0});
   } else if(st!=='wahl'){ S.flash=0; }
   if(S._prev==='waschen' && st!=='waschen'){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
   if(S._prev==='foehnen' && st!=='foehnen'){ S.foehn=false; }

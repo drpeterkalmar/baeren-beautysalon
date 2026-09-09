@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 13;
-console.log('BS v13');
+window.BS_VER = 14;
+console.log('BS v14');
 
 var Art = window.BSArt = {};
 
@@ -64,46 +64,59 @@ function rnd(seed){ // kleiner deterministischer Zufall
   return function(){ s = (s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
 }
 
-// Flauschige Ellipse: leicht wellige Kontur (Amplitude ~amp px), gefüllt.
-// seed gibt der Welle eine stabile Phase pro Körperteil.
+// Flauschige Ellipse: leicht wellige Fell-Kontur (Amplitude amp px, 2-3px Ziel),
+// gefüllt. seed gibt der Welle eine stabile, deterministische Phase pro Körperteil.
 function fluffEll(g,x,y,rx,ry,amp,c,seed){
-  var N=52, ph=(seed||0)*1.7;
+  var N=64, ph=(seed||0)*1.7;
+  var base=(rx+ry)/2;
   g.fillStyle=c; g.beginPath();
   for(var i=0;i<=N;i++){
     var a=i/N*Math.PI*2;
-    var w=1+ (amp/((rx+ry)/2)) * Math.sin(a*5+ph)*0.6 + (amp/((rx+ry)/2))*0.4*Math.sin(a*9+ph*1.3);
+    // zwei überlagerte Sinus-Wellen: grob (5x) + fein (9x) → kuschelig, nicht zottig
+    var off=amp*0.65*Math.sin(a*5+ph)+amp*0.35*Math.sin(a*9+ph*1.3+0.9);
+    var w=1+off/base;
     var px=x+Math.cos(a)*rx*w, py=y+Math.sin(a)*ry*w;
     if(i===0) g.moveTo(px,py); else g.lineTo(px,py);
   }
   g.closePath(); g.fill();
 }
-
-// Weiche Fell-Schattierung: dunklerer Rücken/Seiten, heller Bauch (via Gradients)
-function fellShadeBody(g,cx,cy,rx,ry,fell,dunkel,hell,s){
-  var gr=g.createLinearGradient(cx-rx,cy-ry,cx+rx,cy+ry);
-  gr.addColorStop(0,hell); gr.addColorStop(0.45,fell); gr.addColorStop(1,dunkel);
-  g.fillStyle='rgba(0,0,0,0)'; // nop
-  g.save();
-  g.globalAlpha=0.55; g.fillStyle=gr;
-  g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.fill();
-  g.restore();
-  // heller Bauch-Bereich
-  var bg=g.createRadialGradient(cx,cy+ry*0.25,4,cx,cy+ry*0.25,ry*0.95);
-  bg.addColorStop(0,'rgba(255,250,240,0.30)'); bg.addColorStop(1,'rgba(255,250,240,0)');
-  g.fillStyle=bg;
-  g.beginPath(); g.ellipse(cx,cy+ry*0.3,rx*0.55,ry*0.6,0,0,Math.PI*2); g.fill();
+// Passende wellige Kontur-Linie (für Modelle mit 'kontur'-Stroke)
+function fluffStroke(g,x,y,rx,ry,amp,c,lw,seed){
+  var N=64, ph=(seed||0)*1.7, base=(rx+ry)/2;
+  g.strokeStyle=c; g.lineWidth=lw; g.lineJoin='round';
+  g.beginPath();
+  for(var i=0;i<=N;i++){
+    var a=i/N*Math.PI*2;
+    var off=amp*0.65*Math.sin(a*5+ph)+amp*0.35*Math.sin(a*9+ph*1.3+0.9);
+    var w=1+off/base;
+    var px=x+Math.cos(a)*rx*w, py=y+Math.sin(a)*ry*w;
+    if(i===0) g.moveTo(px,py); else g.lineTo(px,py);
+  }
+  g.closePath(); g.stroke();
 }
 
-// 2-3 subtile Fell-Wellen am Bauch
-function fellWaves(g,cx,cy,s,c){
-  g.save(); g.strokeStyle=c; g.lineWidth=1.6*s; g.lineCap='round'; g.globalAlpha=0.35;
-  for(var i=0;i<3;i++){
-    var y=cy+i*26*s, w=(58-i*12)*s;
-    g.beginPath(); g.moveTo(cx-w,y);
-    g.quadraticCurveTo(cx-w*0.4,y-7*s,cx,y);
-    g.quadraticCurveTo(cx+w*0.4,y+7*s,cx+w,y);
-    g.stroke();
-  }
+// Fell-Schattierung als Schichten (2-3 halbtransparente Ellipsen-Verläufe):
+// Lichtquelle oben links, Schatten unten/links+rechts am Rand. Weiche Übergänge.
+function fellShadeLayers(g,cx,cy,rx,ry,dunkel,hell){
+  // 1) Licht oben links (radialer Highlight-Verlauf)
+  var lg=g.createRadialGradient(cx-rx*0.55,cy-ry*0.55,4, cx-rx*0.55,cy-ry*0.55,rx*1.3);
+  lg.addColorStop(0,'rgba(255,252,244,0.34)');
+  lg.addColorStop(0.5,'rgba(255,252,244,0.10)');
+  lg.addColorStop(1,'rgba(255,252,244,0)');
+  g.fillStyle=lg;
+  g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.fill();
+  // 2) Schatten unten (unterer Körperrand)
+  var sg=g.createRadialGradient(cx,cy+ry*1.05,4, cx,cy+ry*0.45,ry*1.15);
+  sg.addColorStop(0,'rgba(30,20,12,0.30)');
+  sg.addColorStop(0.6,'rgba(30,20,12,0.12)');
+  sg.addColorStop(1,'rgba(30,20,12,0)');
+  g.save();
+  g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.clip();
+  g.fillStyle=sg; g.fillRect(cx-rx,cy-ry,rx*2,ry*2);
+  // 3) Seitenschatten links+rechts (halbdurchsichtige dunkle Ellipsen am Rand)
+  g.globalAlpha=0.16; g.fillStyle=dunkel;
+  g.beginPath(); g.ellipse(cx-rx*0.82,cy+ry*0.15,rx*0.30,ry*0.75,0.12,0,Math.PI*2); g.fill();
+  g.beginPath(); g.ellipse(cx+rx*0.82,cy+ry*0.15,rx*0.30,ry*0.75,-0.12,0,Math.PI*2); g.fill();
   g.restore();
 }
 
@@ -147,10 +160,9 @@ Art.drawBear = function(g, b, opt){
   g.translate(cx, cy+70*s); g.scale(1, breathe); g.translate(-cx, -(cy+70*s));
   // Schatten
   ell(g,cx,cy+150*s,150*s,22*s,'rgba(0,0,0,0.12)');
-  // Körper (flauschige Kontur + Fell-Schattierung)
-  fluffEll(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,2.5*s,fell,2);
-  fellShadeBody(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,fell,dunkel,hell,s);
-  fellWaves(g,cx,cy+88*s+bowOff,s,shade(fell,m.hell?-18:-35));
+  // Körper (flauschige Kontur + Fell-Schattierung in Schichten)
+  fluffEll(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,3.2*s,fell,2);
+  fellShadeLayers(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,dunkel,hell);
   // Arme (Panda: schwarz); Jubel-Pose: Arme hoch statt hängen
   var jub = b.jubel||0;
   var axL = cx-(105+rx*8)*s + jub*40*s, axR = cx+(105+rx*8)*s - jub*40*s;
@@ -164,8 +176,8 @@ Art.drawBear = function(g, b, opt){
     g.translate(axR,ay); g.rotate(0.7*jub);
     fluffEll(g,0,-20*s*jub,34*s,64*s,1.6*s,armC,6);
   } else {
-    fluffEll(g,axL,ay,38*s,70*s,1.6*s,armC,5);
-    fluffEll(g,axR,ay,38*s,70*s,1.6*s,armC,6);
+    fluffEll(g,axL,ay,38*s,70*s,2.2*s,armC,5);
+    fluffEll(g,axR,ay,38*s,70*s,2.2*s,armC,6);
     // Pfotenkissen an den Arm-Enden (weich, ohne Krallen)
     ell(g,axL,ay+58*s,15*s,12*s,schnauzeC);
     ell(g,axR,ay+58*s,15*s,12*s,schnauzeC);
@@ -175,8 +187,8 @@ Art.drawBear = function(g, b, opt){
   }
   g.restore();
   // Beine/Füße (flauschig) + weiche Pfotenkissen
-  fluffEll(g,cx-55*s,cy+165*s,52*s,34*s,1.6*s,fell,7);
-  fluffEll(g,cx+55*s,cy+165*s,52*s,34*s,1.6*s,fell,8);
+  fluffEll(g,cx-55*s,cy+165*s,52*s,34*s,2.2*s,fell,7);
+  fluffEll(g,cx+55*s,cy+165*s,52*s,34*s,2.2*s,fell,8);
   ell(g,cx-55*s,cy+160*s,26*s,14*s,schnauzeC);
   ell(g,cx+55*s,cy+160*s,26*s,14*s,schnauzeC);
   // Pfotenkissen: weiche Ballen + winzige Fellstriche zwischen den Zehen
@@ -209,21 +221,28 @@ Art.drawBear = function(g, b, opt){
     }
     g.restore();
   }
-  fluffEll(g,cx,hy+bowOff*0.5,88*s*fluff,88*s*fluff,2.5*s,fell,11);
+  fluffEll(g,cx,hy+bowOff*0.5,88*s*fluff,88*s*fluff,3*s,fell,11);
   {
-    var kg=g.createLinearGradient(cx-88*s,hy-88*s,cx+88*s,hy+88*s);
-    kg.addColorStop(0,hell); kg.addColorStop(0.5,fell); kg.addColorStop(1,dunkel);
-    g.save(); g.globalAlpha=0.5; g.fillStyle=kg;
-    g.beginPath(); g.arc(cx,hy+bowOff*0.5,88*s*fluff,0,Math.PI*2); g.fill(); g.restore();
+    // Kopf-Schattierung: Licht oben links, dezenter Schatten unten rechts
+    var hr2=88*s*fluff;
+    var kg=g.createRadialGradient(cx-hr2*0.5,hy+bowOff*0.5-hr2*0.5,4, cx-hr2*0.5,hy+bowOff*0.5-hr2*0.5,hr2*1.25);
+    kg.addColorStop(0,'rgba(255,252,244,0.30)'); kg.addColorStop(0.6,'rgba(255,252,244,0.08)'); kg.addColorStop(1,'rgba(255,252,244,0)');
+    g.save();
+    g.beginPath(); g.arc(cx,hy+bowOff*0.5,hr2,0,Math.PI*2); g.clip();
+    g.fillStyle=kg; g.fillRect(cx-hr2,hy+bowOff*0.5-hr2,hr2*2,hr2*2);
+    var ks=g.createRadialGradient(cx,hy+bowOff*0.5+hr2*1.0,4, cx,hy+bowOff*0.5+hr2*0.4,hr2*1.15);
+    ks.addColorStop(0,'rgba(30,20,12,0.22)'); ks.addColorStop(1,'rgba(30,20,12,0)');
+    g.fillStyle=ks; g.fillRect(cx-hr2,hy+bowOff*0.5-hr2,hr2*2,hr2*2);
+    g.restore();
   }
 
-  // Deutliche Kontur für helle Bären (Eisbär etc.)
+  // Deutliche Kontur für helle Bären (Eisbär etc.) — wellig passend zur Fellkontur
   if(m.kontur){
-    g.strokeStyle=m.kontur; g.lineWidth=3.5*s; g.lineJoin='round';
-    g.beginPath(); g.ellipse(cx,cy+70*s+bowOff,120*s*fluff,110*s,0,0,Math.PI*2); g.stroke();
-    g.beginPath(); g.arc(cx,hy+bowOff*0.5,88*s*fluff,0,Math.PI*2); g.stroke();
-    g.beginPath(); g.arc(cx-ex*s,hy+eyy*s+bowOff*0.5,26*s,0,Math.PI*2); g.stroke();
-    g.beginPath(); g.arc(cx+ex*s,hy+eyy*s+bowOff*0.5,26*s,0,Math.PI*2); g.stroke();
+    g.lineWidth=3.5*s;
+    fluffStroke(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,3.2*s,m.kontur,3.5*s,2);
+    fluffStroke(g,cx,hy+bowOff*0.5,88*s*fluff,88*s*fluff,3*s,m.kontur,3.5*s,11);
+    fluffStroke(g,cx-ex*s,ohrY,26*s,26*s,1.6*s,m.kontur,3.5*s,9);
+    fluffStroke(g,cx+ex*s,ohrY,26*s,26*s,1.6*s,m.kontur,3.5*s,10);
   }
 
   // Fell-Glanz: weiche weiße Glanzflecken (fluff hoch oder Spa fertig)
@@ -372,6 +391,9 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
     // Schwarze Flecken um die Augen
     ell(g,cx-32*s,hy-14*s+bowOff*0.5,20*s,26*s,'#2b2b2b');
     ell(g,cx+32*s,hy-14*s+bowOff*0.5,20*s,26*s,'#2b2b2b');
+    // Charakteristische schwarze Schulter-Flecken (oben am Körper, an den Arm-Ansätzen)
+    ell(g,cx-92*s,cy+18*s+bowOff,30*s,26*s,'#2b2b2b');
+    ell(g,cx+92*s,cy+18*s+bowOff,30*s,26*s,'#2b2b2b');
   } else if(typ==='grizzly'){
     // Graue Fellspitzen auf Kopf und Körper
     var r=rnd(11);
