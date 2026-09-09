@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 12;
-console.log('BS v12');
+window.BS_VER = 13;
+console.log('BS v13');
 
 var Art = window.BSArt = {};
 
@@ -64,6 +64,65 @@ function rnd(seed){ // kleiner deterministischer Zufall
   return function(){ s = (s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
 }
 
+// Flauschige Ellipse: leicht wellige Kontur (Amplitude ~amp px), gefüllt.
+// seed gibt der Welle eine stabile Phase pro Körperteil.
+function fluffEll(g,x,y,rx,ry,amp,c,seed){
+  var N=52, ph=(seed||0)*1.7;
+  g.fillStyle=c; g.beginPath();
+  for(var i=0;i<=N;i++){
+    var a=i/N*Math.PI*2;
+    var w=1+ (amp/((rx+ry)/2)) * Math.sin(a*5+ph)*0.6 + (amp/((rx+ry)/2))*0.4*Math.sin(a*9+ph*1.3);
+    var px=x+Math.cos(a)*rx*w, py=y+Math.sin(a)*ry*w;
+    if(i===0) g.moveTo(px,py); else g.lineTo(px,py);
+  }
+  g.closePath(); g.fill();
+}
+
+// Weiche Fell-Schattierung: dunklerer Rücken/Seiten, heller Bauch (via Gradients)
+function fellShadeBody(g,cx,cy,rx,ry,fell,dunkel,hell,s){
+  var gr=g.createLinearGradient(cx-rx,cy-ry,cx+rx,cy+ry);
+  gr.addColorStop(0,hell); gr.addColorStop(0.45,fell); gr.addColorStop(1,dunkel);
+  g.fillStyle='rgba(0,0,0,0)'; // nop
+  g.save();
+  g.globalAlpha=0.55; g.fillStyle=gr;
+  g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); g.fill();
+  g.restore();
+  // heller Bauch-Bereich
+  var bg=g.createRadialGradient(cx,cy+ry*0.25,4,cx,cy+ry*0.25,ry*0.95);
+  bg.addColorStop(0,'rgba(255,250,240,0.30)'); bg.addColorStop(1,'rgba(255,250,240,0)');
+  g.fillStyle=bg;
+  g.beginPath(); g.ellipse(cx,cy+ry*0.3,rx*0.55,ry*0.6,0,0,Math.PI*2); g.fill();
+}
+
+// 2-3 subtile Fell-Wellen am Bauch
+function fellWaves(g,cx,cy,s,c){
+  g.save(); g.strokeStyle=c; g.lineWidth=1.6*s; g.lineCap='round'; g.globalAlpha=0.35;
+  for(var i=0;i<3;i++){
+    var y=cy+i*26*s, w=(58-i*12)*s;
+    g.beginPath(); g.moveTo(cx-w,y);
+    g.quadraticCurveTo(cx-w*0.4,y-7*s,cx,y);
+    g.quadraticCurveTo(cx+w*0.4,y+7*s,cx+w,y);
+    g.stroke();
+  }
+  g.restore();
+}
+
+// Feine Fell-Striche (für helle Bären Kontrastfarbe, sonst dunkleres Fell)
+function fellStriche(g,cx,cyB,hy,rx,ry,hr,s,c,bowOff,seed){
+  var r=rnd(seed||101);
+  g.save(); g.strokeStyle=c; g.lineWidth=1.4*s; g.lineCap='round'; g.globalAlpha=0.5;
+  for(var i=0;i<14;i++){
+    var a=r()*Math.PI*2, rr=0.15+r()*0.7;
+    var inKopf = (i%4===3);
+    var bx = inKopf? cx+Math.cos(a)*hr*rr : cx+Math.cos(a)*rx*rr;
+    var by = inKopf? hy+bowOff*0.5+Math.sin(a)*hr*rr : cyB+Math.sin(a)*ry*rr;
+    var la=a+r()-0.5, len=(4+r()*5)*s;
+    g.beginPath(); g.moveTo(bx,by);
+    g.lineTo(bx+Math.cos(la)*len, by+Math.sin(la)*len); g.stroke();
+  }
+  g.restore();
+}
+
 Art.drawBear = function(g, b, opt){
   // b: {fellIdx, fell, haar, frisur, lack, schaum, tropfen, fluff, bow,
   //     breathe(s), blink(0/1), relax(0..1), makeup:{rouge,lid,gp:[{dx,dy}]}, acc, sticker}
@@ -88,8 +147,10 @@ Art.drawBear = function(g, b, opt){
   g.translate(cx, cy+70*s); g.scale(1, breathe); g.translate(-cx, -(cy+70*s));
   // Schatten
   ell(g,cx,cy+150*s,150*s,22*s,'rgba(0,0,0,0.12)');
-  // Körper
-  ell(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,fell);
+  // Körper (flauschige Kontur + Fell-Schattierung)
+  fluffEll(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,2.5*s,fell,2);
+  fellShadeBody(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,fell,dunkel,hell,s);
+  fellWaves(g,cx,cy+88*s+bowOff,s,shade(fell,m.hell?-18:-35));
   // Arme (Panda: schwarz); Jubel-Pose: Arme hoch statt hängen
   var jub = b.jubel||0;
   var axL = cx-(105+rx*8)*s + jub*40*s, axR = cx+(105+rx*8)*s - jub*40*s;
@@ -98,31 +159,63 @@ Art.drawBear = function(g, b, opt){
   if(jub>0.01){
     // gedrehte Jubel-Arme schräg nach oben
     g.translate(axL,ay); g.rotate(-0.7*jub);
-    ell(g,0,-20*s*jub,34*s,64*s,armC);
+    fluffEll(g,0,-20*s*jub,34*s,64*s,1.6*s,armC,5);
     g.restore(); g.save();
     g.translate(axR,ay); g.rotate(0.7*jub);
-    ell(g,0,-20*s*jub,34*s,64*s,armC);
+    fluffEll(g,0,-20*s*jub,34*s,64*s,1.6*s,armC,6);
   } else {
-    ell(g,axL,ay,38*s,70*s,armC);
-    ell(g,axR,ay,38*s,70*s,armC);
+    fluffEll(g,axL,ay,38*s,70*s,1.6*s,armC,5);
+    fluffEll(g,axR,ay,38*s,70*s,1.6*s,armC,6);
+    // Pfotenkissen an den Arm-Enden (weich, ohne Krallen)
+    ell(g,axL,ay+58*s,15*s,12*s,schnauzeC);
+    ell(g,axR,ay+58*s,15*s,12*s,schnauzeC);
+    g.save(); g.globalAlpha=0.25; g.fillStyle=dunkel;
+    ell(g,axL,ay+62*s,9*s,6*s,dunkel); ell(g,axR,ay+62*s,9*s,6*s,dunkel);
+    g.restore();
   }
   g.restore();
-  // Beine/Füße
-  ell(g,cx-55*s,cy+165*s,52*s,34*s,fell);
-  ell(g,cx+55*s,cy+165*s,52*s,34*s,fell);
+  // Beine/Füße (flauschig) + weiche Pfotenkissen
+  fluffEll(g,cx-55*s,cy+165*s,52*s,34*s,1.6*s,fell,7);
+  fluffEll(g,cx+55*s,cy+165*s,52*s,34*s,1.6*s,fell,8);
   ell(g,cx-55*s,cy+160*s,26*s,14*s,schnauzeC);
   ell(g,cx+55*s,cy+160*s,26*s,14*s,schnauzeC);
+  // Pfotenkissen: weiche Ballen + winzige Fellstriche zwischen den Zehen
+  drawPaw(g,cx-55*s,cy+162*s,s,b,schnauzeC,dunkel);
+  drawPaw(g,cx+55*s,cy+162*s,s,b,schnauzeC,dunkel);
   drawClaws(g,cx-55*s,cy+175*s,s,b,'L');
   drawClaws(g,cx+55*s,cy+175*s,s,b,'R');
 
-  // Kopf
+  // Kopf (flauschig + Schattierung), Ohren mit Verlauf + Büschel
   var hy = cy-90*s+bowOff;
   var ex = 62+rx*16, eyy = -70+rx*12;
-  circle(g,cx-ex*s,hy+eyy*s+bowOff*0.5,26*s,ohrC);
-  circle(g,cx+ex*s,hy+eyy*s+bowOff*0.5,26*s,ohrC);
-  circle(g,cx-ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
-  circle(g,cx+ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
-  circle(g,cx,hy+bowOff*0.5,88*s*fluff,fell);
+  var ohrY=hy+eyy*s+bowOff*0.5;
+  fluffEll(g,cx-ex*s,ohrY,26*s,26*s,1.2*s,ohrC,9);
+  fluffEll(g,cx+ex*s,ohrY,26*s,26*s,1.2*s,ohrC,10);
+  // Innenohr: weicher Verlauf (rosa/dunkler), kein flacher Fleck
+  var ohrIn=[cx-ex*s,cx+ex*s];
+  for(var oi=0;oi<2;oi++){
+    var og=g.createRadialGradient(ohrIn[oi],ohrY+3*s,2, ohrIn[oi],ohrY,15*s);
+    var obase = m.ohren? shade(m.ohren,30) : hell;
+    og.addColorStop(0, m.ohren? shade(m.ohren,55) : '#f7c9c9');
+    og.addColorStop(1, obase);
+    g.fillStyle=og;
+    g.beginPath(); g.arc(ohrIn[oi],ohrY,13*s,0,Math.PI*2); g.fill();
+    // feiner Fell-Büschel am Ohr
+    g.save(); g.strokeStyle=m.ohren? shade(m.ohren,-30):dunkel; g.lineWidth=1.3*s; g.lineCap='round'; g.globalAlpha=0.5;
+    for(var ob=0;ob<3;ob++){
+      var ba=-0.5+ob*0.5;
+      g.beginPath(); g.moveTo(ohrIn[oi]+Math.cos(ba-Math.PI/2)*8*s, ohrY+Math.sin(ba-Math.PI/2)*8*s);
+      g.lineTo(ohrIn[oi]+Math.cos(ba-Math.PI/2)*15*s, ohrY+Math.sin(ba-Math.PI/2)*15*s); g.stroke();
+    }
+    g.restore();
+  }
+  fluffEll(g,cx,hy+bowOff*0.5,88*s*fluff,88*s*fluff,2.5*s,fell,11);
+  {
+    var kg=g.createLinearGradient(cx-88*s,hy-88*s,cx+88*s,hy+88*s);
+    kg.addColorStop(0,hell); kg.addColorStop(0.5,fell); kg.addColorStop(1,dunkel);
+    g.save(); g.globalAlpha=0.5; g.fillStyle=kg;
+    g.beginPath(); g.arc(cx,hy+bowOff*0.5,88*s*fluff,0,Math.PI*2); g.fill(); g.restore();
+  }
 
   // Deutliche Kontur für helle Bären (Eisbär etc.)
   if(m.kontur){
@@ -134,12 +227,18 @@ Art.drawBear = function(g, b, opt){
   }
 
   // Fell-Glanz: weiche weiße Glanzflecken (fluff hoch oder Spa fertig)
-  if((b.fluff||0)>0.7 || opt.spaTarget===1){
-    g.save(); g.globalAlpha=0.35; g.fillStyle='#fff';
-    g.beginPath(); g.ellipse(cx-50*s,cy+30*s+bowOff,40*s,18*s,-0.5,0,Math.PI*2); g.fill();
-    g.beginPath(); g.ellipse(cx+44*s,hy-30*s+bowOff*0.5,30*s,13*s,0.4,0,Math.PI*2); g.fill();
+  if((b.fluff||0)>0.5 || opt.spaTarget===1 || (b.spa||0)>0.5){
+    g.save(); g.globalAlpha=0.30; g.fillStyle='#fff';
+    g.beginPath(); g.ellipse(cx-50*s,cy+30*s+bowOff,42*s,18*s,-0.5,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx+44*s,hy-30*s+bowOff*0.5,32*s,13*s,0.4,0,Math.PI*2); g.fill();
     g.beginPath(); g.ellipse(cx-30*s,hy+50*s+bowOff*0.5,18*s,8*s,0.2,0,Math.PI*2); g.fill();
     g.restore();
+  }
+  // Feine Fell-Striche: helle Bären (Panda/Eisbär/Schnee/hel) in Kontrastfarbe,
+  // damit weißes Fell nicht flach wirkt; dunkle Modelle bekommen es dezent dunkler.
+  {
+    var strichC = m.kontur || shade(fell,-40);
+    fellStriche(g,cx,cy+70*s+bowOff,hy,120*s*fluff,110*s,88*s*fluff,s,strichC,bowOff, m.hell? 211 : 113);
   }
 
   // Muster (Panda-Flecken, Grizzly-Spitzen, Nachtbär-Sterne)
@@ -186,11 +285,20 @@ Art.drawBear = function(g, b, opt){
       g.strokeStyle='#26221f'; g.lineWidth=3*s; g.lineCap='round';
       g.beginPath(); g.moveTo(cx-38*s,ey); g.quadraticCurveTo(cx-30*s,ey+(b.relax>=0.85?6*s:0),cx-22*s,ey);
       g.moveTo(cx+22*s,ey); g.quadraticCurveTo(cx+30*s,ey+(b.relax>=0.85?6*s:0),cx+38*s,ey); g.stroke();
+      // Wimpern auch bei geschlossenem Auge
+      drawWimpern(g,cx-30*s,ey,s,-1); drawWimpern(g,cx+30*s,ey,s,1);
     } else {
-      circle(g,cx-30*s,ey,9*s,'#26221f'); circle(g,cx+30*s,ey,9*s,'#26221f');
-      circle(g,cx-27*s,ey-3*s,3*s,'#fff'); circle(g,cx+33*s,ey-3*s,3*s,'#fff');
+      // Große liebe Augen: dunkelbraune Iris, weißer Glanzpunkt + Funkel,
+      // sanftes unteres Lid bei Entspannung, Wimpern
+      drawAuge(g,cx-30*s,ey,s,b.relax||0,-1);
+      drawAuge(g,cx+30*s,ey,s,b.relax||0,1);
     }
   }
+  // Wangen-Kleckse (blush) — immer sichtbar, rosa halbtransparent
+  g.save(); g.globalAlpha=0.3; g.fillStyle='#ff9eb5';
+  ell(g,cx-56*s,hy+16*s+bowOff*0.5,13*s,9*s,'#ff9eb5');
+  ell(g,cx+56*s,hy+16*s+bowOff*0.5,13*s,9*s,'#ff9eb5');
+  g.restore();
   // Schnauze
   ell(g,cx,hy+28*s+bowOff*0.5,36*s,26*s,schnauzeC);
   // Piraten-Augenklappe (über dem linken Auge)
@@ -205,12 +313,20 @@ Art.drawBear = function(g, b, opt){
     g.restore();
   }
   ell(g,cx,hy+18*s+bowOff*0.5,12*s,9*s,'#4a3227');
+  // Nase: Glanzpunkt + kleine Nasenlöcher
+  circle(g,cx-3.5*s,hy+15*s+bowOff*0.5,3*s,'rgba(255,255,255,0.55)');
+  circle(g,cx-4*s,hy+21*s+bowOff*0.5,1.6*s,'#2c1c14');
+  circle(g,cx+4*s,hy+21*s+bowOff*0.5,1.6*s,'#2c1c14');
+  // Mund: freundliches kleines Lächeln mit sanfter Wölbung
   g.strokeStyle='#4a3227'; g.lineWidth=3*s; g.lineCap='round';
   g.beginPath(); g.moveTo(cx,hy+27*s+bowOff*0.5); g.lineTo(cx,hy+36*s+bowOff*0.5);
-  g.quadraticCurveTo(cx-12*s,hy+46*s+bowOff*0.5,cx-22*s,hy+40*s+bowOff*0.5);
+  g.quadraticCurveTo(cx-14*s,hy+50*s+bowOff*0.5,cx-26*s,hy+42*s+bowOff*0.5);
   g.moveTo(cx,hy+36*s+bowOff*0.5);
-  g.quadraticCurveTo(cx+12*s,hy+46*s+bowOff*0.5,cx+22*s,hy+40*s+bowOff*0.5);
+  g.quadraticCurveTo(cx+14*s,hy+50*s+bowOff*0.5,cx+26*s,hy+42*s+bowOff*0.5);
   g.stroke();
+  // Zungenspitze-Andeutung unterm Lächeln (lieb)
+  g.save(); g.globalAlpha=0.5; g.fillStyle='#ff8fa8';
+  g.beginPath(); g.arc(cx,hy+47*s+bowOff*0.5,5*s,0,Math.PI); g.fill(); g.restore();
 
   // Glitzer-Tupfer (Make-up)
   if(mk.gp && mk.gp.length){
@@ -680,12 +796,61 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
   }
 }
 
-function drawClaws(g,x,y,s,b,side){
+function drawClaws(g,x,y,s,b,side){ // v13: die 3 Lack-Pads bleiben als Zehen-Pads (keine spitzen Krallen)
   for(var i=0;i<3;i++){
     var cxp = x + (i-1)*16*s;
-    var c = (b.lack && b.lack[side+i]) || '#f7ede2';
-    ell(g,cxp,y,7*s,10*s,c);
+    var c = (b.lack && b.lack[side+i]) || null;
+    if(c){ ell(g,cxp,y,7*s,10*s,c); circle(g,cxp-2*s,y-4*s,2*s,'rgba(255,255,255,0.5)'); }
   }
+}
+
+// Weiches Pfotenkissen: großer Ballen + 3 kleine Zehenballen + feine Fellstriche
+function drawPaw(g,x,y,s,b,c,dunkel){
+  ell(g,x,y,16*s,12*s,c);
+  for(var i=0;i<3;i++) circle(g,x+(i-1)*12*s,y-12*s,5*s,c);
+  g.save(); g.globalAlpha=0.3; g.fillStyle=dunkel;
+  ell(g,x,y+2*s,8*s,6*s,dunkel); g.restore();
+  g.save(); g.strokeStyle=dunkel; g.lineWidth=1.1*s; g.lineCap='round'; g.globalAlpha=0.35;
+  for(var j=0;j<2;j++){
+    var fx=x+(j-0.5)*10*s;
+    g.beginPath(); g.moveTo(fx,y-16*s); g.lineTo(fx+(j?2:-2)*s,y-22*s); g.stroke();
+  }
+  g.restore();
+}
+
+// Ein großes, liebes Auge: dunkelbraune Iris, großer Glanzpunkt, zweiter Funkel,
+// unteres Lid bei Entspannung, Wimpern oben
+function drawAuge(g,x,y,s,relax,side){
+  // weißer Rand (Augapfel-Andeutung, weich)
+  circle(g,x,y,11.5*s,'rgba(255,252,248,0.35)');
+  // Iris (dunkelbraun, warm) mit Verlauf
+  var ig=g.createRadialGradient(x,y-2*s,1, x,y,10*s);
+  ig.addColorStop(0,'#5a3a22'); ig.addColorStop(0.6,'#3a2318'); ig.addColorStop(1,'#26221f');
+  g.fillStyle=ig;
+  g.beginPath(); g.arc(x,y,9.5*s,0,Math.PI*2); g.fill();
+  // Pupille
+  circle(g,x,y+1*s,5*s,'#1a120c');
+  // großer weißer Glanzpunkt + kleiner zweiter Funkel
+  circle(g,x+side*3*s,y-3.5*s,3.2*s,'#fff');
+  circle(g,x-side*3.5*s,y+3*s,1.4*s,'rgba(255,255,255,0.85)');
+  // sanftes unteres Lid bei Entspannung
+  if(relax>0.2){
+    g.save(); g.strokeStyle='rgba(38,34,31,'+(0.5*relax).toFixed(2)+')'; g.lineWidth=2.5*s; g.lineCap='round';
+    g.beginPath(); g.arc(x,y+3.5*s-relax*-3*s,9*s,Math.PI*0.2,Math.PI*0.8);
+    g.stroke(); g.restore();
+  }
+  drawWimpern(g,x,y,s,side);
+}
+
+function drawWimpern(g,x,y,s,side){
+  g.save(); g.strokeStyle='#26221f'; g.lineWidth=1.8*s; g.lineCap='round';
+  for(var i=-1;i<=1;i++){
+    var a=(-Math.PI/2)+i*0.55 + side*0.1;
+    var x1=x+Math.cos(a)*10.5*s, y1=y+Math.sin(a)*10.5*s;
+    g.beginPath(); g.moveTo(x1,y1);
+    g.lineTo(x1+Math.cos(a)*5.5*s, y1+Math.sin(a)*5.5*s); g.stroke();
+  }
+  g.restore();
 }
 
 // Kopf-Deko nach der Frisur: Einhorn-Horn, Robo-Antenne, Krone, Helm, Piratenhut, Zauberhut
@@ -961,6 +1126,16 @@ function drawHair(g,cx,hy,s,b){
   } else if(f==='afro'){
     circle(g,cx,hy-80*s,52*s,c);
     circle(g,cx-38*s,hy-58*s,34*s,c); circle(g,cx+38*s,hy-58*s,34*s,c);
+  }
+  // v13: 2-3 feine Fell-/Haarstriche für Tiefe, egal welche Frisur
+  if(f){
+    g.save(); g.strokeStyle=shade(c,35); g.lineWidth=1.6*s; g.lineCap='round'; g.globalAlpha=0.55;
+    var rh=rnd(17);
+    for(var hs=0;hs<3;hs++){
+      var hx=cx+(rh()-0.5)*80*s, hyy2=hy-66*s-rh()*22*s, hl=(10+rh()*9)*s;
+      g.beginPath(); g.moveTo(hx-hl*0.5,hyy2); g.quadraticCurveTo(hx,hyy2-4*s,hx+hl*0.5,hyy2); g.stroke();
+    }
+    g.restore();
   }
 }
 
