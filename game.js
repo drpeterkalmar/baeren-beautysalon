@@ -1,4 +1,4 @@
-// game.js — Loop, Input (Pointer), Partikel, Letterbox
+// game.js — Loop, Input (Pointer), Partikel, Letterbox — v6
 (function(){
 'use strict';
 var S = window.BSSalon;
@@ -136,6 +136,14 @@ function update(dt){
     b._spa=(b._spa||0)+((stgt?1:0)-(b._spa||0))*Math.min(1,dt*1.4);
     b.relax=Math.max(b.relax, b._spa);
   }
+  // Eis: oberste Kugel schrumpft langsam beim Schlecken
+  if(S.state==='eis' && S.eis && S.eis.leck && S.eis.kugeln.length){
+    var top=S.eis.kugeln[S.eis.kugeln.length-1];
+    top.scale=(top.scale===undefined?1:top.scale)-dt*0.06;
+    if(top.scale<0.3) S.eis.kugeln.pop();
+  }
+  // Foto-Flash-Decay
+  if(S.flash>0) S.flash=Math.max(0,S.flash-dt*5);
   if(S.state!=='spa' && S.spaTarget!==undefined && S.spaTarget===0 && b._spa!==undefined){
     b._spa=Math.max(0,b._spa-dt*0.6);
   }

@@ -16,6 +16,8 @@ S.STATIONS = [
   {id:'parfum',   icon:'🌸', name:'Parfum'},
   {id:'makeup',   icon:'💄', name:'Make-up'},
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
+  {id:'eis',       icon:'🍦', name:'Eisdiele'},
+  {id:'foto',      icon:'📸', name:'Foto'},
   {id:'finish',   icon:'✨', name:'Fertig!'}
 ];
 
@@ -45,6 +47,7 @@ Art.DUFTE = [
 ];
 
 S.state = 'menu';          // menu | wahl | station-<id> | finish-done
+S.eis = null; S.fotoRahmen = 0; S.fotoBadge = false; S.flash = 0; S.rainbow = 0;
 S.baer = neuerBaer(0);
 S.saved = null;
 try{ S.saved = JSON.parse(localStorage.getItem('bs_baer')||'null'); }catch(e){}
@@ -76,6 +79,10 @@ function btn(x,y,w,h,label,fn,opt){
 S.buildUI = function(){
   buttons.length = 0;
   var st = S.state;
+  if(st==='menu'){
+    var ri=Math.floor(Math.random()*Art.MODELS.length);
+    S.menuBaer = Object.assign(neuerBaer(ri), {breath:0});
+  } else if(st!=='wahl'){ S.flash=0; }
   if(S._prev==='waschen' && st!=='waschen'){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
   if(S._prev==='foehnen' && st!=='foehnen'){ S.foehn=false; }
   S._prev = st;
@@ -108,6 +115,8 @@ S.buildUI = function(){
   else if(st==='parfum') buildParfum();
   else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
+  else if(st==='eis') buildEis();
+  else if(st==='foto') buildFoto();
   else if(st==='finish') buildFinish();
 };
 
@@ -122,10 +131,10 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // Reihen à 5 Tabs (10 Stationen)
+  // Reihen à 6 Tabs (12 Stationen)
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(42+(j%5)*170, S.VH-130+Math.floor(j/5)*62, 162, 58, st.icon+' '+st.name, function(){
+      btn(8+(j%6)*146, S.VH-130+Math.floor(j/6)*62, 140, 58, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1});
     })(S.STATIONS[j],j);
@@ -254,8 +263,36 @@ function buildSchmuecken(){
 function buildFinish(){
   S.hinweis = 'Perfekt! ✨';
   btn(330,470,240,70,'🎉 Fertig!',function(){
-    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1;
+    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1; S.rainbow=1;
     S.save(); S.buildUI();
+  },{big:1});
+}
+function buildEis(){
+  stationTabs();
+  S.hinweis = 'Waffel wählen, dann Kugel-Farben antippen — der Bär schleckt! 🍦';
+  if(!S.eis) S.eis = {waffel:0, kugeln:[], leck:true};
+  ['🍦 Tüte','🥤 Becher','❤️ Herz'].forEach(function(t,i){
+    btn(30+i*120, 100, 112, 54, t, function(){ S.eis.waffel=i; S.buildUI(); },
+      {active:function(){return S.eis.waffel===i;}, small:1});
+  });
+  Art.EIS_FARBEN.forEach(function(c,i){
+    btn(30+i*60, 166, 54, 54, '', function(){
+      if(S.eis.kugeln.length>=3) return;
+      S.eis.kugeln.push({c:i, scale:1}); S.eis.leck=true; S.buildUI();
+    },{fill:c});
+  });
+  btn(30, 232, 170, 50, '🧽 Neues Eis', function(){ S.eis.kugeln=[]; S.buildUI(); });
+}
+function buildFoto(){
+  stationTabs();
+  S.hinweis = 'Rahmen wählen und Klick! 📸';
+  if(S.fotoRahmen===undefined) S.fotoRahmen=0;
+  ['✨ Sternchen','🌸 Blümchen','👑 Gold'].forEach(function(t,i){
+    btn(30+i*140, 100, 132, 54, t, function(){ S.fotoRahmen=i; S.buildUI(); },
+      {active:function(){return S.fotoRahmen===i;}, small:1});
+  });
+  btn(30, 170, 170, 60, '📸 Klick!', function(){
+    S.flash=1; S.fotoBadge=true; S.buildUI();
   },{big:1});
 }
 
@@ -267,8 +304,8 @@ S.draw = function(g){
   g.fillStyle=grad; g.fillRect(0,0,W,H);
   drawDeko(g);
 
-  if(S.state==='menu'){ drawMenu(g); return; }
-  if(S.state==='wahl'){ drawWahl(g); return; }
+  if(S.state==='menu'){ drawSchmetterlinge(g); drawMenu(g); return; }
+  if(S.state==='wahl'){ drawSchmetterlinge(g); drawWahl(g); return; }
 
   if(S.state==='finish-done'){
     g.textAlign='center';
@@ -276,6 +313,7 @@ S.draw = function(g){
     g.lineWidth=8; g.strokeStyle='#fff';
     g.strokeText('Perfekt! ✨', W/2, 72);
     g.fillStyle='#7a4b8f'; g.fillText('Perfekt! ✨', W/2, 72);
+    if(S.rainbow) drawRegenbogen(g, W/2, 250, 190);
     // 10/10 Badge mit Sternen-Animation über dem Bär
     if(S.badge){
       var bt=(performance.now()/1000)%10;
@@ -327,8 +365,13 @@ S.draw = function(g){
     g.fillText(S.hinweis, W/2, 82);
   }
 
-  Art.drawBear(g,S.baer,{w:W,h:H});
+  Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
+  if(S.state==='eis' && S.eis){
+    var s3=Math.min(S.VW,S.VH)/420;
+    Art.drawEis(g, S.eis, S.VW*0.5, S.VH*0.58+40*s3, s3);
+  }
+  if(S.state==='foto') Art.drawFotoRahmen(g, S.fotoRahmen||0, S.flash||0, !!S.fotoBadge, S.VW, S.VH);
   drawButtons(g);
 };
 
@@ -364,6 +407,28 @@ function drawDeko(g){
       g.fillStyle='#fff'; g.fillRect(716+i*50,138,14,10);
     }
   }
+  if(S.state==='eis'){ // Eis-Stand-Deko
+    g.fillStyle='#c49a6c'; g.fillRect(690,300,180,16);
+    g.fillStyle='#7a4b8f'; g.fillRect(700,316,12,110); g.fillRect(848,316,12,110);
+    Art.EIS_FARBEN.forEach(function(c,i){
+      g.fillStyle=c; g.beginPath(); g.arc(720+i*30,288,13,0,Math.PI*2); g.fill();
+    });
+    g.fillStyle='#d9a94f';
+    g.beginPath(); g.moveTo(800,296); g.lineTo(830,296); g.lineTo(815,340); g.closePath(); g.fill();
+  }
+  if(S.state==='foto'){ // Foto-Studio: Scheinwerfer
+    g.fillStyle='#2b2b2b'; g.fillRect(60,60,10,90); g.fillRect(830,60,10,90);
+    g.save();
+    [['#fff0b3',65,58,-0.5],['#fff0b3',835,58,0.5]].forEach(function(d){
+      g.fillStyle=d[0];
+      g.beginPath(); g.arc(d[1],d[2],20,0,Math.PI*2); g.fill();
+      g.globalAlpha=0.12;
+      g.beginPath(); g.moveTo(d[1],d[2]);
+      g.lineTo(d[1]+(d[3]>0?-160:160)+d[3]*200, 400); g.lineTo(d[1]+d[3]*280, 430);
+      g.closePath(); g.fill(); g.globalAlpha=1;
+    });
+    g.restore();
+  }
 }
 function drawMenu(g){
   var W=S.VW,H=S.VH;
@@ -383,7 +448,7 @@ function drawMenu(g){
   g.fillText('🧸 Bären-Beautysalon v'+window.BS_VER, W/2, H-14);
   g.save();
   g.translate(0, H*0.10);
-  Art.drawBear(g,S.baer,{w:W,h:H*0.66});
+  Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H*0.66});
   g.restore();
   drawButtons(g);
 }
@@ -391,12 +456,21 @@ function drawMenu(g){
 // ---- Bären-Auswahl: 4x3 Raster (dynamisch aus MODELS) -------
 function kacheln(){
   var n=Art.MODELS.length, cols=4, rows=Math.ceil(n/cols);
+  var pitchX=170, w=156, pitchY=118, h=106;
+  var x0=(S.VW-(cols*pitchX-14))/2, y0=126;
   var out=[];
   for(var i=0;i<n;i++){
-    out.push({i:i, x:80+(i%cols)*185, y:150+Math.floor(i/cols)*150, w:170, h:136});
+    out.push({i:i, x:x0+(i%cols)*pitchX, y:y0+Math.floor(i/cols)*pitchY, w:w, h:h});
   }
   return out;
 }
+// Kontrast-Hintergrund für helle Kacheln: Modell-Kontur aufhellen (sonst hellblau)
+function shadeK(hex){
+  var n=parseInt(hex.slice(1),16);
+  var r=Math.min(255,((n>>16)&255)+70), gn=Math.min(255,((n>>8)&255)+70), bl=Math.min(255,(n&255)+70);
+  return 'rgba('+r+','+gn+','+bl+',0.35)';
+}
+
 function drawWahl(g){
   var W=S.VW,H=S.VH;
   var grad=g.createLinearGradient(0,0,0,H);
@@ -416,9 +490,13 @@ function drawWahl(g){
     g.save();
     g.beginPath();
     g.roundRect ? g.roundRect(k.x,k.y,k.w,k.h,16) : g.rect(k.x,k.y,k.w,k.h);
-    // helle Bären: hellblauer Karten-Hintergrund für Kontrast
-    g.fillStyle = act?'#fbeaff':(m.hell?'#d8ecff':'rgba(255,255,255,0.94)');
-    if(!act && (m.fell==='#f2f0ea'||m.fell==='#f4f6f7'||m.fell==='#f4f0e8')) g.fillStyle='#d8ecff';
+    // helle Bären: Kontrast-Hintergrund abhängig von Fellhelligkeit
+    g.fillStyle = act?'#fbeaff':'rgba(255,255,255,0.94)';
+    if(!act){
+      var nhex=parseInt(m.fell.slice(1),16);
+      var lum=((nhex>>16)&255)*0.3+((nhex>>8)&255)*0.59+(nhex&255)*0.11;
+      if(m.hell||lum>190) g.fillStyle = m.kontur ? shadeK(m.kontur) : '#d8ecff';
+    }
     g.fill();
     g.lineWidth = act?5:2; g.strokeStyle = act?'#7a4b8f':'#c9aede';
     g.stroke();
@@ -428,9 +506,9 @@ function drawWahl(g){
       gurkeL:false, gurkeR:false, duft:null,
       acc:{hut:null,schleife:null,brille:null,kette:null}});
     g.save();
-    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-30); g.clip();
-    g.translate(k.x+k.w/2, k.y+6); g.scale(0.34,0.34);
-    g.translate(-225,-30);
+    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-24); g.clip();
+    g.translate(k.x+k.w/2, k.y+2); g.scale(0.26,0.26);
+    g.translate(-225,-40);
     Art.drawBear(g, mini, {w:450, h:330});
     g.restore();
     g.fillStyle='#5d3a75'; g.font='bold 15px sans-serif';
@@ -606,8 +684,49 @@ S.dragBear = function(x,y,px,py){
   S.mass.ang=a;
 };
 
-function roundRect(g,x,y,w,h,r){
-  g.beginPath();
+function drawRegenbogen(g,cx,cy,R){
+  var cols=['#ff7a7a','#ffbe60','#ffe86e','#8fd48a','#7ab8f5','#c39bd3'];
+  g.save(); g.lineCap='round';
+  for(var i=0;i<cols.length;i++){
+    g.strokeStyle=cols[i]; g.globalAlpha=0.85; g.lineWidth=11;
+    g.beginPath(); g.arc(cx,cy,R-i*11,Math.PI,Math.PI*2); g.stroke();
+  }
+  g.globalAlpha=1;
+  // Wölkchen an den Enden
+  [-1,1].forEach(function(sgn){
+    var wx=cx+sgn*R, wy=cy;
+    g.fillStyle='rgba(255,255,255,0.9)';
+    g.beginPath(); g.arc(wx,wy,20,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(wx-16,wy+5,14,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(wx+16,wy+5,14,0,Math.PI*2); g.fill();
+  });
+  g.restore();
+}
+
+function drawSchmetterlinge(g){
+  var t=performance.now()/1000;
+  var cols=['#ff9eb5','#9b59b6','#f1c40f'];
+  for(var i=0;i<3;i++){
+    var p=(t*0.06+i/3)%1;
+    var x = p* (S.VW+80)-40;
+    var y = 120+Math.sin(t*0.9+i*2.1)*(60+i*30)+i*130;
+    if(y>S.VH-140) y=S.VH-150-(y-(S.VH-140));
+    var flap=Math.abs(Math.sin(t*9+i*2))*0.7+0.3;
+    g.save(); g.translate(x,y); g.rotate(Math.sin(t*0.9+i)*0.3);
+    g.fillStyle=cols[i%3];
+    g.save(); g.scale(flap,1);
+    g.beginPath(); g.ellipse(-8,-4,8,11,-0.4,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(8,-4,8,11,0.4,0,Math.PI*2); g.fill();
+    g.globalAlpha=0.8;
+    g.beginPath(); g.ellipse(-6,6,5,7,-0.3,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(6,6,5,7,0.3,0,Math.PI*2); g.fill();
+    g.restore();
+    g.fillStyle='#5d3a75'; g.fillRect(-1.5,-8,3,16);
+    g.restore();
+  }
+}
+
+function roundRect(g,x,y,w,h,r){  g.beginPath();
   g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
   g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
 }

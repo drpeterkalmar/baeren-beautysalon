@@ -1,17 +1,17 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 5;
-console.log('BS v5');
+window.BS_VER = 6;
+console.log('BS v6');
 
 var Art = window.BSArt = {};
 
-// 8 wählbare Bären-Modelle (fellIdx indexiert diese Liste)
+// 16 wählbare Bären-Modelle (fellIdx indexiert diese Liste)
 Art.MODELS = [
   {name:'Braunbär',  fell:'#a9744f'},
   {name:'Honigbär',  fell:'#d9a94f'},
   {name:'Panda',     fell:'#f2f0ea', ohren:'#2b2b2b', arme:'#2b2b2b', muster:'panda'},
-  {name:'Eisbär',    fell:'#f4f6f7', schnauze:'#cfe4f2'},
+  {name:'Eisbär',    fell:'#f4f6f7', schnauze:'#cfe4f2', kontur:'#8fa8bc', hell:1},
   {name:'Grizzly',   fell:'#5a3a22', muster:'grizzly'},
   {name:'Rosé-Bär',  fell:'#eba7b8'},
   {name:'Nachtbär',  fell:'#3f4a68', schnauze:'#8d97b5', muster:'sterne'},
@@ -19,7 +19,11 @@ Art.MODELS = [
   {name:'Regenbogen-Bär', fell:'#f4f0e8', muster:'regenbogen'},
   {name:'Punkti-Bär', fell:'#efe4cf', muster:'punkte', hell:1},
   {name:'Herzchen-Bär', fell:'#faf6f0', muster:'herz', schnauze:'#ffd9e0', hell:1},
-  {name:'Wald-Bär', fell:'#7fa89a', muster:'wald', schnauze:'#bde0cf'}
+  {name:'Wald-Bär', fell:'#7fa89a', muster:'wald', schnauze:'#bde0cf'},
+  {name:'Einhorn-Bär', fell:'#eef0f6', schnauze:'#ffd9e8', muster:'einhorn', kontur:'#b0b8d0', hell:1},
+  {name:'Robo-Bär', fell:'#9aa4ae', schnauze:'#c8d2da', muster:'robo', kontur:'#5a646e'},
+  {name:'Kirschblüten-Bär', fell:'#ffd3e0', schnauze:'#fff0f4', muster:'kirsch', kontur:'#d89aab', hell:1},
+  {name:'Wolken-Bär', fell:'#bcd8f2', schnauze:'#eaf4fd', muster:'wolke', kontur:'#7ba7cc', hell:1}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
 Art.LACK = ['#e91e63','#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#ffffff'];
@@ -84,6 +88,24 @@ Art.drawBear = function(g, b, opt){
   circle(g,cx-ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
   circle(g,cx+ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
   circle(g,cx,hy+bowOff*0.5,88*s*fluff,fell);
+
+  // Deutliche Kontur für helle Bären (Eisbär etc.)
+  if(m.kontur){
+    g.strokeStyle=m.kontur; g.lineWidth=3.5*s; g.lineJoin='round';
+    g.beginPath(); g.ellipse(cx,cy+70*s+bowOff,120*s*fluff,110*s,0,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.arc(cx,hy+bowOff*0.5,88*s*fluff,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.arc(cx-ex*s,hy+eyy*s+bowOff*0.5,26*s,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.arc(cx+ex*s,hy+eyy*s+bowOff*0.5,26*s,0,Math.PI*2); g.stroke();
+  }
+
+  // Fell-Glanz: weiche weiße Glanzflecken (fluff hoch oder Spa fertig)
+  if((b.fluff||0)>0.7 || opt.spaTarget===1){
+    g.save(); g.globalAlpha=0.35; g.fillStyle='#fff';
+    g.beginPath(); g.ellipse(cx-50*s,cy+30*s+bowOff,40*s,18*s,-0.5,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx+44*s,hy-30*s+bowOff*0.5,30*s,13*s,0.4,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx-30*s,hy+50*s+bowOff*0.5,18*s,8*s,0.2,0,Math.PI*2); g.fill();
+    g.restore();
+  }
 
   // Muster (Panda-Flecken, Grizzly-Spitzen, Nachtbär-Sterne)
   if(m.muster) drawMuster(g, m.muster, cx, cy, hy, bowOff, s);
@@ -246,6 +268,70 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
       g.beginPath(); g.moveTo(-13*s,0); g.lineTo(13*s,0); g.stroke();
       g.restore();
     }
+  } else if(typ==='einhorn'){
+    // Goldenes Horn auf der Stirn + Glitzer im Fell
+    var hx=cx, hyy=hy-82*s+bowOff*0.5;
+    g.save();
+    g.fillStyle='#f5c542'; g.strokeStyle='#c8941a'; g.lineWidth=2*s;
+    g.beginPath(); g.moveTo(hx-11*s,hyy+14*s); g.lineTo(hx+11*s,hyy+14*s); g.lineTo(hx,hyy-30*s); g.closePath();
+    g.fill(); g.stroke();
+    g.strokeStyle='#e0a92f'; g.lineWidth=1.8*s;
+    for(i=1;i<4;i++){ var ty=hyy+14*s-i*11*s;
+      g.beginPath(); g.moveTo(hx-(11-i*2.6)*s,ty); g.lineTo(hx+(11-i*2.6)*s,ty); g.stroke(); }
+    // Rosé Fell-Tupfer um das Horn
+    ell(g,hx-16*s,hyy+18*s,8*s,5*s,'rgba(255,182,206,0.7)');
+    ell(g,hx+16*s,hyy+18*s,8*s,5*s,'rgba(255,182,206,0.7)');
+    // Glitzer (deterministisch) auf Körper und Kopf
+    var re=rnd(31);
+    for(i=0;i<16;i++){
+      var ga=re()*Math.PI*2, gr=re()*0.85;
+      var gx=cx+Math.cos(ga)*100*s*gr, gy=(i<9? cy+70*s+Math.sin(ga)*95*s*gr : hy+bowOff*0.5+Math.sin(ga)*72*s*gr);
+      Art.drawSticker(g,'stern',gx,gy,(3.5+re()*3)*s, i%3?'rgba(255,215,90,0.9)':'rgba(255,160,200,0.9)');
+    }
+    g.restore();
+  } else if(typ==='robo'){
+    // Antenne mit Kugel + LED-Augen-Punkte + Metallnähte
+    g.strokeStyle='#5a646e'; g.lineWidth=3*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(cx,hy-88*s+bowOff*0.5); g.lineTo(cx,hy-118*s+bowOff*0.5); g.stroke();
+    circle(g,cx,hy-126*s+bowOff*0.5,9*s,'#e74c3c');
+    circle(g,cx-3*s,hy-129*s+bowOff*0.5,3*s,'#ffb3a7');
+    // LED-Auge
+    var ledT=performance.now()/1000;
+    circle(g,cx-30*s,hy-34*s+bowOff*0.5,4*s,'rgba(80,220,255,'+(0.6+0.4*Math.sin(ledT*3)).toFixed(2)+')');
+    // Nähte/Platten auf dem Körper
+    g.strokeStyle='rgba(80,92,102,0.6)'; g.lineWidth=2*s;
+    g.beginPath(); g.moveTo(cx-80*s,cy+60*s+bowOff); g.lineTo(cx+80*s,cy+60*s+bowOff); g.stroke();
+    g.beginPath(); g.moveTo(cx,cy-30*s+bowOff); g.lineTo(cx,cy+150*s+bowOff); g.stroke();
+    for(i=0;i<6;i++){ circle(g,cx-72*s+i*28*s, cy+60*s+bowOff, 2.5*s, '#6b7680'); }
+    // Bauch-Panel mit Herz-LED
+    g.fillStyle='rgba(200,212,222,0.85)';
+    g.fillRect(cx-30*s,cy+80*s+bowOff,60*s,36*s);
+    g.strokeStyle='#5a646e'; g.strokeRect(cx-30*s,cy+80*s+bowOff,60*s,36*s);
+    Art.drawSticker(g,'herz',cx,cy+94*s+bowOff,10*s,'rgba(231,76,60,'+(0.55+0.45*Math.sin(ledT*4)).toFixed(2)+')');
+  } else if(typ==='kirsch'){
+    // Winzige Blüten im Fell
+    var rk=rnd(47);
+    for(i=0;i<14;i++){
+      var ka=rk()*Math.PI*2, kr=0.25+rk()*0.65;
+      var kx=cx+Math.cos(ka)*105*s*kr;
+      var ky=(i<9? cy+70*s+Math.sin(ka)*92*s*kr : hy+bowOff*0.5+Math.sin(ka)*70*s*kr);
+      Art.drawSticker(g,'blume',kx,ky,(5+rk()*3)*s, i%2?'rgba(255,255,255,0.9)':'rgba(255,170,195,0.9)');
+    }
+  } else if(typ==='wolke'){
+    // Wölkchen-Muster
+    var wpos=[[-60,30],[35,-15],[-15,90],[70,75],[-80,110],[20,140]];
+    for(i=0;i<wpos.length;i++){
+      var wx=cx+wpos[i][0]*s, wy=cy+50*s+bowOff+wpos[i][1]*s*0.7;
+      g.fillStyle='rgba(255,255,255,0.85)';
+      circle(g,wx,wy,11*s,'rgba(255,255,255,0.85)');
+      circle(g,wx-10*s,wy+3*s,8*s,'rgba(255,255,255,0.85)');
+      circle(g,wx+10*s,wy+3*s,8*s,'rgba(255,255,255,0.85)');
+    }
+    for(i=0;i<2;i++){
+      var wx2=cx+[-25,30][i]*s, wy2=hy+[-25,-5][i]*s+bowOff*0.5;
+      circle(g,wx2,wy2,8*s,'rgba(255,255,255,0.8)');
+      circle(g,wx2+7*s,wy2+2*s,6*s,'rgba(255,255,255,0.8)');
+    }
   }
 }
 
@@ -324,6 +410,99 @@ function shade(hex,amt){
   return '#'+((r<<16)|(gn<<8)|bl).toString(16).padStart(6,'0');
 }
 Art.shade=shade;
+
+// Eis: Waffel + Kugeln, gezeichnet in der Bären-Perspektive (rechte Seite)
+Art.EIS_FARBEN = ['#ff9eb5','#e8c878','#8fd48a','#7ab8f5','#c39bd3'];
+Art.WAFFELN = ['tue','bech','herz'];
+Art.drawEis = function(g, eis, cx, cy, s){
+  // eis: {waffel, kugeln:[{c,scale}..], leck}
+  var wx=cx+150*s, wy=cy+80*s;
+  g.save();
+  // Waffel
+  g.fillStyle='#d9a94f'; g.strokeStyle='#b8842f'; g.lineWidth=2.5*s;
+  if(eis.waffel===0){ // Tüte
+    g.beginPath(); g.moveTo(wx-34*s,wy); g.lineTo(wx+34*s,wy); g.lineTo(wx,wy+86*s); g.closePath();
+    g.fill(); g.stroke();
+    g.strokeStyle='rgba(150,100,40,0.5)'; g.lineWidth=1.6*s;
+    for(var i=-2;i<=2;i++){ g.beginPath(); g.moveTo(wx+i*13*s-8*s,wy+4*s); g.lineTo(wx+i*7*s,wy+80*s); g.stroke(); }
+    for(var j=1;j<5;j++){ g.beginPath(); g.moveTo(wx-34*s+34*s*j/2.5,wy+j*17*s); g.lineTo(wx+34*s-34*s*j/2.5,wy+j*17*s); g.stroke(); }
+  } else if(eis.waffel===1){ // Becher
+    g.beginPath(); g.roundRect ? g.roundRect(wx-38*s,wy,76*s,60*s,8*s) : g.rect(wx-38*s,wy,76*s,60*s);
+    g.fillStyle='#f2e2c4'; g.fill(); g.stroke();
+    g.fillStyle='#d9a94f'; g.fillRect(wx-38*s,wy,76*s,10*s);
+  } else { // Herzwaffel
+    Art.drawSticker(g,'herz',wx,wy+34*s,44*s,'#d9a94f');
+    g.strokeStyle='#b8842f';
+    Art.drawSticker(g,'herz',wx,wy+34*s,44*s,'rgba(0,0,0,0)');
+    g.beginPath();
+  }
+  // Kugeln gestapelt (unterste zuerst)
+  for(var k=0;k<eis.kugeln.length;k++){
+    var kg=eis.kugeln[k];
+    var ky2=wy-(k*26+14)*s;
+    var kr=22*s*(kg.scale===undefined?1:kg.scale);
+    circle(g,wx,ky2,kr, Art.EIS_FARBEN[kg.c]);
+    g.strokeStyle='rgba(0,0,0,0.12)'; g.lineWidth=2*s;
+    g.beginPath(); g.arc(wx,ky2,kr,0,Math.PI*2); g.stroke();
+    circle(g,wx-kr*0.3,ky2-kr*0.35,kr*0.22,'rgba(255,255,255,0.7)');
+  }
+  // Zunge zum obersten Kugel-Lecken
+  if(eis.leck && eis.kugeln.length){
+    var topKY=wy-((eis.kugeln.length-1)*26+14)*s;
+    var lt=performance.now()/1000;
+    var lx=cx+60*s, ly=cy-20*s;
+    var dx=wx-lx, dy=topKY-ly;
+    var len=Math.hypot(dx,dy)||1;
+    var p=(Math.sin(lt*6)+1)/2;
+    g.strokeStyle='#ff8fa8'; g.lineWidth=7*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(lx,ly);
+    g.quadraticCurveTo(lx+dx*0.5, ly+dy*0.5+10*s, lx+dx*p, ly+dy*p); g.stroke();
+    Art.drawSticker(g,'herz',lx+dx*p, ly+dy*p-8*s, 5*s, 'rgba(255,143,168,0.8)');
+  }
+  g.restore();
+};
+
+// Foto-Rahmen: Sternchen / Blümchen / Gold + Polaroid-Look + Blitz/Flash
+Art.FOTO_RAHMEN = ['sterne','blumen','gold'];
+Art.drawFotoRahmen = function(g, rahmen, flash, badge, W, H){
+  var t=performance.now()/1000;
+  var x0=W/2-250, y0=40, fw=500, fh=470;
+  g.save();
+  if(rahmen===2){ // Gold
+    g.strokeStyle='#d4af37'; g.lineWidth=10;
+    g.strokeRect(x0,y0,fw,fh);
+    g.strokeStyle='#8a6d1a'; g.lineWidth=3; g.strokeRect(x0+8,y0+8,fw-16,fh-16);
+    [[x0,y0],[x0+fw,y0],[x0,y0+fh],[x0+fw,y0+fh]].forEach(function(p){
+      Art.drawSticker(g,'stern',p[0],p[1],16,'#d4af37');
+    });
+  } else if(rahmen===1){ // Blumen
+    g.strokeStyle='#e89ab8'; g.lineWidth=6; g.strokeRect(x0,y0,fw,fh);
+    for(var i=0;i<12;i++){
+      var px=x0+(i%6)*fw/5, py=(i<6? y0 : y0+fh);
+      Art.drawSticker(g,'blume',px,py,12,'rgba(232,154,184,0.95)');
+    }
+  } else { // Sterne
+    g.strokeStyle='#9b59b6'; g.lineWidth=6; g.setLineDash([18,12]);
+    g.strokeRect(x0,y0,fw,fh); g.setLineDash([]);
+    for(var j=0;j<14;j++){
+      var sa=j/14*Math.PI*2 + t*0.3;
+      Art.drawSticker(g,'stern',x0+fw/2+Math.cos(sa)*(fw/2+14), y0+fh/2+Math.sin(sa)*(fh/2+14), 10,'#ffd24d');
+    }
+  }
+  if(badge){
+    g.fillStyle='rgba(255,255,255,0.95)'; g.strokeStyle='#7a4b8f'; g.lineWidth=3;
+    g.beginPath(); g.roundRect ? g.roundRect(W/2-120,H-70,240,48,24) : g.rect(W/2-120,H-70,240,48);
+    g.fill(); g.stroke();
+    g.fillStyle='#7a4b8f'; g.font='bold 24px sans-serif'; g.textAlign='center';
+    g.fillText('📸 Klick!', W/2, H-38);
+  }
+  if(flash>0){
+    g.globalAlpha=Math.min(1,flash);
+    g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+    g.globalAlpha=1;
+  }
+  g.restore();
+};
 
 // Sticker (Herz, Stern, Blume) – zeichnet bei (x,y), Größe r
 Art.drawSticker=function(g,typ,x,y,r,c){
