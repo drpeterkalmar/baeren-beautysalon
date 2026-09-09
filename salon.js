@@ -840,14 +840,22 @@ function drawMenu(g){
   }
   g.textAlign='center';
   g.fillStyle='#7a4b8f'; g.font='bold 52px sans-serif';
-  g.fillText('🧸 Bären-Beautysalon', W/2, 64);
+  var bTitle='Bären-Beautysalon';
+  var tw=g.measureText(bTitle).width;
+  g.font='68px sans-serif';
+  var ew=g.measureText('🧸').width;
+  g.textAlign='left';
+  g.fillText('🧸', W/2-(tw+ew+12)/2, 70);
+  g.fillStyle='#7a4b8f'; g.font='bold 52px sans-serif';
+  g.fillText(bTitle, W/2-(tw+ew+12)/2+ew+12, 64);
+  g.textAlign='center';
   g.fillStyle='#9c6bb5'; g.font='24px sans-serif';
   g.fillText('Mach den Bären ganz hübsch!', W/2, 106);
   g.fillStyle='#8a6aa0'; g.font='14px sans-serif';
   g.fillText('🧸 Bären-Beautysalon v'+window.BS_VER, W/2, H-14);
   g.save();
-  g.translate(0, H*0.10);
-  Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H*0.66});
+  g.translate(0, H*0.13);
+  Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H*0.62});
   g.restore();
   drawButtons(g);
 }

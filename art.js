@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 14;
-console.log('BS v14');
+window.BS_VER = 15;
+console.log('BS v15');
 
 var Art = window.BSArt = {};
 
@@ -165,7 +165,7 @@ Art.drawBear = function(g, b, opt){
   fellShadeLayers(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,dunkel,hell);
   // Arme (Panda: schwarz); Jubel-Pose: Arme hoch statt hängen
   var jub = b.jubel||0;
-  var axL = cx-(105+rx*8)*s + jub*40*s, axR = cx+(105+rx*8)*s - jub*40*s;
+  var axL = cx-(112+rx*8)*s + jub*40*s, axR = cx+(112+rx*8)*s - jub*40*s;
   var ay = cy+(40+rx*30)*s+bowOff - jub*120*s;
   g.save();
   if(jub>0.01){
@@ -176,29 +176,41 @@ Art.drawBear = function(g, b, opt){
     g.translate(axR,ay); g.rotate(0.7*jub);
     fluffEll(g,0,-20*s*jub,34*s,64*s,1.6*s,armC,6);
   } else {
-    fluffEll(g,axL,ay,38*s,70*s,2.2*s,armC,5);
-    fluffEll(g,axR,ay,38*s,70*s,2.2*s,armC,6);
-    // Pfotenkissen an den Arm-Enden (weich, ohne Krallen)
-    ell(g,axL,ay+58*s,15*s,12*s,schnauzeC);
-    ell(g,axR,ay+58*s,15*s,12*s,schnauzeC);
+    // Arme seitlich abstehend: Schulter-Pivot, nach außen geneigt (Alessia-Wunsch)
+    var tilt = 0.38, pivY = ay - 64*s;
+    g.save();
+    g.translate(axL, pivY); g.rotate(tilt);
+    // Armpfoten etwas größer
+    fluffEll(g,0,64*s,36*s,66*s,2.2*s,armC,5);
+    ell(g,0,122*s,17*s,13*s,schnauzeC);
     g.save(); g.globalAlpha=0.25; g.fillStyle=dunkel;
-    ell(g,axL,ay+62*s,9*s,6*s,dunkel); ell(g,axR,ay+62*s,9*s,6*s,dunkel);
+    ell(g,0,128*s,10*s,7*s,dunkel); g.restore();
+    g.restore();
+    g.save();
+    g.translate(axR, pivY); g.rotate(-tilt);
+    fluffEll(g,0,64*s,36*s,66*s,2.2*s,armC,6);
+    ell(g,0,122*s,17*s,13*s,schnauzeC);
+    g.save(); g.globalAlpha=0.25; g.fillStyle=dunkel;
+    ell(g,0,128*s,9*s,6*s,dunkel); g.restore();
     g.restore();
   }
   g.restore();
-  // Beine/Füße (flauschig) + weiche Pfotenkissen
-  fluffEll(g,cx-55*s,cy+165*s,52*s,34*s,2.2*s,fell,7);
-  fluffEll(g,cx+55*s,cy+165*s,52*s,34*s,2.2*s,fell,8);
-  ell(g,cx-55*s,cy+160*s,26*s,14*s,schnauzeC);
-  ell(g,cx+55*s,cy+160*s,26*s,14*s,schnauzeC);
+  // Beine/Füße (flauschig) + weiche Pfotenkissen — größer (Alessia)
+  fluffEll(g,cx-58*s,cy+165*s,56*s,37*s,2.2*s,fell,7);
+  fluffEll(g,cx+58*s,cy+165*s,56*s,37*s,2.2*s,fell,8);
+  ell(g,cx-58*s,cy+160*s,29*s,16*s,schnauzeC);
+  ell(g,cx+58*s,cy+160*s,29*s,16*s,schnauzeC);
   // Pfotenkissen: weiche Ballen + winzige Fellstriche zwischen den Zehen
-  drawPaw(g,cx-55*s,cy+162*s,s,b,schnauzeC,dunkel);
-  drawPaw(g,cx+55*s,cy+162*s,s,b,schnauzeC,dunkel);
-  drawClaws(g,cx-55*s,cy+175*s,s,b,'L');
-  drawClaws(g,cx+55*s,cy+175*s,s,b,'R');
+  drawPaw(g,cx-58*s,cy+162*s,s,b,schnauzeC,dunkel);
+  drawPaw(g,cx+58*s,cy+162*s,s,b,schnauzeC,dunkel);
+  drawClaws(g,cx-58*s,cy+175*s,s,b,'L');
+  drawClaws(g,cx+58*s,cy+175*s,s,b,'R');
 
-  // Kopf (flauschig + Schattierung), Ohren mit Verlauf + Büschel
-  var hy = cy-90*s+bowOff;
+  // Kopf (flauschig + Schattierung), Ohren mit Verlauf + Büschel — größer (Alessia)
+  var hy = cy-82*s+bowOff;
+  var HS = 1.12; // Kopf-Skalierung
+  g.save();
+  g.translate(cx, hy); g.scale(HS, HS); g.translate(-cx, -hy);
   var ex = 62+rx*16, eyy = -70+rx*12;
   var ohrY=hy+eyy*s+bowOff*0.5;
   fluffEll(g,cx-ex*s,ohrY,26*s,26*s,1.2*s,ohrC,9);
@@ -357,6 +369,7 @@ Art.drawBear = function(g, b, opt){
 
   // Accessoires
   drawAcc(g,cx,hy,bowOff,s,b);
+  g.restore(); // Kopf-Skalierung
 
   // Schaum (weiße Blasen am Körper)
   if(b.schaum>0){
