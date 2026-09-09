@@ -1,4 +1,4 @@
-// game.js — Loop, Input (Pointer), Partikel, Letterbox — v6
+// game.js — Loop, Input (Pointer), Partikel, Letterbox — v9
 (function(){
 'use strict';
 var S = window.BSSalon;
@@ -58,6 +58,15 @@ G.konfettiBurst = function(x,y){
       c:cols[i%cols.length],life:1.4+Math.random()*0.8,t:0,size:6+Math.random()*6,star:false,wave:0});
   }
 };
+// Überraschungs-Wahl: kurze Sternchen-Explosion
+G.sternExplosion = function(x,y){
+  var cols=['#ffd24d','#ff9eb5','#fff','#c39bd3'];
+  for(var i=0;i<28;i++){
+    var a=Math.random()*Math.PI*2, v=150+Math.random()*240;
+    parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,
+      c:cols[i%cols.length],life:0.9+Math.random()*0.5,t:0,size:10+Math.random()*10,star:true,wave:0});
+  }
+};
 function stepParts(dt){
   for(var i=parts.length-1;i>=0;i--){
     var p=parts[i]; p.t+=dt;
@@ -103,9 +112,10 @@ cv.addEventListener('pointermove', function(e){
   var p=toVirt(e);
   if(S.state==='waschen') S.tapBear(p[0],p[1]);
   if(S.state==='massage') S.dragBear(p[0],p[1],lastX,lastY);
+  if(S.state==='zuckerwatte' && S._stabDrag && S.watte){ S.watte.sx=p[0]; S.watte.sy=p[1]; }
   lastX=p[0]; lastY=p[1];
 }, {passive:false});
-function up(e){ e&&e.preventDefault(); down=false; holdBtn=null; S.foehn=false; }
+function up(e){ e&&e.preventDefault(); down=false; holdBtn=null; S.foehn=false; S._stabDrag=false; }
 cv.addEventListener('pointerup', up, {passive:false});
 cv.addEventListener('pointercancel', up, {passive:false});
 document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {passive:false});
@@ -160,6 +170,20 @@ function update(dt){
   b.breathe = (b.breathe||0)+dt;
   // Tanz: Pirouette abbauen
   if(S.tanz && S.tanz.spin>0) S.tanz.spin=Math.max(0, S.tanz.spin-dt*1.2);
+  // Zuckerwatte: spin wächst Watte, Bär beißt zwischendurch ab
+  if(S.state==='zuckerwatte' && S.watte){
+    var wt=S.watte;
+    wt.spin=Math.max(0,(wt.spin||0)-dt*0.25); // Spin lässt nach
+    if(wt.spin>0) wt.lvl=Math.min(1, (wt.lvl||0)+dt*wt.spin*0.30);
+    // gelegentlicher Abbeißer
+    if(wt._bissT===undefined) wt._bissT=4+Math.random()*3;
+    wt._bissT-=dt;
+    if(wt._bissT<0 && wt.lvl>0.15){
+      wt.lvl=Math.max(0.05, wt.lvl-0.22); wt.kau=1.4;
+      wt._bissT=4+Math.random()*3.5;
+    }
+    if(wt.kau>0) wt.kau=Math.max(0,wt.kau-dt);
+  }
   if(b._blinkT===undefined) b._blinkT = 2+Math.random()*3;
   b._blinkT -= dt;
   if(b._blinkT<0){ b.blink=1; if(b._blinkT<-0.12){ b.blink=0; b._blinkT=2.5+Math.random()*3.5; } }

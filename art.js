@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 8;
-console.log('BS v8');
+window.BS_VER = 9;
+console.log('BS v9');
 
 var Art = window.BSArt = {};
 
@@ -31,7 +31,8 @@ Art.MODELS = [
   {name:'Dino-Bär', fell:'#6fae4f', schnauze:'#b8e09a', muster:'dino', kontur:'#3e6b28'},
   {name:'Superhelden-Bär', fell:'#4a7fd6', schnauze:'#9fc0ee', muster:'superheld', kontur:'#274b8a'},
   {name:'Schnee-Bär', fell:'#cfe6f5', schnauze:'#ffffff', muster:'schnee', kontur:'#89aec9', hell:1},
-  {name:'Kaktus-Bär', fell:'#3f9e57', schnauze:'#9fd8ae', muster:'kaktus', kontur:'#25703b'}
+  {name:'Kaktus-Bär', fell:'#3f9e57', schnauze:'#9fd8ae', muster:'kaktus', kontur:'#25703b'},
+  {name:'Überraschung?', fell:'#dcc9f2', schnauze:'#f3e9ff', muster:'frage', kontur:'#a37fd1', hell:1}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
 Art.LACK = ['#e91e63','#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#ffffff'];
@@ -397,27 +398,31 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
     Art.drawSticker(g,'stern',cx,cy+92*s+bowOff,9*s,'#ffe9a8');
     g.restore();
   } else if(typ==='schnee'){
-    // Schneeflocken-Muster + Glitzer-Funkeln
+    // Große helle Schneeflocken + kräftiges Funkeln + gelegentliches Glitzern im Fell
     var tW=performance.now()/1000;
-    var fl=[[-55,20],[35,-45],[ -10,85],[70,55],[-80,95],[20,145]];
+    var fl=[[-55,20],[35,-45],[-10,85],[70,55],[-80,95],[20,145],[-40,120],[55,10]];
     for(i=0;i<fl.length;i++){
       var fx=cx+fl[i][0]*s, fy=cy+60*s+bowOff+fl[i][1]*s*0.75;
-      g.strokeStyle='rgba(255,255,255,0.9)'; g.lineWidth=2*s; g.lineCap='round';
+      g.strokeStyle='rgba(255,255,255,1)'; g.lineWidth=3*s; g.lineCap='round';
       for(var k6=0;k6<6;k6++){
         var fa2=k6*Math.PI/3;
         g.beginPath(); g.moveTo(fx,fy);
-        g.lineTo(fx+Math.cos(fa2)*11*s, fy+Math.sin(fa2)*11*s); g.stroke();
+        g.lineTo(fx+Math.cos(fa2)*15*s, fy+Math.sin(fa2)*15*s); g.stroke();
       }
-      circle(g,fx,fy,2.4*s,'rgba(255,255,255,0.95)');
+      circle(g,fx,fy,3.6*s,'rgba(255,255,255,1)');
+      circle(g,fx,fy,1.6*s,'#bfe2ff');
     }
     var rs=rnd(77);
-    for(i=0;i<12;i++){ // Funkeln
+    for(i=0;i<18;i++){ // stärkeres Funkeln
       var sa=rs()*Math.PI*2, sr=0.2+rs()*0.65;
       var sx2=cx+Math.cos(sa)*105*s*sr;
-      var sy2=(i<8? cy+70*s+bowOff+Math.sin(sa)*92*s*sr : hy+bowOff*0.5+Math.sin(sa)*70*s*sr);
-      var twk=0.5+0.5*Math.sin(tW*3.5+i*1.3);
-      Art.drawSticker(g,'stern',sx2,sy2,(2.5+2.5*twk)*s,'rgba(255,255,255,'+(0.4+0.55*twk).toFixed(2)+')');
+      var sy2=(i<11? cy+70*s+bowOff+Math.sin(sa)*92*s*sr : hy+bowOff*0.5+Math.sin(sa)*70*s*sr);
+      var twk=0.5+0.5*Math.sin(tW*4.5+i*1.3);
+      Art.drawSticker(g,'stern',sx2,sy2,(4+4.5*twk)*s,'rgba(255,255,255,'+(0.55+0.45*twk).toFixed(2)+')');
     }
+    // seltenes großes Glitzern (blitzt im Sekundentakt an wechselnden Stellen auf)
+    var glz=Math.sin(tW*1.4)>0.75;
+    if(glz) Art.drawSticker(g,'stern',cx-40*s+Math.sin(tW*0.7)*50*s, cy+40*s+bowOff, 18*s,'rgba(255,255,255,0.95)');
   } else if(typ==='kaktus'){
     // Kleine V-Stacheln über Körper+Kopf (rosa Blüte: drawKopfDeko)
     var rk2=rnd(91);
@@ -434,6 +439,47 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
       g.beginPath(); g.moveTo(cx+i*40*s,cy-8*s+bowOff);
       g.quadraticCurveTo(cx+i*52*s,cy+80*s+bowOff,cx+i*40*s,cy+160*s+bowOff); g.stroke();
     }
+    // 2 kleine seitliche Kaktus-Arme mit Stacheln
+    g.save();
+    g.strokeStyle='#25703b'; g.fillStyle='#3f9e57'; g.lineWidth=2.4*s; g.lineJoin='round';
+    [-1,1].forEach(function(sg){
+      var ax2=cx+sg*118*s, ay3=cy+62*s+bowOff;
+      g.beginPath();
+      g.moveTo(ax2,ay3+16*s); g.quadraticCurveTo(ax2+sg*38*s, ay3+14*s, ax2+sg*38*s, ay3-16*s);
+      g.quadraticCurveTo(ax2+sg*38*s, ay3-30*s, ax2+sg*24*s, ay3-30*s);
+      g.quadraticCurveTo(ax2+sg*24*s, ay3-14*s, ax2+sg*22*s, ay3-2*s);
+      g.quadraticCurveTo(ax2+sg*18*s, ay3+4*s, ax2, ay3+2*s);
+      g.closePath(); g.fill(); g.stroke();
+    });
+    g.strokeStyle='rgba(255,242,220,0.9)'; g.lineWidth=1.5*s;
+    [-1,1].forEach(function(sg){
+      var bx4=cx+sg*140*s, by4=cy+40*s+bowOff;
+      g.beginPath(); g.moveTo(bx4-3*s,by4); g.lineTo(bx4,by4-4*s); g.lineTo(bx4+3*s,by4); g.stroke();
+      g.beginPath(); g.moveTo(bx4-3*s+sg*16*s,by4+18*s); g.lineTo(bx4+sg*16*s,by4+14*s); g.lineTo(bx4+3*s+sg*16*s,by4+18*s); g.stroke();
+    });
+    g.restore();
+  } else if(typ==='frage'){
+    // Überraschungs-Bär: viele Fragezeichen auf dem Fell + Punktdusche
+    var tF=performance.now()/1000;
+    var fq=[[-55,30],[30,-40],[-15,100],[75,70],[-85,115],[15,150],[-45,-70],[50,-15]];
+    g.textAlign='center'; g.textBaseline='middle';
+    for(i=0;i<fq.length;i++){
+      var qx=cx+fq[i][0]*s, qy=(i<6? cy+55*s+bowOff+fq[i][1]*s*0.8 : hy+bowOff*0.5+fq[i][1]*s*0.8);
+      var qs=(15+3*Math.sin(tF*3+i*1.7))*s;
+      g.font='bold '+Math.max(8,qs)+'px sans-serif';
+      g.fillStyle='rgba(122,75,143,0.85)';
+      g.fillText('?', qx, qy);
+    }
+    // kleine funkelnde Punkte
+    var rf2=rnd(133);
+    for(i=0;i<10;i++){
+      var fa3=rf2()*Math.PI*2, fr3=0.25+rf2()*0.6;
+      var fx3=cx+Math.cos(fa3)*100*s*fr3;
+      var fy3=(i<7? cy+70*s+bowOff+Math.sin(fa3)*90*s*fr3 : hy+bowOff*0.5+Math.sin(fa3)*72*s*fr3);
+      var tw2=0.5+0.5*Math.sin(tF*4+i*2);
+      Art.drawSticker(g,'stern',fx3,fy3,(3+3*tw2)*s, i%2?'rgba(255,210,240,'+(0.5+0.5*tw2).toFixed(2)+')':'rgba(255,225,110,'+(0.5+0.5*tw2).toFixed(2)+')');
+    }
+    g.textBaseline='alphabetic';
   }
 }
 

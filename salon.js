@@ -19,6 +19,8 @@ S.STATIONS = [
   {id:'makeup',   icon:'💄', name:'Make-up'},
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
   {id:'eis',       icon:'🍦', name:'Eisdiele'},
+  {id:'zuckerwatte',icon:'🍬', name:'Zuckerwatte'},
+  {id:'karussell', icon:'🎠', name:'Karussell'},
   {id:'geburtstag',icon:'🎂', name:'Geburtstag'},
   {id:'disco',     icon:'🪩', name:'Disco'},
   {id:'foto',      icon:'📸', name:'Foto'},
@@ -125,6 +127,8 @@ S.buildUI = function(){
   else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
   else if(st==='eis') buildEis();
+  else if(st==='zuckerwatte') buildZuckerwatte();
+  else if(st==='karussell') buildKarussell();
   else if(st==='geburtstag') buildGeburtstag();
   else if(st==='disco') buildDisco();
   else if(st==='foto') buildFoto();
@@ -142,12 +146,12 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // Reihen à 8 Tabs (16 Stationen), 2 Reihen
+  // Reihen à 9 Tabs (18 Stationen), 2 Reihen — kompakt
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(6+(j%8)*112, S.VH-130+Math.floor(j/8)*62, 108, 58, st.icon+' '+st.name, function(){
+      btn(6+(j%9)*99, S.VH-118+Math.floor(j/9)*56, 94, 52, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
-      }, {active:function(){ return S.state===st.id; }, small:1});
+      }, {active:function(){ return S.state===st.id; }, small:1, tiny:1});
     })(S.STATIONS[j],j);
   }
 }
@@ -318,6 +322,24 @@ function buildEis(){
   });
   btn(30, 232, 170, 50, '🧽 Neues Eis', function(){ S.eis.kugeln=[]; S.buildUI(); });
 }
+function buildZuckerwatte(){
+  stationTabs();
+  S.hinweis = 'Tippe die Wolle an zum Spinnen — halte den Watte-Stab fest und zieh ihn! 🍬';
+  if(!S.watte) S.watte = {lvl:0, kau:0, sx:S.VW*0.5+150, sy:S.VH*0.58+120, spin:0};
+  btn(30,100,190,58,'🍬 Wirbeln!',function(){ S.watte.spin=Math.min(1,(S.watte.spin||0)+0.45); },{active:function(){return S.watte.spin>0;}});
+  btn(30,168,190,52,'🧽 Neue Watte',function(){ S.watte={lvl:0,kau:0,sx:S.VW*0.5+150,sy:S.VH*0.58+120,spin:0}; S.buildUI(); });
+}
+function buildKarussell(){
+  stationTabs();
+  S.hinweis = 'Pferd-Farbe wählen — das Karussell dreht sich! 🎠';
+  if(!S.karo) S.karo = {pferd:0, w:0.7, ang:0};
+  ['#ff9eb5','#7ab8f5','#ffd24d'].forEach(function(c,i){
+    btn(30+i*66, 100, 58, 58, '', function(){ S.karo.pferd=i; S.buildUI(); },
+      {fill:c, active:function(){return S.karo.pferd===i;}});
+  });
+  btn(236,100,190,58,'🐢 Langsam',function(){ S.karo.w=0.45; S.buildUI(); },{active:function(){return S.karo.w<0.7;}});
+  btn(436,100,190,58,'🐇 Schnell',function(){ S.karo.w=1.6; S.buildUI(); },{active:function(){return S.karo.w>1;}});
+}
 function buildGeburtstag(){
   stationTabs();
   S.hinweis = 'Kerzen antippen: anzünden und wieder ausblasen! 🎂';
@@ -480,6 +502,8 @@ S.draw = function(g){
     Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
     drawStickers(g);
     g.restore();
+  } else if(S.state==='zuckerwatte' || S.state==='karussell'){
+    if(S.state==='zuckerwatte') drawZuckerwatte(g); else drawKarussell(g);
   } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
@@ -653,9 +677,17 @@ function drawWahl(g){
       acc:{hut:null,schleife:null,brille:null,kette:null}});
     // Idle-Bounce: aktives Bärchen hüpft leicht (nur im Wahl-Screen)
     var bounceY = act ? -Math.abs(Math.sin(performance.now()/1000*4.2+k.i*1.7))*8 : 0;
+    // Überraschungs-Kachel: wackelnde Animation
+    if(k.i===Art.MODELS.length-1){
+      var wt=performance.now()/1000;
+      g.rotate(0); // noop für Klarheit
+      bounceY = -Math.abs(Math.sin(wt*5))*6;
+      g.translate(0,0);
+    }
     g.save();
     g.beginPath(); g.rect(k.x,k.y,k.w,k.h-24); g.clip();
     g.translate(k.x+k.w/2, k.y+2+bounceY); g.scale(0.26,0.26);
+    if(k.i===Art.MODELS.length-1) g.rotate(Math.sin(performance.now()/1000*6)*0.12);
     g.translate(-225,-40);
     Art.drawBear(g, mini, {w:450, h:330});
     g.restore();
@@ -1029,12 +1061,33 @@ S.tapBear = function(x,y){
     for(var i=0;i<ks.length;i++){
       var k=ks[i];
       if(x>=k.x&&x<=k.x+k.w&&y>=k.y&&y<=k.y+k.h){
-        S.baer = neuerBaer(k.i); S.save();
-        S.state='waschen'; S.buildUI();
+        if(k.i===Art.MODELS.length-1){ // Überraschungs-Kachel: zufälliger Bär 0..23
+          var rix=Math.floor(Math.random()*(Art.MODELS.length-1));
+          S.baer = neuerBaer(rix); S.save();
+          S.state='waschen'; S.buildUI();
+          // Konfetti-Puff + Sternchen-Explosion beim Erscheinen
+          window.BSGame && window.BSGame.konfettiBurst(S.VW/2, S.VH*0.4);
+          window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S.VW/2, S.VH*0.5);
+        } else {
+          S.baer = neuerBaer(k.i); S.save();
+          S.state='waschen'; S.buildUI();
+        }
         return true;
       }
     }
     return false;
+  }
+  if(S.state==='zuckerwatte' && S.watte){
+    var wt2=S.watte;
+    // Watte-Stab antippen = Drag aktiv
+    if(S._stabHit && x>=S._stabHit.x&&x<=S._stabHit.x+S._stabHit.w&&y>=S._stabHit.y&&y<=S._stabHit.y+S._stabHit.h){
+      S._stabDrag=true; return true;
+    }
+    // Zuckerwolle antippen = Spinnen starten
+    if(S._wolleHit && x>=S._wolleHit.x&&x<=S._wolleHit.x+S._wolleHit.w&&y>=S._wolleHit.y&&y<=S._wolleHit.y+S._wolleHit.h){
+      wt2.spin=Math.min(1,(wt2.spin||0)+0.45); return true;
+    }
+    return true;
   }
   if(S.state==='foto' && S._albumBoxes){
     // Album-Kachel tippen: Look zurückladen
@@ -1242,4 +1295,141 @@ S.hitButton = function(x,y){
   }
   return null;
 };
+// ---- Zuckerwatte: Wolle-Tap spinnt, Stab per Drag, Bär beißt ab ----
+function drawZuckerwatte(g){
+  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
+  var wt=S.watte;
+  // Hintergrund: Jahrmarkt-Bude
+  g.fillStyle='#ffe9f0'; g.fillRect(0,0,S.VW,S.VH*0.66);
+  g.fillStyle='#ffd1e0'; for(var st2=0;st2<9;st2++) g.fillRect(st2*112,0,56,S.VH*0.66);
+  // schwebende Zuckerkrümel-Partikel
+  for(var p=0;p<16;p++){
+    var px=(p*167+Math.sin(t*0.7+p)*30)%S.VW, py=80+((p*131)%300)+Math.sin(t*1.3+p*2)*20;
+    g.fillStyle=['#ff9eb5','#ffd24d','#c39bd3','#fff'][p%4];
+    g.beginPath(); g.arc(px,py,2.5+Math.sin(t*3+p)*1.2,0,Math.PI*2); g.fill();
+  }
+  // Spinn-Maschine (Wolle im Topf)
+  var mx=S.VW*0.5-170, my=S.VH*0.55+40;
+  g.fillStyle='#8a97a5'; g.strokeStyle='#5a646e'; g.lineWidth=3;
+  g.beginPath(); g.roundRect ? g.roundRect(mx-70,my,140,90,14) : g.rect(mx-70,my,140,90);
+  g.fill(); g.stroke();
+  g.fillStyle='#ff9ec4';
+  g.beginPath(); g.ellipse(mx,my,66,26,0,0,Math.PI*2); g.fill();
+  g.fillStyle='#ffb8d6';
+  g.beginPath(); g.ellipse(mx,my-4,50,18,0,0,Math.PI*2); g.fill();
+  if(wt.spin>0){ // Wirbel im Topf
+    for(var w=0;w<5;w++){
+      var wa=t*8*wt.spin+w*1.3;
+      g.beginPath(); g.ellipse(mx+Math.cos(wa)*38,my-3+Math.sin(wa)*8,6,4,0,0,Math.PI*2); g.fill();
+    }
+  }
+  // Zuckerwolle antippen
+  if(!S._wolleHit) S._wolleHit={x:mx-70,y:my-10,w:140,h:110};
+  g.fillStyle='#7a4b8f'; g.font='15px sans-serif'; g.textAlign='center';
+  g.fillText('👆 Zuckerwolle',mx,my+108);
+  // Bär groß
+  Art.drawBear(g,S.baer,{w:S.VW,h:S.VH, spaTarget:S.spaTarget});
+  drawStickers(g);
+  // Watte-Stab (Bär hält ihn, Position vom User-Drag)
+  var wx2=wt.sx, wy2=wt.sy;
+  g.save();
+  g.strokeStyle='#e8d5b0'; g.lineWidth=7*s; g.lineCap='round';
+  g.beginPath(); g.moveTo(wx2,wy2+90*s); g.lineTo(wx2,wy2-40*s); g.stroke();
+  // Watte: rosa Wolke wächst mit lvl
+  var wr=(30+wt.lvl*60)*s*(wt.kau>0?1:1);
+  if(wr>4){
+    var wob=1+0.06*Math.sin(t*6);
+    g.globalAlpha=0.96;
+    ell2(g,wx2,wy2-60*s,wr*0.9*wob,wr*0.75,'#ffb8d6');
+    ell2(g,wx2-wr*0.35,wy2-58*s,wr*0.55,wr*0.5,'#ffc9e0');
+    ell2(g,wx2+wr*0.35,wy2-66*s,wr*0.6,wr*0.52,'#ffc9e0');
+    ell2(g,wx2,wy2-80*s,wr*0.5,wr*0.42,'#ff9ec4');
+    g.globalAlpha=1;
+    // glitzernde Zuckerpunkte in der Watte
+    for(var zp=0;zp<8;zp++){
+      var za=t*2+zp*0.8;
+      var zx=wx2+Math.cos(za)*wr*0.5, zy=wy2-62*s+Math.sin(za*1.3)*wr*0.35;
+      g.globalAlpha=0.5+0.5*Math.sin(t*5+zp);
+      circle2(g,zx,zy,2.5*s,'#fff');
+    }
+    g.globalAlpha=1;
+  }
+  // Hit-Box des Stabs für Drag
+  S._stabHit={x:wx2-40*s, y:wy2-40*s-wr, w:80*s+wr*2*0, h:130*s+wr};
+  // glückliches Kaugesicht: Bär mit hochgezogenen Wangen, wenn kau>0
+  if(wt.kau>0){
+    var kc=S.VW*0.5, kcy2=S.VH*0.58-15*s;
+    g.globalAlpha=Math.min(1,wt.kau);
+    Art.drawSticker(g,'herz',kc-55*s,kcy2,14*s,'rgba(255,120,160,0.9)');
+    Art.drawSticker(g,'herz',kc+55*s,kcy2,14*s,'rgba(255,120,160,0.9)');
+    g.globalAlpha=1;
+  }
+  g.restore();
+}
+// ---- Karussell: Zelt, Lichterketten, drehendes Pferd mit Bär ----
+function drawKarussell(g){
+  var t=performance.now()/1000;
+  var k=S.karo; k.ang=(k.ang||0)+k.w*0.02;
+  var W=S.VW,H=S.VH;
+  // Zelt-Dach
+  g.fillStyle='#e74c3c';
+  g.beginPath(); g.moveTo(W/2,30); g.lineTo(W/2-260,140); g.lineTo(W/2+260,140); g.closePath(); g.fill();
+  g.strokeStyle='#b03a2e'; g.lineWidth=3;
+  for(var st3=-2;st3<=2;st3++){
+    g.beginPath(); g.moveTo(W/2+st3*52,140); g.lineTo(W/2,30); g.stroke();
+  }
+  // Lichterketten am Dachrand
+  for(var li=0;li<=12;li++){
+    var f=li/12, lx=W/2-260+f*520, ly=140-Math.sin(f*Math.PI)*26;
+    var blink=0.5+0.5*Math.sin(t*4+li*1.4);
+    circle2(g,lx,ly,5+3*blink,['#ffd24d','#ff9eb5','#7ab8f5','#8fd48a'][li%4]);
+  }
+  for(var li2=0;li2<=10;li2++){
+    var f2=li2/10, lx2=W/2-210+f2*420, ly2=150+Math.sin(f2*Math.PI)*34;
+    var blink2=0.5+0.5*Math.sin(t*5+li2*1.7);
+    circle2(g,lx2,ly2,4+3*blink2,['#7ab8f5','#ffd24d','#ff9eb5'][li2%3]);
+  }
+  // Podium
+  g.fillStyle='#c49a6c'; g.beginPath(); g.ellipse(W/2,H*0.72,300,44,0,0,Math.PI*2); g.fill();
+  g.fillStyle='#a87f52'; g.beginPath(); g.ellipse(W/2,H*0.72+10,300,30,0,0,Math.PI*2); g.fill();
+  // Mittelmast
+  g.fillStyle='#8a6aa0'; g.fillRect(W/2-8,140,16,H*0.72-140);
+  // Pferd kreist um den Mast (Bär sitzt drauf) — Ellipse mit Auf-und-Ab
+  var ang=k.ang;
+  var rr=190, ex=W/2+Math.cos(ang)*rr, ey=H*0.72-Math.abs(Math.sin(ang))*50-Math.max(0,Math.sin(ang))*26;
+  var depth=0.85+0.3*((Math.sin(ang)+1)/2); // vorne größer
+  // weitere Pferde als Deko (hinten)
+  [ang+2.1, ang+4.2].forEach(function(a2,di){
+    var dx2=W/2+Math.cos(a2)*rr, dy2=H*0.72-Math.abs(Math.sin(a2))*50;
+    var d2=0.7+0.25*((Math.sin(a2)+1)/2);
+    g.save(); g.globalAlpha=0.85;
+    g.strokeStyle='#9aa4ae'; g.lineWidth=4;
+    g.beginPath(); g.moveTo(dx2,dy2-120*d2); g.lineTo(dx2,dy2+30); g.stroke();
+    drawPferd(g,dx2,dy2,d2*0.8,['#c39bd3','#8fd48a'][di]);
+    g.restore();
+  });
+  // Hauptpferd: Stange + Pferd + Bär
+  g.strokeStyle='#9aa4ae'; g.lineWidth=4.5;
+  g.beginPath(); g.moveTo(ex,ey-150*depth); g.lineTo(ex,ey+40); g.stroke();
+  drawPferd(g,ex,ey,depth,['#ff9eb5','#7ab8f5','#ffd24d'][k.pferd]);
+  // Bär reitet klein auf dem Pferd
+  g.save();
+  g.translate(ex,ey-70*depth); g.scale(0.34*depth,0.34*depth); g.translate(-W/2,-300);
+  Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
+  g.restore();
+}
+function drawPferd(g,x,y,d,c){
+  g.save(); g.translate(x,y); g.scale(d,d);
+  g.fillStyle=c; g.strokeStyle=Art.shade(c,-40); g.lineWidth=3;
+  g.beginPath(); g.ellipse(0,0,66,30,0,0,Math.PI*2); g.fill(); g.stroke(); // Körper
+  g.beginPath(); g.ellipse(46,-22,22,16,-0.5,0,Math.PI*2); g.fill(); g.stroke(); // Kopf
+  circle2(g,52,-26,3.5,'#2b2b2b');
+  g.fillStyle=Art.shade(c,-40);
+  [[-38,26],[-24,30],[24,30],[38,26]].forEach(function(p){
+    g.fillRect(p[0]-5,p[1],10,26); // Beine
+  });
+  g.beginPath(); g.moveTo(-64,-4); g.quadraticCurveTo(-88,-18,-92,4); g.quadraticCurveTo(-86,10,-64,10); g.fill(); // Schweif
+  g.fillStyle='#fff'; g.beginPath(); g.ellipse(-10,-8,26,20,0,0,Math.PI*2); g.fill(); // Sattel
+  g.restore();
+}
 })();
