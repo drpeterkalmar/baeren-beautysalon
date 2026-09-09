@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 11;
-console.log('BS v11');
+window.BS_VER = 12;
+console.log('BS v12');
 
 var Art = window.BSArt = {};
 
@@ -40,6 +40,10 @@ Art.MODELS = [
   {name:'Feuerwehr-Bär', fell:'#c0392b', schnauze:'#f0b8a8', muster:'feuer', kontur:'#7e2318'},
   {name:'Blumen-Bär', fell:'#f2d24b', schnauze:'#fdf0b8', muster:'blumenb', kontur:'#b89b22'},
   {name:'Mond-Bär', fell:'#4a5270', schnauze:'#8d97b5', muster:'mond', kontur:'#2c3248'},
+  {name:'Engel-Bär', fell:'#f7f3ea', schnauze:'#f5e0c8', muster:'engel', kontur:'#c9b98a', hell:1},
+  {name:'Clown-Bär', fell:'#f4e2c8', schnauze:'#ffe3d0', muster:'clown', kontur:'#b08a5a'},
+  {name:'Wikinger-Bär', fell:'#8a7a66', schnauze:'#c9b8a0', muster:'wikinger', kontur:'#55483a'},
+  {name:'Cowboy-Bär', fell:'#d0a76b', schnauze:'#eed9ae', muster:'cowboy', kontur:'#8a6438'},
   {name:'Überraschung?', fell:'#dcc9f2', schnauze:'#f3e9ff', muster:'frage', kontur:'#a37fd1', hell:1}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
@@ -160,7 +164,7 @@ Art.drawBear = function(g, b, opt){
   // Frisur
   drawHair(g,cx,hy+bowOff*0.5,s,b);
   // Kopf-Deko ÜBER der Frisur (Horn, Antenne, Krone, Helm, Hüte der Modelle)
-  drawKopfDeko(g, m, cx, hy+bowOff*0.5, s);
+  drawKopfDeko(g, m, cx, hy+bowOff*0.5, s, bowOff);
 
   // Gesicht: Augen (mit Blinzeln, Spa-Gurken, Entspannung)
   var augenZu = b.blink || (b.relax>=0.85);
@@ -580,6 +584,77 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
       Art.drawSticker(g,'stern',mx2,my2,(3+3*tw4)*s,'rgba(255,235,150,'+(0.4+0.5*tw4).toFixed(2)+')');
     }
     g.restore();
+  } else if(typ==='engel'){
+    // Weiße Flügel hinter den Schultern + sanftes Gold-Funkeln
+    g.save();
+    [-1,1].forEach(function(sg){
+      var fx=cx+sg*112*s, fy=cy-14*s+bowOff;
+      g.fillStyle='rgba(255,255,250,0.92)'; g.strokeStyle='rgba(215,195,140,0.8)'; g.lineWidth=2*s;
+      // Flügel aus 3 Feder-Reihen
+      for(var fi=0;fi<3;fi++){
+        g.beginPath();
+        g.ellipse(fx+sg*fi*8*s, fy-fi*16*s, (46-fi*8)*s, 22*s, sg*(0.6+fi*0.25), 0, Math.PI*2);
+        g.fill(); g.stroke();
+      }
+    });
+    var re2=rnd(163);
+    for(i=0;i<10;i++){
+      var ea=re2()*Math.PI*2, er=0.25+re2()*0.55;
+      var exx=cx+Math.cos(ea)*100*s*er;
+      var eyy=(i<6? cy+70*s+bowOff+Math.sin(ea)*90*s*er : hy+bowOff*0.5+Math.sin(ea)*70*s*er);
+      Art.drawSticker(g,'stern',exx,eyy,(3+2.5*re2())*s,'rgba(255,220,130,0.85)');
+    }
+    g.restore();
+  } else if(typ==='clown'){
+    // Bunte Punkte + lachender Mund-Malerbogen unten (rote Nase in drawKopfDeko)
+    var rc=rnd(173);
+    var ccols=['#e74c3c','#f1c40f','#3498db','#2ecc71','#9b59b6'];
+    for(i=0;i<14;i++){
+      var ca=rc()*Math.PI*2, cr2=0.25+rc()*0.6;
+      var cxx=cx+Math.cos(ca)*98*s*cr2;
+      var cyy=(i<9? cy+70*s+bowOff+Math.sin(ca)*90*s*cr2 : hy+bowOff*0.5+Math.sin(ca)*72*s*cr2);
+      circle(g,cxx,cyy,(5+rc()*6)*s,ccols[i%5]);
+      circle(g,cxx-2*s,cyy-2*s,1.8*s,'rgba(255,255,255,0.7)');
+    }
+    // Breiter Clown-Lächel-Bogen
+    g.strokeStyle='#e74c3c'; g.lineWidth=4*s; g.lineCap='round';
+    g.beginPath(); g.arc(cx,hy+34*s+bowOff*0.5,34*s,Math.PI*0.15,Math.PI*0.85); g.stroke();
+    circle(g,cx-35*s,hy+48*s+bowOff*0.5,5*s,'#e74c3c');
+    circle(g,cx+35*s,hy+48*s+bowOff*0.5,5*s,'#e74c3c');
+  } else if(typ==='wikinger'){
+    // Fell-Flecken wie Runen-Muster + Zopf-Bart-Andeutung
+    var rw=rnd(181);
+    g.strokeStyle='rgba(60,50,40,0.55)'; g.lineWidth=2.6*s; g.lineCap='round';
+    for(i=0;i<7;i++){ // Runen-Striche auf dem Körper
+      var rx2=cx+(rw()-0.5)*150*s, ry2=cy+40*s+bowOff+rw()*110*s;
+      var ra2=(rw()-0.5)*1.4;
+      g.save(); g.translate(rx2,ry2); g.rotate(ra2);
+      g.beginPath(); g.moveTo(-6*s,0); g.lineTo(6*s,0);
+      g.moveTo(0,-6*s); g.lineTo(0,6*s); g.stroke();
+      g.restore();
+    }
+    // Zopf-Bart: 3 geflochtene Segmente unter der Schnauze
+    for(i=0;i<3;i++){
+      var bzy=hy+(68+i*20)*s+bowOff*0.5;
+      circle(g,cx-6*s+(i%2)*12*s, bzy, 7*s, '#6b5a44');
+      circle(g,cx+6*s-(i%2)*12*s, bzy, 7*s, '#7d6b52');
+    }
+    circle(g,cx,hy+130*s+bowOff*0.5,5*s,'#f5c542'); // Ring am Zopfende
+  } else if(typ==='cowboy'){
+    // Halstuch + Gürtel mit Stern-Buckle
+    g.save();
+    g.fillStyle='#c0392b'; g.strokeStyle='#8e2215'; g.lineWidth=2*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-52*s,hy+56*s+bowOff*0.5); g.lineTo(cx+52*s,hy+56*s+bowOff*0.5);
+    g.lineTo(cx,hy+112*s+bowOff*0.5); g.closePath(); g.fill(); g.stroke();
+    circle(g,cx,hy+56*s+bowOff*0.5,5*s,'#7e1d10');
+    // Holster-Gürtel
+    g.fillStyle='#6b4226'; g.fillRect(cx-78*s,cy+128*s+bowOff,156*s,14*s);
+    // Stern-Buckle (gold)
+    circle(g,cx,cy+135*s+bowOff,11*s,'#f5c542');
+    Art.drawSticker(g,'stern',cx,cy+135*s+bowOff,14*s,'#b8860b');
+    Art.drawSticker(g,'stern',cx,cy+135*s+bowOff,7*s,'#f5c542');
+    g.restore();
   } else if(typ==='frage'){
     // Überraschungs-Bär: viele Fragezeichen auf dem Fell + Punktdusche
     var tF=performance.now()/1000;
@@ -614,7 +689,8 @@ function drawClaws(g,x,y,s,b,side){
 }
 
 // Kopf-Deko nach der Frisur: Einhorn-Horn, Robo-Antenne, Krone, Helm, Piratenhut, Zauberhut
-function drawKopfDeko(g, m, cx, hy, s){
+function drawKopfDeko(g, m, cx, hy, s, bowOff){
+  bowOff = bowOff||0;
   var t = performance.now()/1000;
   if(m.muster==='einhorn'){
     // Goldenes Horn, groß und deutlich, mit Glanzpunkt
@@ -784,6 +860,74 @@ function drawKopfDeko(g, m, cx, hy, s){
     Art.drawSticker(g,'blume',cx,byb,17*s*puls,'#ff9ec4');
     ellipsePetals(g,cx,byb,17*s*puls,'#ff9ec4');
     circle(g,cx,byb,5.5*s,'#ffe06e');
+    g.restore();
+  } else if(m.muster==='engel'){
+    // Heiligenschein über dem Kopf, schwebt + glitzert
+    var hyE=hy-112*s+Math.sin(t*1.6)*4*s;
+    g.save();
+    g.strokeStyle='#f5c542'; g.lineWidth=6*s; g.lineCap='round';
+    g.beginPath(); g.ellipse(cx,hyE,40*s,11*s,0,0,Math.PI*2); g.stroke();
+    g.strokeStyle='rgba(255,235,160,0.6)'; g.lineWidth=2.5*s;
+    g.beginPath(); g.ellipse(cx,hyE,47*s,14*s,0,0,Math.PI*2); g.stroke();
+    Art.drawSticker(g,'stern',cx-30*s,hyE-8*s,(5+2*Math.sin(t*4))*s,'#ffe9a8');
+    Art.drawSticker(g,'stern',cx+32*s,hyE-6*s,(4+2*Math.sin(t*4+2))*s,'#fff');
+    g.restore();
+  } else if(m.muster==='clown'){
+    // Große rote Nase + bunt gepunkteter Clown-Kragen am Hals
+    g.save();
+    // Kragen: gerüschte Zacken um den Hals
+    var cky=hy+52*s, kr6=performance.now()/1000;
+    var clw=['#e74c3c','#f1c40f','#3498db','#2ecc71'];
+    for(var ci=0;ci<9;ci++){
+      var ca2=Math.PI*(0.12+ci*0.095); // Bogen unten ums Kinn
+      var cxl=cx+Math.cos(ca2)*62*s, cyl=cky+Math.sin(ca2)*26*s+bowOff*0;
+      circle(g,cxl,cyl,(10+1.5*Math.sin(kr6*3+ci))*s,clw[ci%4]);
+      g.strokeStyle='rgba(0,0,0,0.15)'; g.lineWidth=1.5*s;
+      g.beginPath(); g.arc(cxl,cyl,(10+1.5*Math.sin(kr6*3+ci))*s,0,Math.PI*2); g.stroke();
+    }
+    // Rote Nase über der Bärennase: groß, mit Glanzpunkt
+    circle(g,cx,hy+18*s,15*s,'#e0342c');
+    circle(g,cx,hy+18*s,6*s,'#f06a5a');
+    circle(g,cx-5*s,hy+13*s,3.5*s,'#ffd6cd');
+    g.restore();
+  } else if(m.muster==='wikinger'){
+    // Metall-Helm mit 2 Hörnern
+    var hyW=hy-64*s;
+    g.save();
+    g.fillStyle='#8a94a0'; g.strokeStyle='#4a545e'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath(); g.arc(cx,hyW,62*s,Math.PI,0); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle='#6a7480'; g.fillRect(cx-5*s,hyW-62*s,10*s,62*s); // Mittelgrat
+    // Nieten vorn
+    for(var wn=-1;wn<=1;wn++) circle(g,cx+wn*40*s,hyW-16*s,4*s,'#c8d2dc');
+    // Hörner links/rechts (helles Horn, gebogen)
+    [-1,1].forEach(function(sg){
+      g.fillStyle='#e8e0cc'; g.strokeStyle='#a89878'; g.lineWidth=2*s;
+      g.beginPath();
+      g.moveTo(cx+sg*52*s,hyW-20*s);
+      g.quadraticCurveTo(cx+sg*96*s,hyW-30*s,cx+sg*92*s,hyW-78*s);
+      g.quadraticCurveTo(cx+sg*80*s,hyW-46*s,cx+sg*60*s,hyW-38*s);
+      g.closePath(); g.fill(); g.stroke();
+    });
+    g.restore();
+  } else if(m.muster==='cowboy'){
+    // Cowboyhut: breite hochgebogene Krempe + Hutband
+    var hyC=hy-62*s;
+    g.save();
+    // Krempe: breite Ellipse mit hochgebogenen Seiten
+    g.fillStyle='#8a5a2a'; g.strokeStyle='#5a3a1a'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-84*s,hyC+6*s);
+    g.quadraticCurveTo(cx-84*s,hyC-16*s,cx-56*s,hyC-10*s);
+    g.lineTo(cx+56*s,hyC-10*s);
+    g.quadraticCurveTo(cx+84*s,hyC-16*s,cx+84*s,hyC+6*s);
+    g.quadraticCurveTo(cx,hyC+22*s,cx-84*s,hyC+6*s);
+    g.closePath(); g.fill(); g.stroke();
+    // Kronen-Teil
+    g.beginPath(); g.arc(cx,hyC-6*s,50*s,Math.PI,0); g.closePath(); g.fill(); g.stroke();
+    // Hutband
+    g.fillStyle='#5a3a1a'; g.fillRect(cx-50*s,hyC-22*s,100*s,10*s);
+    // Sternconcha vorn
+    Art.drawSticker(g,'stern',cx,hyC-36*s,9*s,'#f5c542');
     g.restore();
   }
 }

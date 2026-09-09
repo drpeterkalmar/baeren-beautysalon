@@ -246,6 +246,8 @@ function update(dt){
     S.keks.biss=Math.max(0,S.keks.biss-dt);
     S.baer.jubel=Math.min(1,Math.max(S.baer.jubel||0,S.keks.biss*0.8));
   }
+  // Toast-Decay (Malbuch "Meisterwerk!")
+  if(S.toast && S.toast.t>0) S.toast.t=Math.max(0,S.toast.t-dt);
   // Grand Finale: Timer runterzählen
   if(S.vorhang>0) S.vorhang=Math.max(0,S.vorhang-dt);
   if(S.finale>0) S.finale=Math.max(0,S.finale-dt);
