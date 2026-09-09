@@ -1202,7 +1202,9 @@ function drawAcc(g,cx,hy,bowOff,s,b){
 }
 
 function shade(hex,amt){
+  if(!hex || typeof hex!=='string' || hex[0]!=='#') return hex || '#a9744f';
   var n=parseInt(hex.slice(1),16);
+  if(isNaN(n)) return hex;
   var r=Math.max(0,Math.min(255,(n>>16)+amt));
   var gn=Math.max(0,Math.min(255,((n>>8)&255)+amt));
   var bl=Math.max(0,Math.min(255,(n&255)+amt));
