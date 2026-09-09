@@ -5,6 +5,7 @@ var S = window.BSSalon;
 window.__errors = [];
 window.onerror = function(msg,src,line){ window.__errors.push(msg+' @'+line);
   var e=document.getElementById('err'); if(e) e.textContent = '⚠️ '+msg; };
+var G = window.BSGame = {};
 
 var cv = document.getElementById('cv');
 var g = cv.getContext('2d');
@@ -30,14 +31,34 @@ function spawn(x,y,c,n,spd,life,size){
     var a=Math.random()*Math.PI*2, v=(0.3+Math.random()*0.7)*spd;
     parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-spd*0.6,
       c:c,life:life*(0.6+Math.random()*0.6),t:0,size:size*(0.6+Math.random()*0.8),
-      star:Math.random()<0.5});
+      star:Math.random()<0.5, wave:0});
   }
 }
+// Parfum-Sprühstoß: Duft-Farbwolken vom Flakon zum Bären
+G.parfumSpray = function(c){
+  var x0=30, y0=S.VH*0.5;
+  for(var i=0;i<26;i++){
+    var t=i/26;
+    parts.push({x:x0+t*(S.VW*0.48-x0)+(Math.random()-0.5)*30,
+      y:y0+(S.VH*0.42-y0)*t+(Math.random()-0.5)*40,
+      vx:60+Math.random()*40, vy:-30+Math.random()*30,
+      c:c, life:1.2+Math.random(), t:0, size:5+Math.random()*6, star:false, wave:2});
+  }
+};
+// Spa-Gurkentupfer: grünes Spritzen
+G.spaTupfer = function(x,y){
+  spawn(x,y,'#7ec850',8,70,0.8,5);
+};
 function stepParts(dt){
   for(var i=parts.length-1;i>=0;i--){
     var p=parts[i]; p.t+=dt;
     if(p.t>p.life){ parts.splice(i,1); continue; }
-    p.vy+=500*dt; p.x+=p.vx*dt; p.y+=p.vy*dt;
+    if(p.wAmp){ // wellenförmige Föhn-Partikel
+      p.x+=p.vx*dt;
+      p.y+=Math.sin((performance.now()/1000)*10+p.wave)*p.wAmp*dt*3 - 20*dt;
+    } else {
+      p.vy+=500*dt; p.x+=p.vx*dt; p.y+=p.vy*dt;
+    }
   }
 }
 function drawParts(){
@@ -95,14 +116,28 @@ function update(dt){
   if(S.state==='foehnen'){
     var tgt = (S.foehn && b.schaum<0.1) ? 1 : 0;
     b.fluff += (tgt-b.fluff)*Math.min(1,dt*3);
-    if(S.foehn) spawn(S.VW*0.5+(Math.random()-0.5)*300, S.VH*0.4+Math.random()*200,
-      '#cfe8ff',1,60,0.6,3);
+    if(S.foehn){
+      var t0=performance.now()/1000;
+      for(var wi=0; wi<2; wi++){
+        parts.push({x:200, y:150+(Math.random()-0.5)*40,
+          vx:160+Math.random()*80, vy:0, c:'#cfe8ff', life:1.4, t:0,
+          size:3, star:false, wave:t0*6+wi*2, wAmp:50});
+      }
+    }
   }
   if(S.state==='finish-done'){
     if(S.confetti>0){ S.confetti-=dt*60;
       spawn(Math.random()*S.VW, -10, ['#e91e63','#f1c40f','#2ecc71','#3498db','#9b59b6'][Math.floor(Math.random()*5)],3,120,2.5,7); }
     if(S.stars>0){ S.stars-=dt*60;
       spawn(Math.random()*S.VW, Math.random()*S.VH*0.5, '#ffd24d',2,80,1.5,8); }
+  }
+  if(S.state==='spa'){
+    var stgt=(S.spaTarget)?1:0;
+    b._spa=(b._spa||0)+((stgt?1:0)-(b._spa||0))*Math.min(1,dt*1.4);
+    b.relax=Math.max(b.relax, b._spa);
+  }
+  if(S.state!=='spa' && S.spaTarget!==undefined && S.spaTarget===0 && b._spa!==undefined){
+    b._spa=Math.max(0,b._spa-dt*0.6);
   }
   // Idle: Atmen + Blinzeln (alle Screens)
   b.breathe = (b.breathe||0)+dt;
@@ -114,7 +149,11 @@ function update(dt){
     var rt = Math.min(1, S.mass.prog/100);
     b.relax += (rt-b.relax)*Math.min(1,dt*2.5);
     for(var hi=S.mass.herzen.length-1;hi>=0;hi--){
-      var h=S.mass.herzen[hi]; h.y+=h.vy*dt; h.a-=dt*0.7;
+      var h=S.mass.herzen[hi]; h.t=(h.t||0)+dt; h.a-=dt*0.7;
+      // Spiral-Flug statt gerade auf
+      var r=h.r0+h.t*70;
+      h.x=h.ox+Math.cos(h.a0+h.t*3.2)*r;
+      h.y=h.oy+Math.sin(h.a0+h.t*3.2)*r - h.t*30;
       if(h.a<=0) S.mass.herzen.splice(hi,1);
     }
   } else if(b.relax>0){

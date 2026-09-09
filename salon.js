@@ -12,6 +12,8 @@ S.STATIONS = [
   {id:'schneiden',icon:'✂️', name:'Schneiden'},
   {id:'pfoten',   icon:'💅', name:'Pfoten'},
   {id:'massage',  icon:'💆', name:'Massage'},
+  {id:'spa',      icon:'💎', name:'Spa-Maske'},
+  {id:'parfum',   icon:'🌸', name:'Parfum'},
   {id:'makeup',   icon:'💄', name:'Make-up'},
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
   {id:'finish',   icon:'✨', name:'Fertig!'}
@@ -29,10 +31,18 @@ function neuerBaer(fellIdx){
   return { fellIdx: fellIdx, fell: Art.MODELS[fellIdx].fell,
     haar: Art.HAAR[0], frisur: 'lockig', lack:{}, schaum:0, fluff:0,
     tropfen:[], bow:0, breathe:0, blink:0, relax:0,
+    gurkeL:false, gurkeR:false, duft:null,
     makeup:{rouge:null,lid:null,gp:[]},
     acc:{hut:null,schleife:null,brille:null,kette:null},
     sticker:[] };
 }
+
+Art.DUFTE = [
+  {name:'Garten', icon:'🌷', c:'#7ec850'},
+  {name:'Vanille', icon:'🍦', c:'#e8c878'},
+  {name:'Meer', icon:'🌊', c:'#5aa8e8'},
+  {name:'Wald', icon:'🌲', c:'#4a8860'}
+];
 
 S.state = 'menu';          // menu | wahl | station-<id> | finish-done
 S.baer = neuerBaer(0);
@@ -49,7 +59,8 @@ if(S.saved && Art.MODELS[S.saved.fellIdx||0]){
 S.save = function(){
   try{ localStorage.setItem('bs_baer', JSON.stringify({
     fellIdx:S.baer.fellIdx, haar:S.baer.haar, frisur:S.baer.frisur,
-    lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker, makeup:S.baer.makeup
+    lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker, makeup:S.baer.makeup,
+    gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft
   })); }catch(e){}
 };
 
@@ -93,6 +104,8 @@ S.buildUI = function(){
   else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
+  else if(st==='spa') buildSpa();
+  else if(st==='parfum') buildParfum();
   else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
   else if(st==='finish') buildFinish();
@@ -109,10 +122,10 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // 2 Reihen à 4 Tabs (8 Stationen)
+  // Reihen à 5 Tabs (10 Stationen)
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(130+(j%4)*160, S.VH-130+Math.floor(j/4)*62, 152, 58, st.icon+' '+st.name, function(){
+      btn(42+(j%5)*170, S.VH-130+Math.floor(j/5)*62, 162, 58, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1});
     })(S.STATIONS[j],j);
@@ -166,6 +179,35 @@ function buildMassage(){
   S.hinweis = 'Streiche mit dem Finger in Kreisen über den Bären! 💆';
   if(!S.mass) S.mass = {prog:0, ang:null, herzen:[]};
 }
+function buildSpa(){
+  stationTabs();
+  S.hinweis = 'Tippe aufs Auge für eine Gurkenscheibe, nochmal zum Abnehmen! 🥒';
+  if(S.baer.gurkeL && S.baer.gurkeR){
+    // Ahhhh — Entspannung ansteuern
+    S.spaTarget = 1;
+  } else S.spaTarget = 0;
+  btn(330,400,240,56,'🧽 Gurken weg',function(){
+    S.baer.gurkeL=false; S.baer.gurkeR=false; S.spaTarget=0; S.save(); S.buildUI();
+  },{active:function(){return S.baer.gurkeL||S.baer.gurkeR;}});
+}
+function buildParfum(){
+  stationTabs();
+  S.hinweis = 'Wähle einen Duft — ein Schnupper-Wölkchen bleibt! 🌸';
+  Art.DUFTE.forEach(function(d,i){
+    btn(30+(i%2)*170, 100+Math.floor(i/2)*130, 162, 56, d.icon+' '+d.name, function(){
+      S.baer.duft=i; S.save(); S.buildUI();
+      window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
+    },{active:function(){return S.baer.duft===i;}});
+    // kleiner Flakon unter dem Knopf
+    btn(80+(i%2)*170, 162+Math.floor(i/2)*130, 30, 46, '', function(){
+      S.baer.duft=i; S.save(); S.buildUI();
+      window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
+    },{fill:d.c,tiny:1});
+  });
+  btn(30, 372, 150, 50, '🧽 Kein Duft', function(){
+    S.baer.duft=null; S.save(); S.buildUI();
+  });
+}
 function buildMakeup(){
   stationTabs();
   S.hinweis = 'Farbe wählen, dann Glitzer auf Wange oder Stirn tupfen! ✨';
@@ -212,7 +254,7 @@ function buildSchmuecken(){
 function buildFinish(){
   S.hinweis = 'Perfekt! ✨';
   btn(330,470,240,70,'🎉 Fertig!',function(){
-    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1;
+    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1;
     S.save(); S.buildUI();
   },{big:1});
 }
@@ -234,15 +276,45 @@ S.draw = function(g){
     g.lineWidth=8; g.strokeStyle='#fff';
     g.strokeText('Perfekt! ✨', W/2, 72);
     g.fillStyle='#7a4b8f'; g.fillText('Perfekt! ✨', W/2, 72);
+    // 10/10 Badge mit Sternen-Animation über dem Bär
+    if(S.badge){
+      var bt=(performance.now()/1000)%10;
+      var by=118+Math.sin(bt*2)*4;
+      g.save();
+      g.translate(W/2,by);
+      // Kapsel
+      g.beginPath();
+      g.roundRect ? g.roundRect(-110,-30,220,60,30) : g.rect(-110,-30,220,60);
+      g.fillStyle='rgba(255,215,77,0.95)'; g.fill();
+      g.lineWidth=4; g.strokeStyle='#b8860b'; g.stroke();
+      g.fillStyle='#7a4b00'; g.font='bold 32px sans-serif';
+      g.fillText('10/10 ⭐',0,12);
+      // animierte Sterne drumherum
+      for(var si=0;si<5;si++){
+        var sa=bt*1.3+si*(Math.PI*2/5);
+        var sr=95+Math.sin(bt*3+si*2)*14;
+        Art.drawSticker(g,'stern',Math.cos(sa)*sr,Math.sin(sa)*sr*0.5,10+Math.sin(bt*4+si)*3,'#ffd24d');
+      }
+      g.restore();
+    }
     g.save();
     g.translate(0,-34);
     Art.drawBear(g,S.baer,{w:W,h:H});
     drawStickers(g);
+    if(S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
     if(S.glitzerRing) drawGlitzerRing(g);
+    drawShootingStar(g);
     g.restore();
     drawButtons(g);
     return;
   }
+
+  if(S.state==='finish-done') return; // schon in finish-done gezeichnet
+  // Duft-Wolken im Stations-Screen
+  if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined && S.state!=='wahl' && S.state!=='menu') drawDuftWolken(g);
+
+  // Sternschnuppe über dem Menü
+  if(S.state==='menu') drawShootingStar(g);
 
   // Massage-Deko (unter Titel)
   if(S.state==='massage') drawHerzen(g);
@@ -277,7 +349,7 @@ function drawDeko(g){
     g.fillStyle='rgba(120,190,255,0.75)';
     for(var k=-2;k<=2;k++) g.fillRect(829+k*9,108,3,16);
   }
-  if(S.state==='pfoten'||S.state==='makeup'||S.state==='massage'){ // Teppich
+  if(S.state==='spa'||S.state==='parfum'||S.state==='pfoten'||S.state==='makeup'||S.state==='massage'){ // Teppich
     g.fillStyle='rgba(154,107,181,0.16)';
     g.beginPath(); g.ellipse(W/2,H-160,250,60,0,0,Math.PI*2); g.fill();
     g.strokeStyle='rgba(122,75,143,0.35)'; g.lineWidth=3;
@@ -316,12 +388,12 @@ function drawMenu(g){
   drawButtons(g);
 }
 
-// ---- Bären-Auswahl -----------------------------------------
+// ---- Bären-Auswahl: 4x3 Raster (dynamisch aus MODELS) -------
 function kacheln(){
-  // 4x2 Raster, Mitte des Screens
+  var n=Art.MODELS.length, cols=4, rows=Math.ceil(n/cols);
   var out=[];
-  for(var i=0;i<Art.MODELS.length;i++){
-    out.push({i:i, x:150+(i%4)*155, y:190+Math.floor(i/4)*210, w:140, h:190});
+  for(var i=0;i<n;i++){
+    out.push({i:i, x:80+(i%cols)*185, y:150+Math.floor(i/cols)*150, w:170, h:136});
   }
   return out;
 }
@@ -344,25 +416,68 @@ function drawWahl(g){
     g.save();
     g.beginPath();
     g.roundRect ? g.roundRect(k.x,k.y,k.w,k.h,16) : g.rect(k.x,k.y,k.w,k.h);
-    g.fillStyle = act?'#fbeaff':'rgba(255,255,255,0.94)';
+    // helle Bären: hellblauer Karten-Hintergrund für Kontrast
+    g.fillStyle = act?'#fbeaff':(m.hell?'#d8ecff':'rgba(255,255,255,0.94)');
+    if(!act && (m.fell==='#f2f0ea'||m.fell==='#f4f6f7'||m.fell==='#f4f0e8')) g.fillStyle='#d8ecff';
     g.fill();
     g.lineWidth = act?5:2; g.strokeStyle = act?'#7a4b8f':'#c9aede';
     g.stroke();
     // Mini-Bär (auf Kachel skaliert)
     var mini = Object.assign({}, S.baer, {fellIdx:k.i, fell:m.fell, schaum:0, tropfen:[],
-      fluff:0, bow:0, lack:{}, sticker:[], makeup:{rouge:null,lid:null,gp:[]},
+      fluff:0, bow:0, relax:0, blink:0, lack:{}, sticker:[], makeup:{rouge:null,lid:null,gp:[]},
+      gurkeL:false, gurkeR:false, duft:null,
       acc:{hut:null,schleife:null,brille:null,kette:null}});
     g.save();
-    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-46); g.clip();
-    g.translate(k.x+k.w/2, k.y+12); g.scale(0.42,0.42);
-    g.translate(-225,-40);
+    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-30); g.clip();
+    g.translate(k.x+k.w/2, k.y+6); g.scale(0.34,0.34);
+    g.translate(-225,-30);
     Art.drawBear(g, mini, {w:450, h:330});
     g.restore();
-    g.fillStyle='#5d3a75'; g.font='bold 17px sans-serif';
-    g.fillText(m.name, k.x+k.w/2, k.y+k.h-14);
+    g.fillStyle='#5d3a75'; g.font='bold 15px sans-serif';
+    g.fillText(m.name, k.x+k.w/2, k.y+k.h-10);
     g.restore();
   });
   drawButtons(g);
+}
+
+function drawShootingStar(g){
+  // Sternschnuppe: alle ~6 s quer über den oberen Bereich
+  var t = performance.now()/1000;
+  var cyc = t % 6;
+  if(cyc>1) return;
+  var p = cyc/1;
+  var x = S.VW*0.15 + p*S.VW*0.7;
+  var y = 40 + p*60 + Math.sin(p*Math.PI)*10;
+  g.globalAlpha = Math.sin(p*Math.PI);
+  var grd=g.createLinearGradient(x-40,y-8,x,y);
+  grd.addColorStop(0,'rgba(255,255,255,0)'); grd.addColorStop(1,'rgba(255,235,140,0.9)');
+  g.strokeStyle=grd; g.lineWidth=2.5; g.lineCap='round';
+  g.beginPath(); g.moveTo(x-40,y-8); g.lineTo(x,y); g.stroke();
+  Art.drawSticker(g,'stern',x,y,7,'#fff5c8');
+  g.globalAlpha=1;
+}
+
+function drawDuftWolken(g){
+  // kleine Duft-Wolke beim Bären (Finish / Stationen)
+  var d = Art.DUFTE[S.baer.duft]; if(!d) return;
+  var t = performance.now()/1000;
+  var s = Math.min(S.VW,S.VH)/420;
+  var cx=S.VW*0.5, cy=S.VH*0.58;
+  for(var i=0;i<3;i++){
+    var a = t*0.7 + i*(Math.PI*2/3);
+    var rr = (140+i*24)*s + Math.sin(t*1.5+i)*8*s;
+    var x = cx+Math.cos(a)*rr, y = cy-120*s+Math.sin(a)*rr*0.35+Math.sin(t*2+i)*6*s;
+    var sz = (12+Math.sin(t*3+i*1.7)*3)*s;
+    g.globalAlpha = 0.35;
+    g.fillStyle=d.c;
+    g.beginPath(); g.arc(x,y,sz,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(x+sz*0.8,y-sz*0.4,sz*0.7,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(x-sz*0.8,y-sz*0.2,sz*0.6,0,Math.PI*2); g.fill();
+    g.globalAlpha = 0.85;
+    g.fillStyle='#fff'; g.font='bold '+(13*s)+'px sans-serif'; g.textAlign='center';
+    g.fillText(d.icon, x, y+5*s);
+    g.globalAlpha=1;
+  }
 }
 
 function drawHerzen(g){
@@ -451,6 +566,22 @@ S.tapBear = function(x,y){
     return true;
   }
   if(S.state==='massage'){ S.dragBear(x,y); return true; }
+  if(S.state==='spa'){
+    var s2=Math.min(S.VW,S.VH)/420;
+    var cx2=S.VW*0.5, ey=S.VH*0.58-105*s2;
+    // linke Seite / rechte Seite
+    if(Math.hypot(x-(cx2-30*s2), y-ey) < 40*s2){
+      S.baer.gurkeL = !S.baer.gurkeL; S.save(); S.buildUI();
+      window.BSGame && window.BSGame.spaTupfer(x,y);
+      return true;
+    }
+    if(Math.hypot(x-(cx2+30*s2), y-ey) < 40*s2){
+      S.baer.gurkeR = !S.baer.gurkeR; S.save(); S.buildUI();
+      window.BSGame && window.BSGame.spaTupfer(x,y);
+      return true;
+    }
+    return true;
+  }
   return false;
 };
 
@@ -468,7 +599,7 @@ S.dragBear = function(x,y,px,py){
     if(da<-Math.PI) da+=Math.PI*2;
     S.mass.prog=Math.min(100,S.mass.prog+Math.abs(da)*2.2);
     if(Math.abs(da)>0.05 && Math.random()<0.3){
-      S.mass.herzen.push({x:x+(Math.random()-0.5)*30, y:y-10, vy:-40, a:1});
+      S.mass.herzen.push({ox:x,oy:y, x:x, y:y, a:1, t:0, a0:Math.random()*Math.PI*2, r0:6+Math.random()*10});
       if(S.mass.herzen.length>18) S.mass.herzen.shift();
     }
   }
