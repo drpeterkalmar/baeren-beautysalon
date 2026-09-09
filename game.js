@@ -212,6 +212,21 @@ function update(dt){
   if(b._j===undefined) b._j=0;
   b._j = b._j + (jt-b._j)*Math.min(1,dt*3);
   b.jubel = b._j;
+  // Ballon: Pust-Decay, Schreck-Zuck → danach lachen
+  if(S.ballon){
+    if(S.ballon.pust>0) S.ballon.pust=Math.max(0,S.ballon.pust-dt*1.6);
+    if(S.ballon.schreck>0){
+      S.ballon.schreck=Math.max(0,S.ballon.schreck-dt*0.9);
+      if(S.ballon.schreck===0){ b.jubelT2=1.2; } // danach lacht er
+    }
+  }
+  if(b.jubelT2>0){ b.jubelT2=Math.max(0,b.jubelT2-dt); b.jubel=Math.min(1,b.jubelT2); }
+  if(S.zauber && S.zauber.pfote>0) S.zauber.pfote=Math.max(0,S.zauber.pfote-dt*1.1);
+  // Hut kippt leicht beim Lachen (jubel>0) und in finish-done
+  var hutTgt = (S.state==='finish-done' || (b.jubel||0)>0.3)?1:0;
+  if(b._hutTil===undefined) b._hutTil=0;
+  b._hutTil += (hutTgt-b._hutTil)*Math.min(1,dt*4);
+  b.hutTilt = b._hutTil;
   stepParts(dt);
 }
 

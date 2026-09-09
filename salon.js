@@ -20,6 +20,8 @@ S.STATIONS = [
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
   {id:'eis',       icon:'🍦', name:'Eisdiele'},
   {id:'zuckerwatte',icon:'🍬', name:'Zuckerwatte'},
+  {id:'ballon',   icon:'🎈', name:'Ballons'},
+  {id:'zauber',   icon:'🌈', name:'Zauber'},
   {id:'karussell', icon:'🎠', name:'Karussell'},
   {id:'geburtstag',icon:'🎂', name:'Geburtstag'},
   {id:'disco',     icon:'🪩', name:'Disco'},
@@ -128,6 +130,8 @@ S.buildUI = function(){
   else if(st==='schmuecken') buildSchmuecken();
   else if(st==='eis') buildEis();
   else if(st==='zuckerwatte') buildZuckerwatte();
+  else if(st==='ballon') buildBallon();
+  else if(st==='zauber') buildZauber();
   else if(st==='karussell') buildKarussell();
   else if(st==='geburtstag') buildGeburtstag();
   else if(st==='disco') buildDisco();
@@ -146,10 +150,10 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // Reihen à 9 Tabs (18 Stationen), 2 Reihen — kompakt
+  // Reihen à 10 Tabs (20 Stationen), 2 Reihen — kompakt
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(6+(j%9)*99, S.VH-118+Math.floor(j/9)*56, 94, 52, st.icon+' '+st.name, function(){
+      btn(6+(j%10)*89, S.VH-118+Math.floor(j/10)*56, 85, 52, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1, tiny:1});
     })(S.STATIONS[j],j);
@@ -329,6 +333,36 @@ function buildZuckerwatte(){
   btn(30,100,190,58,'🍬 Wirbeln!',function(){ S.watte.spin=Math.min(1,(S.watte.spin||0)+0.45); },{active:function(){return S.watte.spin>0;}});
   btn(30,168,190,52,'🧽 Neue Watte',function(){ S.watte={lvl:0,kau:0,sx:S.VW*0.5+150,sy:S.VH*0.58+120,spin:0}; S.buildUI(); });
 }
+Art.BALLON_FARBEN = ['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
+function buildBallon(){
+  stationTabs();
+  S.hinweis = 'Farbe wählen, Pusten-Knopf drücken — fertigen Ballon antippen = PLATZ! 🎈';
+  if(!S.ballon) S.ballon = {farb:0, gr:0, pust:0, fertig:false, schweb:null, schreck:0};
+  Art.BALLON_FARBEN.forEach(function(c,i){
+    btn(30+i*66, 100, 58, 58, '', function(){
+      S.ballon.farb=i; S.ballon.gr=0; S.ballon.fertig=false; S.ballon.schreck=0; S.ballon.schweb=null; S.buildUI();
+    },{fill:c, active:function(){return S.ballon.farb===i && !S.ballon.fertig && S.ballon.gr===0;}});
+  });
+  btn(30,170,190,64,'💨 Pusten!',function(){
+    if(S.ballon.fertig) return;
+    S.ballon.pust=1.4; S.ballon.gr=Math.min(1,S.ballon.gr+0.2);
+    if(S.ballon.gr>=1) S.ballon.fertig=true;
+    S.buildUI();
+  },{active:function(){return S.ballon.pust>0;}, big:1});
+  btn(30,246,190,52,'🧽 Neuer Ballon',function(){
+    S.ballon={farb:S.ballon.farb,gr:0,pust:0,fertig:false,schweb:null,schreck:0}; S.buildUI();
+  });
+}
+function buildZauber(){
+  stationTabs();
+  S.hinweis = 'Zauber wählen, dann den Zauberstab antippen! 🌈✨';
+  if(!S.zauber) S.zauber = {art:0, fx:null, pfote:0};
+  [['⭐ Sternenschweif'],['🌸 Blütenregen'],['❤️ Herz-Kreis']].forEach(function(d,i){
+    btn(30+i*200, 100, 190, 60, d[0], function(){
+      S.zauber.art=i; S.buildUI();
+    },{active:function(){return S.zauber.art===i;}, small:1});
+  });
+}
 function buildKarussell(){
   stationTabs();
   S.hinweis = 'Pferd-Farbe wählen — das Karussell dreht sich! 🎠';
@@ -504,6 +538,25 @@ S.draw = function(g){
     g.restore();
   } else if(S.state==='zuckerwatte' || S.state==='karussell'){
     if(S.state==='zuckerwatte') drawZuckerwatte(g); else drawKarussell(g);
+  } else if(S.state==='ballon'){
+    // Erschreck-Zucken: Bär springt kurz hoch, dann lacht er (jubel hoch)
+    var bl=S.ballon||{schreck:0};
+    var shk=Math.max(0,bl.schreck||0);
+    g.save();
+    g.translate(0,-Math.sin(Math.min(1,shk)*Math.PI)*26);
+    Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
+    drawStickers(g);
+    g.restore();
+    drawBallonStation(g);
+  } else if(S.state==='zauber'){
+    // Pfoten heben beim Zaubern: kurz jubel-Anteil
+    var zb=S.zauber||{pfote:0};
+    if(S.baer._j===undefined) S.baer._j=0;
+    var jAlt=S.baer.jubel; S.baer.jubel=Math.max(jAlt,Math.min(1,zb.pfote||0)*0.7);
+    Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
+    S.baer.jubel=jAlt;
+    drawStickers(g);
+    drawZauberStation(g);
   } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
@@ -626,8 +679,12 @@ function drawMenu(g){
 // ---- Bären-Auswahl: Raster dynamisch aus MODELS -------
 function kacheln(){
   var n=Art.MODELS.length, cols=5, rows=Math.ceil(n/cols);
-  var pitchX=150, w=136, pitchY=94, h=84;
-  var x0=(S.VW-(cols*pitchX-14))/2, y0=118;
+  var pitchX=150, w=136;
+  // Reihen wachsen dynamisch: Höhe anpassen, damit alle sichtbar bleiben
+  var y0=118;
+  var pitchY=Math.min(94, Math.floor((S.VH-y0-26)/rows));
+  var h=pitchY-10;
+  var x0=(S.VW-(cols*pitchX-14))/2;
   var out=[];
   for(var i=0;i<n;i++){
     out.push({i:i, x:x0+(i%cols)*pitchX, y:y0+Math.floor(i/cols)*pitchY, w:w, h:h});
@@ -1109,6 +1166,36 @@ S.tapBear = function(x,y){
       }
     }
   }
+  if(S.state==='ballon' && S.ballon){
+    // Fertigen Ballon antippen = PLATZ!
+    if(S._ballHit && S.ballon.fertig &&
+      x>=S._ballHit.x&&x<=S._ballHit.x+S._ballHit.w&&y>=S._ballHit.y&&y<=S._ballHit.y+S._ballHit.h){
+      var bl2=S.ballon;
+      window.BSGame && window.BSGame.konfettiBurst(S._ballHit.x+S._ballHit.w/2, S._ballHit.y+S._ballHit.h/2);
+      bl2.schweb=null; bl2.fertig=false; bl2.gr=0; bl2.schreck=1; // Bär zuckt
+      S.buildUI();
+      return true;
+    }
+    return true;
+  }
+  if(S.state==='zauber' && S.zauber){
+    // Zauberstab antippen = Zauberspruch
+    if(S._stabHitZ && x>=S._stabHitZ.x&&x<=S._stabHitZ.x+S._stabHitZ.w&&y>=S._stabHitZ.y&&y<=S._stabHitZ.y+S._stabHitZ.h){
+      S.zauber.fx={art:S.zauber.art, t:0.001, d:1.6, seed:Math.random()*6};
+      S.zauber.pfote=1;
+      window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S.VW*0.5+128*Math.min(S.VW,S.VH)/420, S.VH*0.58-140);
+      S.buildUI();
+      return true;
+    }
+    // Auch Tap aufs obere Drittel neben dem Bären zaubert (Kinder-tolerant)
+    var s6=Math.min(S.VW,S.VH)/420;
+    if(Math.hypot(x-(S.VW*0.5+128*s6), y-(S.VH*0.58-60*s6))<120*s6){
+      S.zauber.fx={art:S.zauber.art, t:0.001, d:1.6, seed:Math.random()*6};
+      S.zauber.pfote=1; S.buildUI();
+      return true;
+    }
+    return true;
+  }
   if(S.state==='geburtstag' && S.kuchen){
     // Kerzen antippen
     var kp=kerzenPos();
@@ -1366,6 +1453,119 @@ function drawZuckerwatte(g){
   }
   g.restore();
 }
+// ---- Ballon-Station: Farbe + Pusten + PLATZ + schwebender Ballon + Mini-Herzen ----
+function drawBallonStation(g){
+  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
+  var bl=S.ballon; if(!bl) return;
+  var cx=S.VW*0.5, cy=S.VH*0.58;
+  // schwebende Mini-Herzchen als Deko
+  for(var h=0;h<8;h++){
+    var hx=(h*113+Math.sin(t*0.6+h)*40)%S.VW, hy2=90+((h*89)%260)+Math.sin(t*1.4+h*2.2)*14;
+    g.globalAlpha=0.4+0.3*Math.sin(t*2+h*1.3);
+    Art.drawSticker(g,'herz',hx,hy2,7+2*Math.sin(t*3+h),'#ff8fb3');
+  }
+  g.globalAlpha=1;
+  // Pust-Wangen (rund) während der Pust-Animation
+  if(bl.pust>0){
+    g.globalAlpha=Math.min(1,bl.pust);
+    circle2(g,cx-56*s,cy-52*s,20*s,'rgba(255,160,180,0.75)');
+    circle2(g,cx+56*s,cy-52*s,20*s,'rgba(255,160,180,0.75)');
+    g.globalAlpha=1;
+  }
+  // Luft-Strahl vom Mund zum Ballon beim Pusten
+  var bx=cx+210*s, by=cy-150*s, br=(14+bl.gr*54)*s;
+  if(bl.fertig && bl.schweb===null){ // frisch fertig: hängt noch am Schnürchen
+    bl.schweb={x:bx,y:by,c:bl.farb,ph:Math.random()*6};
+  }
+  if(bl.pust>0 && !bl.fertig){
+    g.strokeStyle='rgba(160,220,255,0.6)'; g.lineWidth=4; g.lineCap='round';
+    for(var l=-1;l<=1;l++){
+      g.beginPath(); g.moveTo(cx+30*s,cy-14*s+l*5);
+      g.quadraticCurveTo(cx+120*s,cy-60*s+l*20, bx-br*0.6, by+l*10); g.stroke();
+    }
+  }
+  // Ballon am Mund wächst (noch nicht fertig), sonst schwebt er neben dem Bären
+  if(!bl.fertig && bl.gr>0){
+    g.fillStyle=Art.BALLON_FARBEN[bl.farb];
+    g.beginPath(); g.ellipse(bx-br*0.3,by,br*0.8,br,0,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,0.5)';
+    g.beginPath(); g.ellipse(bx-br*0.3-br*0.25,by-br*0.3,br*0.22,br*0.3,0,0,Math.PI*2); g.fill();
+    // Hit-Box auf wachsenden Ballon (erst bei fertig relevant)
+    S._ballHit={x:bx-br*0.3-br,y:by-br,w:br*2,h:br*2};
+  } else S._ballHit=null;
+  if(bl.fertig && bl.schweb){
+    var sw=bl.schweb;
+    var sx2=sw.x+Math.sin(t*1.1+sw.ph)*10, sy2=sw.y+Math.sin(t*1.7+sw.ph)*16;
+    // Schnur
+    g.strokeStyle='rgba(120,120,140,0.7)'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(cx+86*s,cy-40*s); g.quadraticCurveTo(sx2-20,sy2+80,sx2,sy2+br+4); g.stroke();
+    g.fillStyle=Art.BALLON_FARBEN[sw.c];
+    g.beginPath(); g.ellipse(sx2,sy2,br*0.85,br*1.05,0,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,0.5)';
+    g.beginPath(); g.ellipse(sx2-br*0.28,sy2-br*0.35,br*0.2,br*0.28,0,0,Math.PI*2); g.fill();
+    // Zipfel
+    g.fillStyle=Art.shade(Art.BALLON_FARBEN[sw.c],-40);
+    g.beginPath(); g.moveTo(sx2-6,sy2+br*1.05); g.lineTo(sx2+6,sy2+br*1.05); g.lineTo(sx2,sy2+br*1.05+10); g.closePath(); g.fill();
+    S._ballHit={x:sx2-br,y:sy2-br*1.05,w:br*2,h:br*2.2};
+    // Hinweis-Platzer-Stern
+    Art.drawSticker(g,'stern',sx2+br*0.6,sy2-br*0.7,8+2*Math.sin(t*5),'rgba(255,230,120,0.9)');
+  }
+}
+// ---- Zauber-Station: Stab + 3 Zauber + mystischer Boden-Nebel ----
+function drawZauberStation(g){
+  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
+  var zb=S.zauber; if(!zb) return;
+  var cx=S.VW*0.5, cy=S.VH*0.58;
+  // Mystischer Nebel: langsam wandernde halbtransparente Wölkchen am Boden
+  for(var n=0;n<7;n++){
+    var nx=((t*14+n*173)%(S.VW+220))-110, ny=S.VH*0.72+((n*53)%110)+Math.sin(t*0.8+n)*10;
+    g.globalAlpha=0.16+0.08*Math.sin(t*0.7+n*1.9);
+    var nc=n%2?'#c39bd3':'#9fb8d8';
+    circle2(g,nx,ny,34+n*4,nc);
+    circle2(g,nx+26,ny+5,24+n*3,nc);
+    circle2(g,nx-26,ny+6,22+n*2,nc);
+  }
+  g.globalAlpha=1;
+  // Zauberstab in der rechten Pfote, leicht schwebend, funkelt idle
+  var stx=cx+128*s, sty=cy-30*s+Math.sin(t*1.5)*4;
+  g.save();
+  g.translate(stx,sty); g.rotate(-0.5);
+  g.strokeStyle='#8a5a2a'; g.lineWidth=6*s; g.lineCap='round';
+  g.beginPath(); g.moveTo(0,0); g.lineTo(0,-86*s); g.stroke();
+  var tw=0.6+0.4*Math.sin(t*4.5);
+  Art.drawSticker(g,'stern',0,-98*s,(14+5*tw)*s,'#ffd24d');
+  g.globalAlpha=tw*0.6;
+  circle2(g,0,-98*s,(26+6*Math.sin(t*4.5))*s,'rgba(255,220,120,0.5)');
+  g.globalAlpha=1;
+  g.restore();
+  S._stabHitZ={x:stx-30*s,y:sty-130*s,w:60*s,h:150*s};
+  // Zauberspruch-Effekte (Partikel je Zauber)
+  if(zb.fx){
+    var f=zb.fx, q=f.t/f.d;
+    if(q>=1){ zb.fx=null; }
+    else if(f.art===0){ // Sternenschweif: goldene Sterne kreisen aufwärts
+      for(var i2=0;i2<14;i2++){
+        var a2=f.seed+i2*0.45+q*5;
+        var rr2=(60+q*180)*s;
+        Art.drawSticker(g,'stern',cx+Math.cos(a2)*rr2,cy-40*s+Math.sin(a2)*rr2*0.5-q*90*s,
+          (9+3*Math.sin(q*9+i2))*s,'rgba(255,210,77,'+(1-q)+')');
+      }
+    } else if(f.art===1){ // Blütenregen: Rosa Blumen fallen von oben
+      for(var b2=0;b2<16;b2++){
+        var bx2=(b2*67 + f.seed*40)%S.VW;
+        var by2=-20+q*S.VH*0.8+((b2*29)%40);
+        Art.drawSticker(g,'blume',bx2+Math.sin(t*2+b2)*16,by2,9*s,'rgba(255,158,181,'+(1-q*0.6)+')');
+      }
+    } else { // Herz-Kreis: Herzen im Kreis um den Bären
+      for(var h2=0;h2<12;h2++){
+        var ah=h2/12*Math.PI*2+q*3+f.seed;
+        Art.drawSticker(g,'herz',cx+Math.cos(ah)*150*s,cy+Math.sin(ah)*110*s-40*s,
+          (10+4*Math.sin(q*8+h2))*s,'rgba(233,30,99,'+(1-q)+')');
+      }
+    }
+    if(zb.fx) zb.fx.t+=0.016;
+  }
+}
 // ---- Karussell: Zelt, Lichterketten, drehendes Pferd mit Bär ----
 function drawKarussell(g){
   var t=performance.now()/1000;
@@ -1417,6 +1617,21 @@ function drawKarussell(g){
   g.translate(ex,ey-70*depth); g.scale(0.34*depth,0.34*depth); g.translate(-W/2,-300);
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   g.restore();
+  // Musiknoten schweben beim schnellen Dreh
+  if(k.w>1){
+    if(!k.noten) k.noten=[];
+    if(Math.random()<0.3) k.noten.push({x:W/2+(Math.random()-0.5)*300, y:H*0.72, t:0, wob:Math.random()*6});
+    for(var ni=k.noten.length-1;ni>=0;ni--){
+      var no=k.noten[ni]; no.t+=0.016;
+      no.y-=2.4; no.x+=Math.sin(t*3+no.wob)*2;
+      var na=Math.max(0,1-no.t/1.6);
+      if(na<=0){ k.noten.splice(ni,1); continue; }
+      g.globalAlpha=na; g.font='26px sans-serif'; g.textAlign='center';
+      g.fillStyle=['#7a4b8f','#e91e63','#3498db'][ni%3];
+      g.fillText(NICONS[ni%4], no.x, no.y);
+    }
+    g.globalAlpha=1;
+  } else if(k.noten) k.noten.length=0;
 }
 function drawPferd(g,x,y,d,c){
   g.save(); g.translate(x,y); g.scale(d,d);
