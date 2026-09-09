@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 6;
-console.log('BS v6');
+window.BS_VER = 7;
+console.log('BS v7');
 
 var Art = window.BSArt = {};
 
@@ -23,7 +23,11 @@ Art.MODELS = [
   {name:'Einhorn-Bär', fell:'#eef0f6', schnauze:'#ffd9e8', muster:'einhorn', kontur:'#b0b8d0', hell:1},
   {name:'Robo-Bär', fell:'#9aa4ae', schnauze:'#c8d2da', muster:'robo', kontur:'#5a646e'},
   {name:'Kirschblüten-Bär', fell:'#ffd3e0', schnauze:'#fff0f4', muster:'kirsch', kontur:'#d89aab', hell:1},
-  {name:'Wolken-Bär', fell:'#bcd8f2', schnauze:'#eaf4fd', muster:'wolke', kontur:'#7ba7cc', hell:1}
+  {name:'Wolken-Bär', fell:'#bcd8f2', schnauze:'#eaf4fd', muster:'wolke', kontur:'#7ba7cc', hell:1},
+  {name:'Prinzessinnen-Bär', fell:'#f2a7c8', schnauze:'#ffd9e8', muster:'prinzessin', kontur:'#c97ea5'},
+  {name:'Bauarbeiter-Bär', fell:'#c8913f', schnauze:'#e8c88f', muster:'bau'},
+  {name:'Piraten-Bär', fell:'#4d5259', schnauze:'#9aa4ae', muster:'pirat', kontur:'#31353a'},
+  {name:'Zauberer-Bär', fell:'#8e6bbf', schnauze:'#cbb3ea', muster:'zauberer', kontur:'#5f3f96'}
 ];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
 Art.LACK = ['#e91e63','#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#ffffff'];
@@ -128,6 +132,8 @@ Art.drawBear = function(g, b, opt){
 
   // Frisur
   drawHair(g,cx,hy+bowOff*0.5,s,b);
+  // Kopf-Deko ÜBER der Frisur (Horn, Antenne, Krone, Helm, Hüte der Modelle)
+  drawKopfDeko(g, m, cx, hy+bowOff*0.5, s);
 
   // Gesicht: Augen (mit Blinzeln, Spa-Gurken, Entspannung)
   var augenZu = b.blink || (b.relax>=0.85);
@@ -156,6 +162,17 @@ Art.drawBear = function(g, b, opt){
   }
   // Schnauze
   ell(g,cx,hy+28*s+bowOff*0.5,36*s,26*s,schnauzeC);
+  // Piraten-Augenklappe (über dem linken Auge)
+  if(m.muster==='pirat'){
+    g.save();
+    circle(g,cx-30*s,ey,15*s,'#1d1f23');
+    g.strokeStyle='#1d1f23'; g.lineWidth=3.5*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(cx-44*s,ey-4*s); g.lineTo(cx-84*s,hy-40*s+bowOff*0.5); g.stroke();
+    g.beginPath(); g.moveTo(cx-16*s,ey-6*s); g.lineTo(cx+62*s,hy-44*s+bowOff*0.5); g.stroke();
+    g.strokeStyle='#f5c542'; g.lineWidth=1.6*s;
+    g.beginPath(); g.arc(cx-30*s,ey,15*s,0,Math.PI*2); g.stroke();
+    g.restore();
+  }
   ell(g,cx,hy+18*s+bowOff*0.5,12*s,9*s,'#4a3227');
   g.strokeStyle='#4a3227'; g.lineWidth=3*s; g.lineCap='round';
   g.beginPath(); g.moveTo(cx,hy+27*s+bowOff*0.5); g.lineTo(cx,hy+36*s+bowOff*0.5);
@@ -269,33 +286,17 @@ function drawMuster(g, typ, cx, cy, hy, bowOff, s){
       g.restore();
     }
   } else if(typ==='einhorn'){
-    // Goldenes Horn auf der Stirn + Glitzer im Fell
-    var hx=cx, hyy=hy-82*s+bowOff*0.5;
-    g.save();
-    g.fillStyle='#f5c542'; g.strokeStyle='#c8941a'; g.lineWidth=2*s;
-    g.beginPath(); g.moveTo(hx-11*s,hyy+14*s); g.lineTo(hx+11*s,hyy+14*s); g.lineTo(hx,hyy-30*s); g.closePath();
-    g.fill(); g.stroke();
-    g.strokeStyle='#e0a92f'; g.lineWidth=1.8*s;
-    for(i=1;i<4;i++){ var ty=hyy+14*s-i*11*s;
-      g.beginPath(); g.moveTo(hx-(11-i*2.6)*s,ty); g.lineTo(hx+(11-i*2.6)*s,ty); g.stroke(); }
-    // Rosé Fell-Tupfer um das Horn
-    ell(g,hx-16*s,hyy+18*s,8*s,5*s,'rgba(255,182,206,0.7)');
-    ell(g,hx+16*s,hyy+18*s,8*s,5*s,'rgba(255,182,206,0.7)');
-    // Glitzer (deterministisch) auf Körper und Kopf
+    // Glitzer im Fell (Horn wird nach der Frisur gezeichnet, siehe drawKopfDeko)
+    ell(g,cx-16*s,hy-64*s+bowOff*0.5,8*s,5*s,'rgba(255,182,206,0.7)');
+    ell(g,cx+16*s,hy-64*s+bowOff*0.5,8*s,5*s,'rgba(255,182,206,0.7)');
     var re=rnd(31);
     for(i=0;i<16;i++){
       var ga=re()*Math.PI*2, gr=re()*0.85;
       var gx=cx+Math.cos(ga)*100*s*gr, gy=(i<9? cy+70*s+Math.sin(ga)*95*s*gr : hy+bowOff*0.5+Math.sin(ga)*72*s*gr);
       Art.drawSticker(g,'stern',gx,gy,(3.5+re()*3)*s, i%3?'rgba(255,215,90,0.9)':'rgba(255,160,200,0.9)');
     }
-    g.restore();
   } else if(typ==='robo'){
-    // Antenne mit Kugel + LED-Augen-Punkte + Metallnähte
-    g.strokeStyle='#5a646e'; g.lineWidth=3*s; g.lineCap='round';
-    g.beginPath(); g.moveTo(cx,hy-88*s+bowOff*0.5); g.lineTo(cx,hy-118*s+bowOff*0.5); g.stroke();
-    circle(g,cx,hy-126*s+bowOff*0.5,9*s,'#e74c3c');
-    circle(g,cx-3*s,hy-129*s+bowOff*0.5,3*s,'#ffb3a7');
-    // LED-Auge
+    // LED-Augen-Punkte + Metallnähte (Antenne in drawKopfDeko)
     var ledT=performance.now()/1000;
     circle(g,cx-30*s,hy-34*s+bowOff*0.5,4*s,'rgba(80,220,255,'+(0.6+0.4*Math.sin(ledT*3)).toFixed(2)+')');
     // Nähte/Platten auf dem Körper
@@ -342,6 +343,107 @@ function drawClaws(g,x,y,s,b,side){
     ell(g,cxp,y,7*s,10*s,c);
   }
 }
+
+// Kopf-Deko nach der Frisur: Einhorn-Horn, Robo-Antenne, Krone, Helm, Piratenhut, Zauberhut
+function drawKopfDeko(g, m, cx, hy, s){
+  var t = performance.now()/1000;
+  if(m.muster==='einhorn'){
+    // Goldenes Horn, groß und deutlich, mit Glanzpunkt
+    var baseY = hy-70*s, wB=17*s, h=64*s;
+    g.save();
+    g.fillStyle='#f5c542'; g.strokeStyle='#b8860b'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath(); g.moveTo(cx-wB,baseY); g.lineTo(cx+wB,baseY); g.lineTo(cx,baseY-h); g.closePath();
+    g.fill(); g.stroke();
+    // Gold-Windungen
+    g.strokeStyle='#de9f22'; g.lineWidth=2.2*s;
+    for(var i=1;i<5;i++){ var f=i/5; var ty=baseY-f*h; var tw=wB*(1-f);
+      g.beginPath(); g.moveTo(cx-tw,ty); g.lineTo(cx+tw,ty); g.stroke(); }
+    // Glanzpunkt an der Spitze
+    circle(g,cx,baseY-h+4*s,6*s,'rgba(255,255,255,0.9)');
+    circle(g,cx,baseY-h+4*s,2.5*s,'#fff');
+    Art.drawSticker(g,'stern',cx+10*s,baseY-h+10*s,6*s+2*s*Math.sin(t*4),'rgba(255,240,160,0.95)');
+    g.restore();
+  } else if(m.muster==='robo'){
+    // Antenne mit Kugel, ragt sichtbar über die Kopfform
+    g.strokeStyle='#454e57'; g.lineWidth=4.5*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(cx,hy-84*s); g.lineTo(cx,hy-126*s); g.stroke();
+    g.strokeStyle='#7b8894'; g.lineWidth=1.6*s;
+    g.beginPath(); g.moveTo(cx-5*s,hy-96*s); g.lineTo(cx+5*s,hy-96*s); g.stroke();
+    g.beginPath(); g.moveTo(cx-4*s,hy-108*s); g.lineTo(cx+4*s,hy-108*s); g.stroke();
+    ring(g,cx,hy-136*s,11*s,'#e74c3c');
+    circle(g,cx,hy-136*s,11*s,'#c0392b');
+    circle(g,cx,hy-136*s,7*s,'#e74c3c');
+    circle(g,cx-3*s,hy-139*s,3*s,'#ffd6cd');
+    // Blitz-Funkeln an der Kugel
+    var fa=(0.5+0.5*Math.sin(t*5));
+    Art.drawSticker(g,'stern',cx+14*s,hy-142*s,(4+3*fa)*s,'rgba(255,220,120,'+(0.5+0.5*fa).toFixed(2)+')');
+  } else if(m.muster==='prinzessin'){
+    // Goldene Krone mit 3 Zacken + Rubinen
+    var by=hy-84*s;
+    g.save();
+    g.fillStyle='#f5c542'; g.strokeStyle='#b8860b'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-46*s,by); g.lineTo(cx-46*s,by-26*s); g.lineTo(cx-23*s,by-8*s);
+    g.lineTo(cx,by-38*s); g.lineTo(cx+23*s,by-8*s); g.lineTo(cx+46*s,by-26*s);
+    g.lineTo(cx+46*s,by); g.closePath(); g.fill(); g.stroke();
+    circle(g,cx,by-38*s,5*s,'#e74c3c');
+    circle(g,cx-46*s,by-28*s,4*s,'#e74c3c'); circle(g,cx+46*s,by-28*s,4*s,'#e74c3c');
+    circle(g,cx-20*s,by+8*s,4.5*s,'#e74c3c'); circle(g,cx+20*s,by+8*s,4.5*s,'#9b59b6');
+    circle(g,cx,by+8*s,4.5*s,'#3498db');
+    Art.drawSticker(g,'stern',cx,by-50*s,(5+2*Math.sin(t*3))*s,'rgba(255,250,190,0.95)');
+    g.restore();
+  } else if(m.muster==='bau'){
+    // Gelber Bauarbeiter-Helm
+    var hyy=hy-58*s;
+    g.save();
+    g.fillStyle='#f4c20d'; g.strokeStyle='#c79408'; g.lineWidth=2.5*s;
+    g.beginPath(); g.arc(cx,hyy,64*s,Math.PI,0); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(cx,hyy,72*s,10*s,0,0,0); g.fill(); g.stroke();
+    g.fillStyle='#de9f22'; g.fillRect(cx-5*s,hyy-64*s,10*s,64*s);
+    g.fillStyle='rgba(255,255,255,0.4)';
+    g.beginPath(); g.ellipse(cx-30*s,hyy-38*s,16*s,8*s,-0.5,0,Math.PI*2); g.fill();
+    g.restore();
+  } else if(m.muster==='pirat'){
+    // Dreieckshut mit Totenkopf
+    var py=hy-70*s;
+    g.save();
+    g.fillStyle='#23262b'; g.strokeStyle='#0e1013'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-72*s,py); g.quadraticCurveTo(cx,py-70*s,cx+72*s,py);
+    g.quadraticCurveTo(cx,py-18*s,cx-72*s,py); g.closePath(); g.fill(); g.stroke();
+    // Goldener Rand
+    g.strokeStyle='#f5c542'; g.lineWidth=3*s;
+    g.beginPath(); g.moveTo(cx-72*s,py); g.quadraticCurveTo(cx,py-18*s,cx+72*s,py); g.stroke();
+    // Totenkopf
+    circle(g,cx,py-34*s,10*s,'#f7f2e8');
+    circle(g,cx-4*s,py-37*s,2.2*s,'#23262b'); circle(g,cx+4*s,py-37*s,2.2*s,'#23262b');
+    g.fillStyle='#f7f2e8'; g.fillRect(cx-6*s,py-27*s,12*s,5*s);
+    g.restore();
+  } else if(m.muster==='zauberer'){
+    // Spitzer Sternhut + schwebende Zauber-Punkt-Partikel
+    var zy=hy-66*s;
+    g.save();
+    g.fillStyle='#5f3f96'; g.strokeStyle='#3d2566'; g.lineWidth=2.5*s; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(cx-56*s,zy+16*s); g.quadraticCurveTo(cx,zy+34*s,cx+56*s,zy+16*s);
+    g.lineTo(cx+14*s,zy+8*s); g.lineTo(cx-4*s,zy-88*s); g.lineTo(cx-16*s,zy+8*s);
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle='#f5c542'; g.lineWidth=3*s;
+    g.beginPath(); g.moveTo(cx-52*s,zy+15*s); g.quadraticCurveTo(cx,zy+31*s,cx+52*s,zy+15*s); g.stroke();
+    Art.drawSticker(g,'stern',cx-10*s,zy-38*s,7*s,'#ffd24d');
+    Art.drawSticker(g,'stern',cx+8*s,zy-12*s,5*s,'#ff9eb5');
+    Art.drawSticker(g,'stern',cx-2*s,zy-64*s,5*s,'#c39bd3');
+    // schwebende Partikel (idle)
+    for(var i=0;i<5;i++){
+      var pa=t*0.9+i*(Math.PI*2/5);
+      var px=cx+Math.cos(pa)*52*s, pyy=zy+8*s+Math.sin(pa)*14*s-10*s;
+      circle(g,px,pyy,(2.5+Math.sin(t*3+i))*s, i%2?'rgba(255,210,77,0.9)':'rgba(195,155,211,0.9)');
+    }
+    circle(g,cx-4*s,zy-88*s,4*s,'#ffd24d');
+    g.restore();
+  }
+}
+function ring(g,x,y,r,c){ g.strokeStyle=c; g.lineWidth=2; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); }
 
 function drawHair(g,cx,hy,s,b){
   var c = b.haar, f = b.frisur, i;

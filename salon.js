@@ -13,6 +13,8 @@ S.STATIONS = [
   {id:'pfoten',   icon:'💅', name:'Pfoten'},
   {id:'massage',  icon:'💆', name:'Massage'},
   {id:'spa',      icon:'💎', name:'Spa-Maske'},
+  {id:'tanz',     icon:'🎵', name:'Tanz'},
+  {id:'zirkus',   icon:'🎪', name:'Zirkus'},
   {id:'parfum',   icon:'🌸', name:'Parfum'},
   {id:'makeup',   icon:'💄', name:'Make-up'},
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
@@ -48,9 +50,11 @@ Art.DUFTE = [
 
 S.state = 'menu';          // menu | wahl | station-<id> | finish-done
 S.eis = null; S.fotoRahmen = 0; S.fotoBadge = false; S.flash = 0; S.rainbow = 0;
+S.tanz = null; S.zirkus = null; S.album = [];
 S.baer = neuerBaer(0);
 S.saved = null;
 try{ S.saved = JSON.parse(localStorage.getItem('bs_baer')||'null'); }catch(e){}
+try{ S.album = JSON.parse(localStorage.getItem('bs_album')||'[]'); }catch(e){ S.album=[]; }
 if(S.saved && Art.MODELS[S.saved.fellIdx||0]){
   var idx = S.saved.fellIdx||0;
   S.saved.fell = Art.MODELS[idx].fell; // Modell-Farbe hat Vorrang vor altem Save
@@ -97,7 +101,7 @@ S.buildUI = function(){
   }
   if(st==='wahl'){
     btn(16,16,120,56,'⬅️ Start',function(){ S.state='menu'; S.buildUI(); });
-    // Kacheln (4x2), Hit-Test in tapBear
+    // Kacheln (5 Spalten, dynamisch), Hit-Test in tapBear
     return;
   }
   if(st==='finish-done'){
@@ -112,6 +116,8 @@ S.buildUI = function(){
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
   else if(st==='spa') buildSpa();
+  else if(st==='tanz') buildTanz();
+  else if(st==='zirkus') buildZirkus();
   else if(st==='parfum') buildParfum();
   else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
@@ -131,10 +137,10 @@ function backButtons(){
 }
 
 function stationTabs(){
-  // Reihen à 6 Tabs (12 Stationen)
+  // Reihen à 7 Tabs (14 Stationen), 2 Reihen
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(8+(j%6)*146, S.VH-130+Math.floor(j/6)*62, 140, 58, st.icon+' '+st.name, function(){
+      btn(8+(j%7)*126, S.VH-130+Math.floor(j/7)*62, 120, 58, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1});
     })(S.STATIONS[j],j);
@@ -187,6 +193,29 @@ function buildMassage(){
   stationTabs();
   S.hinweis = 'Streiche mit dem Finger in Kreisen über den Bären! 💆';
   if(!S.mass) S.mass = {prog:0, ang:null, herzen:[]};
+}
+function buildTanz(){
+  stationTabs();
+  S.hinweis = 'Musikstil wählen und mit dem Bären tanzen! Antippen = Pirouette! 🎵';
+  if(!S.tanz) S.tanz = {stil:'disco', noten:[], spin:0};
+  [['disco','🕺 Disco'],['klassik','🎻 Klassik'],['rock','🎸 Rock']].forEach(function(d,i){
+    btn(30+i*160, 100, 150, 60, d[1], function(){
+      S.tanz.stil=d[0]; S.buildUI();
+    },{active:function(){return S.tanz.stil===d[0];}, small:1});
+  });
+}
+function buildZirkus(){
+  stationTabs();
+  S.hinweis = 'Ball-Farbe antippen = ein Ball mehr zum Jonglieren (max. 3)! 🎪';
+  if(!S.zirkus) S.zirkus = {bälle:[{c:'#e74c3c'}], t:0};
+  ['#e74c3c','#f4c20d','#3498db','#2ecc71','#9b59b6'].forEach(function(c,i){
+    btn(30+i*66, 100, 58, 58, '', function(){
+      var z=S.zirkus;
+      if(z.bälle.length>=3) return;
+      z.bälle.push({c:c}); S.buildUI();
+    },{fill:c});
+  });
+  btn(30, 170, 190, 52, '🧽 Neue Bälle', function(){ S.zirkus.bälle=[{c:'#e74c3c'}]; S.buildUI(); });
 }
 function buildSpa(){
   stationTabs();
@@ -264,6 +293,7 @@ function buildFinish(){
   S.hinweis = 'Perfekt! ✨';
   btn(330,470,240,70,'🎉 Fertig!',function(){
     S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1; S.rainbow=1;
+    startFeuerwerk();
     S.save(); S.buildUI();
   },{big:1});
 }
@@ -293,6 +323,14 @@ function buildFoto(){
   });
   btn(30, 170, 170, 60, '📸 Klick!', function(){
     S.flash=1; S.fotoBadge=true; S.buildUI();
+    // Schnappschuss ins Album (max 4, älteste verschwinden)
+    var d = new Date();
+    var tag = ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.';
+    S.album.push({modell: Art.MODELS[S.baer.fellIdx||0].name, datum: tag,
+      fellIdx: S.baer.fellIdx||0, haar: S.baer.haar, frisur: S.baer.frisur,
+      rahmen: S.fotoRahmen||0});
+    while(S.album.length>4) S.album.shift();
+    try{ localStorage.setItem('bs_album', JSON.stringify(S.album)); }catch(e){}
   },{big:1});
 }
 
@@ -343,6 +381,7 @@ S.draw = function(g){
     if(S.glitzerRing) drawGlitzerRing(g);
     drawShootingStar(g);
     g.restore();
+    drawFeuerwerk(g);
     drawButtons(g);
     return;
   }
@@ -365,8 +404,44 @@ S.draw = function(g){
     g.fillText(S.hinweis, W/2, 82);
   }
 
+  // Tanz: Bär wippt/wiegt/nickt je nach Stil; Pirouette bei spin
+  var tNow=performance.now()/1000;
+  var tOffY=0, tRot=0, tStretch=1;
+  if(S.state==='tanz' && S.tanz){
+    var stil=S.tanz.stil||'disco';
+    if(stil==='disco'){ // auf-und-ab hüpfen
+      tOffY=-Math.abs(Math.sin(tNow*4.4))*34;
+      tRot=Math.sin(tNow*4.4)*0.09;
+    } else if(stil==='klassik'){ // sanft wiegend
+      tRot=Math.sin(tNow*1.8)*0.22;
+      tOffY=Math.sin(tNow*3.6)*8;
+    } else { // rock: Kopf-Nicken (Vorbeugen)
+      tStretch=1-Math.abs(Math.sin(tNow*5.2))*0.10;
+      tOffY=Math.abs(Math.sin(tNow*5.2))*14;
+    }
+    if(S.tanz.spin>0){
+      // spinA: volle Drehung über spin 1→0 (Abbau in update())
+      var sp=S.tanz.spin;
+      S.tanz.spinA = Math.sin((1-sp)*Math.PI)*6.2; // 0→π→0 Wipp-Rotation
+    } else S.tanz.spinA=0;
+    tRot += (S.tanz.spinA||0);
+    g.save();
+    g.translate(W/2, S.VH*0.58+150*Math.min(W,H)/420);
+    g.rotate(tRot); g.scale(1,tStretch);
+    g.translate(-W/2, -(S.VH*0.58+150*Math.min(W,H)/420)-tOffY);
+    Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
+    drawStickers(g);
+    g.restore();
+    // bunte Noten steigen auf
+    drawNoten(g);
+  } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
+  }
+  // Zirkus: jonglierende Bälle auf Parabel-Bahnen über den Pfoten
+  if(S.state==='zirkus' && S.zirkus) drawJonglage(g);
+  // Album-Vorschau in der Foto-Station
+  if(S.state==='foto') drawAlbumVorschau(g);
   if(S.state==='eis' && S.eis){
     var s3=Math.min(S.VW,S.VH)/420;
     Art.drawEis(g, S.eis, S.VW*0.5, S.VH*0.58+40*s3, s3);
@@ -453,11 +528,11 @@ function drawMenu(g){
   drawButtons(g);
 }
 
-// ---- Bären-Auswahl: 4x3 Raster (dynamisch aus MODELS) -------
+// ---- Bären-Auswahl: Raster dynamisch aus MODELS -------
 function kacheln(){
-  var n=Art.MODELS.length, cols=4, rows=Math.ceil(n/cols);
-  var pitchX=170, w=156, pitchY=118, h=106;
-  var x0=(S.VW-(cols*pitchX-14))/2, y0=126;
+  var n=Art.MODELS.length, cols=5, rows=Math.ceil(n/cols);
+  var pitchX=150, w=136, pitchY=94, h=84;
+  var x0=(S.VW-(cols*pitchX-14))/2, y0=118;
   var out=[];
   for(var i=0;i<n;i++){
     out.push({i:i, x:x0+(i%cols)*pitchX, y:y0+Math.floor(i/cols)*pitchY, w:w, h:h});
@@ -516,6 +591,121 @@ function drawWahl(g){
     g.restore();
   });
   drawButtons(g);
+}
+
+// ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
+var NICONS=['🎵','🎶','♪','♫'];
+function drawNoten(g){
+  var t=performance.now()/1000;
+  if(!S._noteT) S._noteT=0;
+  if(!S.tanz) return;
+  // neue Noten nachführen
+  if(t>S._noteT){
+    S._noteT=t+0.4;
+    var cols=['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
+    S.tanz.noten.push({x:S.VW*0.5+(Math.random()-0.5)*320, y:S.VH*0.72,
+      w:(Math.random()-0.5)*30, c:cols[Math.floor(Math.random()*5)],
+      ic:NICONS[Math.floor(Math.random()*4)], t:0});
+    if(S.tanz.noten.length>14) S.tanz.noten.shift();
+  }
+  for(var i=S.tanz.noten.length-1;i>=0;i--){
+    var n=S.tanz.noten[i]; n.t++;
+    n.y-=1.9; n.x+=Math.sin(n.t*0.1)*1.4+n.w*0.006;
+    var a=Math.min(1,(S.VH*0.72-n.y)/80)-Math.max(0, (S.VH*0.16-n.y)/90);
+    g.globalAlpha=Math.max(0,Math.min(1,a));
+    g.font=(20+Math.sin(n.t*0.12)*4)+'px sans-serif'; g.textAlign='center';
+    g.fillStyle=n.c; g.fillText(n.ic, n.x, n.y);
+    if(n.y<S.VH*0.1) S.tanz.noten.splice(i,1);
+  }
+  g.globalAlpha=1;
+}
+function drawJonglage(g){
+  var z=S.zirkus, bälle=z.bälle, n=bälle.length;
+  var t=performance.now()/1000;
+  var cx=S.VW*0.5, cy=S.VH*0.36;
+  var handL=cx-150, handR=cx+150, handY=S.VH*0.6;
+  for(var i=0;i<n;i++){
+    // Jeder Ball eine phasenverschobene Parabel zwischen den Pfoten
+    var ph=(t*1.4 + i/n)%1; var p=ph<0.5? ph*2 : 2-ph*2;
+    var x=handL+(handR-handL)*p;
+    var y=cy - Math.sin(p*Math.PI)*(90+ (i%2)*40) - 40*Math.sin(((t*1.4+i/n)%1)*Math.PI*2);
+    var b=bälle[i];
+    g.fillStyle=b.c; g.beginPath(); g.arc(x,y,17,0,Math.PI*2); g.fill();
+    g.strokeStyle='rgba(0,0,0,0.25)'; g.lineWidth=2; g.stroke();
+    g.fillStyle='rgba(255,255,255,0.65)';
+    g.beginPath(); g.arc(x-5,y-6,5,0,Math.PI*2); g.fill();
+  }
+  // Pfoten-Stubs als Jonglier-Hände andeuten
+  g.fillStyle='rgba(122,75,143,0.5)';
+  g.beginPath(); g.arc(handL,handY,13,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(handR,handY,13,0,Math.PI*2); g.fill();
+}
+function drawAlbumVorschau(g){
+  if(!S.album || !S.album.length) return;
+  var ax=S.VW-330, ay=S.VH-230, aw=72, ah=86, gap=14;
+  g.save(); g.font='11px sans-serif'; g.textAlign='center';
+  g.fillStyle='#7a4b8f'; g.fillText('Meine Schnappschüsse', ax+ (4*(aw+gap)-gap)/2, ay-6);
+  S.album.slice(-4).forEach(function(p,i){
+    var x=ax+i*(aw+gap);
+    g.fillStyle='#fff'; g.strokeStyle='#c9aede'; g.lineWidth=2;
+    g.beginPath(); g.rect(x,ay,aw,ah); g.fill(); g.stroke();
+    // Mini-Bär im Polaroid
+    var mod=Art.MODELS[p.fellIdx]||Art.MODELS[0];
+    var mini=Object.assign({}, S.baer, {fellIdx:p.fellIdx, fell:mod.fell, schaum:0,
+      tropfen:[], fluff:0, bow:0, relax:0, blink:0, lack:{}, sticker:[],
+      makeup:{rouge:null,lid:null,gp:[]}, gurkeL:false,gurkeR:false, duft:null,
+      acc:{hut:null,schleife:null,brille:null,kette:null}});
+    g.save(); g.beginPath(); g.rect(x+4,ay+4,aw-8,50); g.clip();
+    g.translate(x+aw/2,ay+10); g.scale(0.14,0.14); g.translate(-225,-60);
+    Art.drawBear(g, mini, {w:450,h:330}); g.restore();
+    g.fillStyle='#5d3a75'; g.font='9px sans-serif';
+    g.fillText(p.modell, x+aw/2, ay+64);
+    g.fillText(p.datum, x+aw/2, ay+76);
+  });
+  g.restore();
+}
+// Finish-Feuerwerk: Raketen steigen + Farb-Fontänen
+function drawFeuerwerk(g){
+  if(!S.fw) return;
+  var t=performance.now()/1000;
+  S.fw.forEach(function(f){
+    var dt2=t-f.t0;
+    if(f.phase===0){ // Rakete steigt
+      var p=Math.min(1,dt2/0.9);
+      var x=f.x0+(f.x1-f.x0)*p, y=f.y0-f.h*p;
+      g.strokeStyle='rgba(255,240,180,0.9)'; g.lineWidth=3; g.lineCap='round';
+      g.beginPath(); g.moveTo(x,y+26); g.lineTo(x,y); g.stroke();
+      g.fillStyle='#fff'; g.beginPath(); g.arc(x,y,4,0,Math.PI*2); g.fill();
+      if(p>=1) f.phase=1, f.t0=t;
+    } else { // Burst: Farb-Fontäne
+      var q=dt2/1.1;
+      if(q>1){ f.dead=1; return; }
+      for(var i=0;i<f.nP;i++){
+        var a=f.ang[i], sp=f.spd[i]*(1-q*0.35);
+        var x=f.x1+Math.cos(a)*sp*q*90;
+        var y=f.y0-f.h+Math.sin(a)*sp*q*90 + q*q*120;
+        g.globalAlpha=1-q;
+        g.fillStyle=f.cols[i%f.cols.length];
+        g.beginPath(); g.arc(x,y,3.2-q*1.6+1,0,Math.PI*2); g.fill();
+      }
+      g.globalAlpha=1;
+    }
+  });
+  S.fw=S.fw.filter(function(f){return !f.dead;});
+  if(!S.fw.length) S.fw=null;
+}
+function startFeuerwerk(){
+  S.fw=[];
+  var cols=[['#e74c3c','#f4c20d','#3498db'],['#9b59b6','#ff9eb5','#ffd24d'],['#2ecc71','#7ab8f5','#fff']];
+  var n=2+Math.floor(Math.random()*2);
+  for(var k=0;k<n;k++){
+    var ang=[], spd=[];
+    for(var i=0;i<26;i++){ ang.push(-Math.PI*0.15-Math.random()*Math.PI*0.7); spd.push(0.5+Math.random()*0.9); }
+    S.fw.push({x0:S.VW*(0.3+Math.random()*0.4), y0:S.VH*0.92,
+      x1:S.VW*(0.25+k*0.25+Math.random()*0.1), h:220+Math.random()*80,
+      t0:performance.now()/1000+k*0.45, phase:0, nP:26, ang:ang, spd:spd,
+      cols:cols[k%3]});
+  }
 }
 
 function drawShootingStar(g){
@@ -644,6 +834,13 @@ S.tapBear = function(x,y){
     return true;
   }
   if(S.state==='massage'){ S.dragBear(x,y); return true; }
+  if(S.state==='tanz' && S.tanz){
+    // Antippen des Bären: Pirouette (Spin)
+    var s4=Math.min(S.VW,S.VH)/420;
+    var bx=S.VW*0.5, byc=S.VH*0.58;
+    if(Math.hypot(x-bx,y-byc)<160*s4){ S.tanz.spin=1; return true; }
+    return true;
+  }
   if(S.state==='spa'){
     var s2=Math.min(S.VW,S.VH)/420;
     var cx2=S.VW*0.5, ey=S.VH*0.58-105*s2;

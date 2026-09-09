@@ -149,6 +149,8 @@ function update(dt){
   }
   // Idle: Atmen + Blinzeln (alle Screens)
   b.breathe = (b.breathe||0)+dt;
+  // Tanz: Pirouette abbauen
+  if(S.tanz && S.tanz.spin>0) S.tanz.spin=Math.max(0, S.tanz.spin-dt*1.2);
   if(b._blinkT===undefined) b._blinkT = 2+Math.random()*3;
   b._blinkT -= dt;
   if(b._blinkT<0){ b.blink=1; if(b._blinkT<-0.12){ b.blink=0; b._blinkT=2.5+Math.random()*3.5; } }
