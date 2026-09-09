@@ -1,12 +1,22 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 3;
-console.log('BS v3');
+window.BS_VER = 4;
+console.log('BS v4');
 
 var Art = window.BSArt = {};
 
-Art.FELL = ['#a9744f','#8a5a3b','#c79a6b','#e0c39a','#9aa3ad','#7a4b8f'];
+// 8 wählbare Bären-Modelle (fellIdx indexiert diese Liste)
+Art.MODELS = [
+  {name:'Braunbär',  fell:'#a9744f'},
+  {name:'Honigbär',  fell:'#d9a94f'},
+  {name:'Panda',     fell:'#f2f0ea', ohren:'#2b2b2b', arme:'#2b2b2b', muster:'panda'},
+  {name:'Eisbär',    fell:'#f4f6f7', schnauze:'#cfe4f2'},
+  {name:'Grizzly',   fell:'#5a3a22', muster:'grizzly'},
+  {name:'Rosé-Bär',  fell:'#eba7b8'},
+  {name:'Nachtbär',  fell:'#3f4a68', schnauze:'#8d97b5', muster:'sterne'},
+  {name:'Teddy',     fell:'#e0892f'}
+];
 Art.HAAR = ['#5a3a1e','#2b2b2b','#c0392b','#e67e22','#f1c40f','#8e44ad','#16a085','#e91e63'];
 Art.LACK = ['#e91e63','#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6','#ffffff'];
 Art.FRISEURE = ['lockig','kurz','zottig','igel','afro'];
@@ -14,71 +24,113 @@ Art.HUTE = ['#c0392b','#2980b9','#27ae60'];
 Art.BRILLEN = ['#e91e63','#f1c40f','#34495e'];
 Art.SCHLEIFEN = ['#e91e63','#9b59b6','#16a085'];
 Art.KETTEN = ['#f1c40f','#ecf0f1','#e91e63'];
+Art.ROUGE = ['#ff6b81','#ff9eb5','#e75480','#ff7f50','#c94f6d'];
+Art.LIDSCHATTEN = ['#9b59b6','#3498db','#f1c40f','#16a085','#ff8fb3'];
 
 function circle(g,x,y,r,c){ g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); }
 function ell(g,x,y,rx,ry,c){ g.fillStyle=c; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,Math.PI*2); g.fill(); }
 
-function rnd(seed){ // kleiner deterministischer Zufall für Zotten
+function rnd(seed){ // kleiner deterministischer Zufall
   var s = seed>>>0;
   return function(){ s = (s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
 }
 
 Art.drawBear = function(g, b, opt){
-  // b: {fell, haar, frisur, lack:{i:color}, schaum:0..1, tropfen:[], fluff:0..1,
-  //     acc:{hut:null|i,brille:null|i,schleife:null|i,kette:null|i}, bow:0 (Verbeugen 0..1)}
+  // b: {fellIdx, fell, haar, frisur, lack, schaum, tropfen, fluff, bow,
+  //     breathe(s), blink(0/1), relax(0..1), makeup:{rouge,lid,gp:[{dx,dy}]}, acc, sticker}
   opt = opt || {};
   var W = opt.w, H = opt.h;
   var cx = W*0.5, cy = H*0.58;
-  var s = Math.min(W,H)/420;                    // Basis-Skalierung
+  var s = Math.min(W,H)/420;
+  var m = Art.MODELS[b.fellIdx||0] || Art.MODELS[0];
+  var fell = m.fell;
+  b.fell = fell; // Kompatibilität für alte Save-Stände
   var fluff = 1 + (b.fluff||0)*0.08;
-  var bowOff = (b.bow||0)*40*s;                 // Oberkörper beim Verbeugen nach unten
-  var fell = b.fell;
+  var bowOff = (b.bow||0)*40*s;
+  var rx = b.relax||0;
   var dunkel = shade(fell,-25), hell = shade(fell,25);
+  var schnauzeC = m.schnauze || hell;
+  var ohrC = m.ohren || fell;
+  var armC = m.arme || fell;
+  var breathe = 1 + Math.sin((b.breathe||0)*2.2)*0.012;
 
   g.save();
+  // Atmung: sanftes Skalieren um die Körpermitte
+  g.translate(cx, cy+70*s); g.scale(1, breathe); g.translate(-cx, -(cy+70*s));
   // Schatten
   ell(g,cx,cy+150*s,150*s,22*s,'rgba(0,0,0,0.12)');
   // Körper
   ell(g,cx,cy+70*s+bowOff,120*s*fluff,110*s,fell);
-  // Arme
-  ell(g,cx-105*s,cy+40*s+bowOff,38*s,70*s,fell);
-  ell(g,cx+105*s,cy+40*s+bowOff,38*s,70*s,fell);
+  // Arme (Panda: schwarz)
+  ell(g,cx-(105+rx*8)*s,cy+(40+rx*30)*s+bowOff,38*s,70*s,armC);
+  ell(g,cx+(105+rx*8)*s,cy+(40+rx*30)*s+bowOff,38*s,70*s,armC);
   // Beine/Füße
   ell(g,cx-55*s,cy+165*s,52*s,34*s,fell);
   ell(g,cx+55*s,cy+165*s,52*s,34*s,fell);
-  // Fußballen
-  ell(g,cx-55*s,cy+160*s,26*s,14*s,hell);
-  ell(g,cx+55*s,cy+160*s,26*s,14*s,hell);
-  // Krallen + Nagellack
+  ell(g,cx-55*s,cy+160*s,26*s,14*s,schnauzeC);
+  ell(g,cx+55*s,cy+160*s,26*s,14*s,schnauzeC);
   drawClaws(g,cx-55*s,cy+175*s,s,b,'L');
   drawClaws(g,cx+55*s,cy+175*s,s,b,'R');
 
   // Kopf
   var hy = cy-90*s+bowOff;
-  circle(g,cx-62*s,hy-70*s+bowOff*0.5,26*s,fell); // Ohren
-  circle(g,cx+62*s,hy-70*s+bowOff*0.5,26*s,fell);
-  circle(g,cx-62*s,hy-70*s+bowOff*0.5,13*s,hell);
-  circle(g,cx+62*s,hy-70*s+bowOff*0.5,13*s,hell);
+  var ex = 62+rx*16, eyy = -70+rx*12;
+  circle(g,cx-ex*s,hy+eyy*s+bowOff*0.5,26*s,ohrC);
+  circle(g,cx+ex*s,hy+eyy*s+bowOff*0.5,26*s,ohrC);
+  circle(g,cx-ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
+  circle(g,cx+ex*s,hy+eyy*s+bowOff*0.5,13*s, m.ohren? shade(m.ohren,30):hell);
   circle(g,cx,hy+bowOff*0.5,88*s*fluff,fell);
+
+  // Muster (Panda-Flecken, Grizzly-Spitzen, Nachtbär-Sterne)
+  if(m.muster) drawMuster(g, m.muster, cx, cy, hy, bowOff, s);
+
+  // Make-up hinter den Augen: Lidschatten + Rouge
+  var mk = b.makeup || {};
+  var ey = hy-15*s+bowOff*0.5;
+  if(mk.lid){
+    g.globalAlpha=0.7;
+    ell(g,cx-30*s,ey-11*s,15*s,9*s,mk.lid);
+    ell(g,cx+30*s,ey-11*s,15*s,9*s,mk.lid);
+    g.globalAlpha=1;
+  }
+  if(mk.rouge){
+    g.globalAlpha=0.4;
+    circle(g,cx-52*s,hy+14*s+bowOff*0.5,17*s,mk.rouge);
+    circle(g,cx+52*s,hy+14*s+bowOff*0.5,17*s,mk.rouge);
+    g.globalAlpha=1;
+  }
 
   // Frisur
   drawHair(g,cx,hy+bowOff*0.5,s,b);
 
-  // Gesicht
-  var ey = hy-15*s+bowOff*0.5;
+  // Gesicht: Augen (mit Blinzeln)
   if(!b.acc.brille && b.acc.brille!==0){
-    circle(g,cx-30*s,ey,9*s,'#26221f'); circle(g,cx+30*s,ey,9*s,'#26221f');
-    circle(g,cx-27*s,ey-3*s,3*s,'#fff'); circle(g,cx+33*s,ey-3*s,3*s,'#fff');
+    if(b.blink){
+      g.strokeStyle='#26221f'; g.lineWidth=3*s; g.lineCap='round';
+      g.beginPath(); g.moveTo(cx-38*s,ey); g.lineTo(cx-22*s,ey);
+      g.moveTo(cx+22*s,ey); g.lineTo(cx+38*s,ey); g.stroke();
+    } else {
+      circle(g,cx-30*s,ey,9*s,'#26221f'); circle(g,cx+30*s,ey,9*s,'#26221f');
+      circle(g,cx-27*s,ey-3*s,3*s,'#fff'); circle(g,cx+33*s,ey-3*s,3*s,'#fff');
+    }
   }
   // Schnauze
-  ell(g,cx,hy+28*s+bowOff*0.5,36*s,26*s,hell);
-  ell(g,cx,hy+18*s+bowOff*0.5,12*s,9*s,'#4a3227');       // Nase
+  ell(g,cx,hy+28*s+bowOff*0.5,36*s,26*s,schnauzeC);
+  ell(g,cx,hy+18*s+bowOff*0.5,12*s,9*s,'#4a3227');
   g.strokeStyle='#4a3227'; g.lineWidth=3*s; g.lineCap='round';
   g.beginPath(); g.moveTo(cx,hy+27*s+bowOff*0.5); g.lineTo(cx,hy+36*s+bowOff*0.5);
   g.quadraticCurveTo(cx-12*s,hy+46*s+bowOff*0.5,cx-22*s,hy+40*s+bowOff*0.5);
   g.moveTo(cx,hy+36*s+bowOff*0.5);
   g.quadraticCurveTo(cx+12*s,hy+46*s+bowOff*0.5,cx+22*s,hy+40*s+bowOff*0.5);
   g.stroke();
+
+  // Glitzer-Tupfer (Make-up)
+  if(mk.gp && mk.gp.length){
+    for(var gi=0; gi<mk.gp.length; gi++){
+      var gp = mk.gp[gi];
+      Art.drawSticker(g,'stern',cx+gp.dx,hy+bowOff*0.5+gp.dy,6*s,'rgba(255,215,90,0.95)');
+    }
+  }
 
   // Accessoires
   drawAcc(g,cx,hy,bowOff,s,b);
@@ -107,6 +159,33 @@ Art.drawBear = function(g, b, opt){
   g.restore();
 };
 
+function drawMuster(g, typ, cx, cy, hy, bowOff, s){
+  var i;
+  if(typ==='panda'){
+    // Schwarze Flecken um die Augen
+    ell(g,cx-32*s,hy-14*s+bowOff*0.5,20*s,26*s,'#2b2b2b');
+    ell(g,cx+32*s,hy-14*s+bowOff*0.5,20*s,26*s,'#2b2b2b');
+  } else if(typ==='grizzly'){
+    // Graue Fellspitzen auf Kopf und Körper
+    var r=rnd(11);
+    for(i=0;i<14;i++){
+      var a=-Math.PI*0.85 + i*(Math.PI*0.7/13);
+      var x1=cx+Math.cos(a)*88*s, y1=hy+bowOff*0.5+Math.sin(a)*88*s;
+      ell(g,x1,y1,7*s,4*s,'rgba(190,190,190,0.5)');
+    }
+    for(i=0;i<10;i++){
+      var a2=-Math.PI*0.8 + i*(Math.PI*0.6/9);
+      ell(g,cx+Math.cos(a2)*115*s, cy+70*s+Math.sin(a2)*105*s, 8*s,5*s,'rgba(190,190,190,0.4)');
+    }
+  } else if(typ==='sterne'){
+    // Kleine Sternchen auf Körper und Kopf
+    var spots=[[-60,40],[30,110],[-20,-30],[70,60],[-90,110],[10,150]];
+    for(i=0;i<spots.length;i++){
+      Art.drawSticker(g,'stern',cx+spots[i][0]*s,cy+70*s+bowOff+spots[i][1]*s*0.6,7*s,'rgba(255,230,120,0.85)');
+    }
+  }
+}
+
 function drawClaws(g,x,y,s,b,side){
   for(var i=0;i<3;i++){
     var cxp = x + (i-1)*16*s;
@@ -118,7 +197,6 @@ function drawClaws(g,x,y,s,b,side){
 function drawHair(g,cx,hy,s,b){
   var c = b.haar, f = b.frisur, i;
   if(f==='lockig'){
-    // 6 Locken-Kreise am Kopfrand oben
     for(i=0;i<6;i++){ var t=i/5; var x=cx+(t-0.5)*110*s;
       circle(g,x, hy-75*s+Math.abs(t-0.5)*20*s, (16-Math.abs(t-0.5)*8)*s, c); }
   } else if(f==='kurz'){
@@ -142,7 +220,7 @@ function drawAcc(g,cx,hy,bowOff,s,b){
   var top = hy-88*s+bowOff*0.5;
   if(b.acc.hut!==null && b.acc.hut!==undefined){
     var hc = Art.HUTE[b.acc.hut];
-    ell(g,cx,top-6*s,70*s,14*s,hc);           // Krempe
+    ell(g,cx,top-6*s,70*s,14*s,hc);
     g.fillStyle=hc; g.beginPath();
     g.moveTo(cx-42*s,top-6*s); g.lineTo(cx-32*s,top-62*s);
     g.lineTo(cx+32*s,top-62*s); g.lineTo(cx+42*s,top-6*s); g.closePath(); g.fill();
@@ -184,7 +262,7 @@ function shade(hex,amt){
 }
 Art.shade=shade;
 
-// Sticker (Herz, Stern, Blume) für Pfoten – zeichnet bei (x,y), Größe r
+// Sticker (Herz, Stern, Blume) – zeichnet bei (x,y), Größe r
 Art.drawSticker=function(g,typ,x,y,r,c){
   g.save(); g.translate(x,y); g.fillStyle=c;
   if(typ==='herz'){

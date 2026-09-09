@@ -4,8 +4,6 @@
 var Art = window.BSArt;
 
 var S = window.BSSalon = {};
-
-// Virtuelle Spielebene 900x600 (wird letterboxed skaliert)
 S.VW = 900; S.VH = 600;
 
 S.STATIONS = [
@@ -13,6 +11,8 @@ S.STATIONS = [
   {id:'foehnen',  icon:'🚿', name:'Föhnen'},
   {id:'schneiden',icon:'✂️', name:'Schneiden'},
   {id:'pfoten',   icon:'💅', name:'Pfoten'},
+  {id:'massage',  icon:'💆', name:'Massage'},
+  {id:'makeup',   icon:'💄', name:'Make-up'},
   {id:'schmuecken',icon:'🎀', name:'Schmücken'},
   {id:'finish',   icon:'✨', name:'Fertig!'}
 ];
@@ -26,77 +26,77 @@ var ACC = [
 ];
 
 function neuerBaer(fellIdx){
-  return { fell: Art.FELL[fellIdx], fellIdx: fellIdx,
+  return { fellIdx: fellIdx, fell: Art.MODELS[fellIdx].fell,
     haar: Art.HAAR[0], frisur: 'lockig', lack:{}, schaum:0, fluff:0,
-    tropfen:[], bow:0,
+    tropfen:[], bow:0, breathe:0, blink:0, relax:0,
+    makeup:{rouge:null,lid:null,gp:[]},
     acc:{hut:null,schleife:null,brille:null,kette:null},
     sticker:[] };
 }
 
-S.state = 'menu';          // menu | station-<id> | finish-done
+S.state = 'menu';          // menu | wahl | station-<id> | finish-done
 S.baer = neuerBaer(0);
-S.station = null;
 S.saved = null;
 try{ S.saved = JSON.parse(localStorage.getItem('bs_baer')||'null'); }catch(e){}
-if(S.saved && S.saved.fell){ // gespeicherten Bären anbieten
-  S.baer = Object.assign(neuerBaer(S.saved.fellIdx||0), S.saved);
-  S.baer.tropfen=[]; S.baer.schaum=0; S.baer.fluff=0; S.baer.bow=0;
+if(S.saved && Art.MODELS[S.saved.fellIdx||0]){
+  var idx = S.saved.fellIdx||0;
+  S.saved.fell = Art.MODELS[idx].fell; // Modell-Farbe hat Vorrang vor altem Save
+  S.baer = Object.assign(neuerBaer(idx), S.saved);
+  S.baer.tropfen=[]; S.baer.schaum=0; S.baer.fluff=0; S.baer.bow=0; S.baer.relax=0;
+  if(!S.baer.makeup) S.baer.makeup={rouge:null,lid:null,gp:[]};
 }
 
 S.save = function(){
   try{ localStorage.setItem('bs_baer', JSON.stringify({
-    fellIdx:S.baer.fellIdx, fell:S.baer.fell, haar:S.baer.haar,
-    frisur:S.baer.frisur, lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker
+    fellIdx:S.baer.fellIdx, haar:S.baer.haar, frisur:S.baer.frisur,
+    lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker, makeup:S.baer.makeup
   })); }catch(e){}
 };
 
 // ---- Buttons ----------------------------------------------
-// {x,y,w,h,label,icon,sub,onTap,active:fn}
 var buttons = [];
 S.buttons = buttons;
-
 function btn(x,y,w,h,label,fn,opt){
   var b = {x:x,y:y,w:w,h:h,label:label,onTap:fn};
   if(opt) for(var k in opt) b[k]=opt[k];
   buttons.push(b); return b;
 }
 
-// Layout pro Zustand neu aufbauen
 S.buildUI = function(){
   buttons.length = 0;
   var st = S.state;
-  // Station-Verlassen aufräumen: kein Schaum/Tropfen-Rest im weiteren Verlauf
   if(S._prev==='waschen' && st!=='waschen'){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
   if(S._prev==='foehnen' && st!=='foehnen'){ S.foehn=false; }
   S._prev = st;
   if(st==='menu'){
     if(S.saved && S.saved.fell){
       btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.state='waschen'; S.buildUI(); },{big:1});
-      btn(230,534,440,64,'🌟 Neuer Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
+      btn(230,534,440,64,'🌟 Bär wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1});
     } else {
-      btn(230,500,440,70,'▶️ Start',function(){ S.state='waschen'; S.buildUI(); },{big:1});
+      btn(230,500,440,70,'▶️ Start',function(){ S.state='wahl'; S.buildUI(); },{big:1});
     }
     return;
   }
+  if(st==='wahl'){
+    btn(16,16,120,56,'⬅️ Start',function(){ S.state='menu'; S.buildUI(); });
+    // Kacheln (4x2), Hit-Test in tapBear
+    return;
+  }
   if(st==='finish-done'){
-    btn(150,518,280,62,'🐻 Noch ein Bär',function(){ neuRandom(); S.state='waschen'; S.buildUI(); },{big:1});
+    btn(150,518,280,62,'🐻 Bär wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1});
     btn(470,518,280,62,'🔄 Von vorne',function(){ S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1});
     return;
   }
-  // Stations-UI
   backButtons();
   if(st==='waschen') buildWaschen();
   else if(st==='foehnen') buildFoehnen();
   else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
+  else if(st==='massage') buildMassage();
+  else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
   else if(st==='finish') buildFinish();
 };
-
-function neuRandom(){
-  var idx = Math.floor(Math.random()*Art.FELL.length);
-  S.baer = neuerBaer(idx); S.save();
-}
 
 function backButtons(){
   btn(16,16,120,56,'⬅️ Start',function(){ S.state='menu'; S.buildUI(); });
@@ -109,15 +109,15 @@ function backButtons(){
 }
 
 function stationTabs(){
+  // 2 Reihen à 4 Tabs (8 Stationen)
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
-      btn(130+j*112, S.VH-72, 104, 60, st.icon+' '+st.name, function(){
+      btn(130+(j%4)*160, S.VH-130+Math.floor(j/4)*62, 152, 58, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
       }, {active:function(){ return S.state===st.id; }, small:1});
     })(S.STATIONS[j],j);
   }
 }
-
 // ---- Stations-Builder --------------------------------------
 function buildWaschen(){
   stationTabs();
@@ -161,6 +161,34 @@ function buildPfoten(){
   });
   btn(30,326,150,56,'🧽 Neu',function(){ S.baer.lack={}; S.baer.sticker=[]; S.save(); S.buildUI(); });
 }
+function buildMassage(){
+  stationTabs();
+  S.hinweis = 'Streiche mit dem Finger in Kreisen über den Bären! 💆';
+  if(!S.mass) S.mass = {prog:0, ang:null, herzen:[]};
+}
+function buildMakeup(){
+  stationTabs();
+  S.hinweis = 'Farbe wählen, dann Glitzer auf Wange oder Stirn tupfen! ✨';
+  var mk = S.baer.makeup;
+  // Rouge-Farben
+  Art.ROUGE.forEach(function(c,i){
+    btn(30+i*52, 100, 46, 46, '', function(){
+      mk.rouge=c; S.save(); S.buildUI();
+    },{fill:c,active:function(){return mk.rouge===c;}});
+  });
+  // Lidschatten
+  Art.LIDSCHATTEN.forEach(function(c,i){
+    btn(30+i*52, 156, 46, 46, '', function(){
+      mk.lid=c; S.save(); S.buildUI();
+    },{fill:c,active:function(){return mk.lid===c;}});
+  });
+  btn(30, 216, 200, 50, '✨ Glitzer-Modus', function(){
+    S.glitzMode = !S.glitzMode; S.buildUI();
+  },{active:function(){return !!S.glitzMode;}});
+  btn(30, 276, 150, 50, '🧽 Neu', function(){
+    S.baer.makeup={rouge:null,lid:null,gp:[]}; S.save(); S.buildUI();
+  });
+}
 function buildSchmuecken(){
   stationTabs();
   S.hinweis = 'Antippen = an/aus, Farben wechseln! 🎀';
@@ -183,24 +211,24 @@ function buildSchmuecken(){
 }
 function buildFinish(){
   S.hinweis = 'Perfekt! ✨';
-  btn(330,480,240,70,'🎉 Fertig!',function(){
-    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120;
+  btn(330,470,240,70,'🎉 Fertig!',function(){
+    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1;
     S.save(); S.buildUI();
   },{big:1});
 }
 
-// ---- Zeichnen ------------------------------------------------
+// ---- Zeichnen ----------------------------------------------
 S.draw = function(g){
   var W=S.VW,H=S.VH;
-  // Hintergrund: Salon mit Wand + Boden
   var grad=g.createLinearGradient(0,0,0,H);
   grad.addColorStop(0,'#ffe6f2'); grad.addColorStop(0.65,'#fff3e0'); grad.addColorStop(0.65,'#d9b38c'); grad.addColorStop(1,'#c49a6c');
   g.fillStyle=grad; g.fillRect(0,0,W,H);
+  drawDeko(g);
 
   if(S.state==='menu'){ drawMenu(g); return; }
+  if(S.state==='wahl'){ drawWahl(g); return; }
 
   if(S.state==='finish-done'){
-    // Feier-Screen: großes Perfekt, Bär freudig oben, Buttons darunter
     g.textAlign='center';
     g.font='bold 54px sans-serif';
     g.lineWidth=8; g.strokeStyle='#fff';
@@ -210,12 +238,15 @@ S.draw = function(g){
     g.translate(0,-34);
     Art.drawBear(g,S.baer,{w:W,h:H});
     drawStickers(g);
+    if(S.glitzerRing) drawGlitzerRing(g);
     g.restore();
     drawButtons(g);
     return;
   }
 
-  // Titel + Hinweis
+  // Massage-Deko (unter Titel)
+  if(S.state==='massage') drawHerzen(g);
+
   g.fillStyle='#7a4b8f'; g.font='bold 26px sans-serif'; g.textAlign='center';
   var st=S.STATIONS.filter(function(x){return x.id===S.state;})[0];
   g.fillText(st? st.icon+' '+st.name : '', W/2, 50);
@@ -224,20 +255,49 @@ S.draw = function(g){
     g.fillText(S.hinweis, W/2, 82);
   }
 
-  // Bär (bei Pfoten-Station größer ausgerichtet)
   Art.drawBear(g,S.baer,{w:W,h:H});
-
-  // Sticker auf Pfoten
   drawStickers(g);
   drawButtons(g);
 };
 
+// Stations-Deko: kleine prozedurale Details, zurückhaltend
+function drawDeko(g){
+  var W=S.VW,H=S.VH;
+  if(S.state==='wahl') return;
+  if(S.state==='schneiden'){ // Spiegel links oben
+    g.fillStyle='#d7ecf5'; g.strokeStyle='#b08cc7'; g.lineWidth=5;
+    g.beginPath(); g.arc(790,150,72,0,Math.PI*2); g.fill(); g.stroke();
+    g.fillStyle='rgba(255,255,255,0.5)';
+    g.beginPath(); g.arc(768,128,26,0,Math.PI*2); g.fill();
+  }
+  if(S.state==='waschen'||S.state==='foehnen'){ // Duschkopf-Deko
+    g.fillStyle='#8a97a5';
+    g.fillRect(824,40,10,54);
+    g.beginPath(); g.arc(829,104,26,0,Math.PI); g.fill();
+    g.fillStyle='rgba(120,190,255,0.75)';
+    for(var k=-2;k<=2;k++) g.fillRect(829+k*9,108,3,16);
+  }
+  if(S.state==='pfoten'||S.state==='makeup'||S.state==='massage'){ // Teppich
+    g.fillStyle='rgba(154,107,181,0.16)';
+    g.beginPath(); g.ellipse(W/2,H-160,250,60,0,0,Math.PI*2); g.fill();
+    g.strokeStyle='rgba(122,75,143,0.35)'; g.lineWidth=3;
+    g.beginPath(); g.ellipse(W/2,H-160,220,48,0,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.ellipse(W/2,H-160,180,35,0,0,Math.PI*2); g.stroke();
+  }
+  if(S.state==='schmuecken'){ // Regal mit Fläschchen
+    g.fillStyle='#c49a6c'; g.fillRect(690,180,180,14);
+    var fl=['#e91e63','#9b59b6','#f1c40f'];
+    for(var i=0;i<3;i++){
+      g.fillStyle=fl[i]; g.fillRect(710+i*50,146,26,34);
+      g.fillStyle='#fff'; g.fillRect(716+i*50,138,14,10);
+    }
+  }
+}
 function drawMenu(g){
   var W=S.VW,H=S.VH;
   var grad=g.createLinearGradient(0,0,0,H);
   grad.addColorStop(0,'#ffe6f2'); grad.addColorStop(1,'#e8d5f5');
   g.fillStyle=grad; g.fillRect(0,0,W,H);
-  // deko Sterne (Hintergrund, vor Titel+Bär)
   for(var i=0;i<14;i++){
     var x=(i*167)%W, y=40+((i*97)%520);
     Art.drawSticker(g,'stern',x,y,8+(i%3)*4,'rgba(255,210,77,0.45)');
@@ -253,8 +313,78 @@ function drawMenu(g){
   g.translate(0, H*0.10);
   Art.drawBear(g,S.baer,{w:W,h:H*0.66});
   g.restore();
-  var oldLen = buttons.length;
   drawButtons(g);
+}
+
+// ---- Bären-Auswahl -----------------------------------------
+function kacheln(){
+  // 4x2 Raster, Mitte des Screens
+  var out=[];
+  for(var i=0;i<Art.MODELS.length;i++){
+    out.push({i:i, x:150+(i%4)*155, y:190+Math.floor(i/4)*210, w:140, h:190});
+  }
+  return out;
+}
+function drawWahl(g){
+  var W=S.VW,H=S.VH;
+  var grad=g.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#e8f4ff'); grad.addColorStop(1,'#f5e6ff');
+  g.fillStyle=grad; g.fillRect(0,0,W,H);
+  for(var i=0;i<10;i++){
+    Art.drawSticker(g,'stern',(i*211)%W, 30+((i*131)%540), 7+(i%3)*3, 'rgba(154,107,181,0.25)');
+  }
+  g.textAlign='center';
+  g.fillStyle='#7a4b8f'; g.font='bold 44px sans-serif';
+  g.fillText('Wähle deinen Bären! 🐻', W/2, 70);
+  g.fillStyle='#9c6bb5'; g.font='20px sans-serif';
+  g.fillText('Antippen und los geht’s!', W/2, 104);
+  kacheln().forEach(function(k){
+    var m=Art.MODELS[k.i];
+    var act = S.baer.fellIdx===k.i;
+    g.save();
+    g.beginPath();
+    g.roundRect ? g.roundRect(k.x,k.y,k.w,k.h,16) : g.rect(k.x,k.y,k.w,k.h);
+    g.fillStyle = act?'#fbeaff':'rgba(255,255,255,0.94)';
+    g.fill();
+    g.lineWidth = act?5:2; g.strokeStyle = act?'#7a4b8f':'#c9aede';
+    g.stroke();
+    // Mini-Bär (auf Kachel skaliert)
+    var mini = Object.assign({}, S.baer, {fellIdx:k.i, fell:m.fell, schaum:0, tropfen:[],
+      fluff:0, bow:0, lack:{}, sticker:[], makeup:{rouge:null,lid:null,gp:[]},
+      acc:{hut:null,schleife:null,brille:null,kette:null}});
+    g.save();
+    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-46); g.clip();
+    g.translate(k.x+k.w/2, k.y+12); g.scale(0.42,0.42);
+    g.translate(-225,-40);
+    Art.drawBear(g, mini, {w:450, h:330});
+    g.restore();
+    g.fillStyle='#5d3a75'; g.font='bold 17px sans-serif';
+    g.fillText(m.name, k.x+k.w/2, k.y+k.h-14);
+    g.restore();
+  });
+  drawButtons(g);
+}
+
+function drawHerzen(g){
+  if(!S.mass) return;
+  S.mass.herzen.forEach(function(h){
+    g.globalAlpha = h.a;
+    Art.drawSticker(g,'herz',h.x,h.y,10,'#ff6b9d');
+  });
+  g.globalAlpha=1;
+}
+
+function drawGlitzerRing(g){
+  // Kreis aus Sternen um den Bären (Finish)
+  var t = (performance.now()/1000)%10;
+  for(var i=0;i<18;i++){
+    var a = i/18*Math.PI*2 + t*0.6;
+    var R = 235 + Math.sin(t*3+i)*12;
+    var x = S.VW*0.5 + Math.cos(a)*R;
+    var y = S.VH*0.55 + Math.sin(a)*R*0.72;
+    var sz = 9 + Math.sin(t*5+i*1.7)*4;
+    Art.drawSticker(g,'stern',x,y,Math.max(4,sz), i%2?'#ffd24d':'#ff9eb5');
+  }
 }
 
 function drawStickers(g){
@@ -268,7 +398,6 @@ function drawStickers(g){
 }
 
 function clawPos(key){
-  // virtuelle Koordinaten der Krallen für Hit-Tests
   var s = Math.min(S.VW,S.VH)/420;
   var cy = S.VH*0.58, cx=S.VW*0.5;
   var map = {L:[-55,175],R:[55,175]};
@@ -276,9 +405,19 @@ function clawPos(key){
   var p=map[side];
   return [cx + (p[0]+(i-1)*16)*s, cy+p[1]*s, 14*s];
 }
-
 S.tapBear = function(x,y){
-  // Rubbeln beim Waschen: Schaum erhöhen
+  if(S.state==='wahl'){
+    var ks=kacheln();
+    for(var i=0;i<ks.length;i++){
+      var k=ks[i];
+      if(x>=k.x&&x<=k.x+k.w&&y>=k.y&&y<=k.y+k.h){
+        S.baer = neuerBaer(k.i); S.save();
+        S.state='waschen'; S.buildUI();
+        return true;
+      }
+    }
+    return false;
+  }
   if(S.state==='waschen'){
     var s=Math.min(S.VW,S.VH)/420;
     var cx=S.VW*0.5, cy=S.VH*0.58+70*s;
@@ -300,7 +439,40 @@ S.tapBear = function(x,y){
     });
     return true;
   }
+  if(S.state==='makeup' && S.glitzMode){
+    // Glitzer-Tupfer auf Wange/Stirn (Kopfbereich), max 14
+    var s2=Math.min(S.VW,S.VH)/420;
+    var cx2=S.VW*0.5, hy2=S.VH*0.58-90*s2;
+    var ddx=x-cx2, ddy=y-hy2;
+    if(ddx*ddx/(90*s2*90*s2)+ddy*ddy/(90*s2*90*s2)<1.2){
+      var mk=S.baer.makeup; if(!mk.gp) mk.gp=[];
+      if(mk.gp.length<14){ mk.gp.push({dx:ddx,dy:ddy}); S.save(); }
+    }
+    return true;
+  }
+  if(S.state==='massage'){ S.dragBear(x,y); return true; }
   return false;
+};
+
+// Massage-Bewegung: Kreis-Drag auf dem Bär-Körper
+S.dragBear = function(x,y,px,py){
+  if(S.state!=='massage'||!S.mass) return;
+  var s=Math.min(S.VW,S.VH)/420;
+  var cx=S.VW*0.5, cy=S.VH*0.58+70*s;
+  var dx=(x-cx)/(140*s), dy=(y-cy)/(130*s);
+  if(dx*dx+dy*dy>1.6) { S.mass.ang=null; return; }
+  var a=Math.atan2(y-cy,x-cx);
+  if(S.mass.ang!==null && px!==undefined){
+    var da=a-S.mass.ang;
+    if(da>Math.PI) da-=Math.PI*2;
+    if(da<-Math.PI) da+=Math.PI*2;
+    S.mass.prog=Math.min(100,S.mass.prog+Math.abs(da)*2.2);
+    if(Math.abs(da)>0.05 && Math.random()<0.3){
+      S.mass.herzen.push({x:x+(Math.random()-0.5)*30, y:y-10, vy:-40, a:1});
+      if(S.mass.herzen.length>18) S.mass.herzen.shift();
+    }
+  }
+  S.mass.ang=a;
 };
 
 function roundRect(g,x,y,w,h,r){
@@ -322,13 +494,13 @@ function drawButtons(g){
     g.stroke();
     if(b.label){
       g.fillStyle = act ? '#fff' : '#5d3a75';
-      g.font = (b.tiny?'13px':b.small?'16px':b.big?'bold 24px sans-serif':'19px sans-serif');
+      g.font = (b.tiny?'13px sans-serif':b.small?'16px sans-serif':b.big?'bold 24px sans-serif':'19px sans-serif');
       g.textAlign='center'; g.textBaseline='middle';
       g.fillText(b.label, b.x+b.w/2, b.y+b.h/2);
     }
     g.restore();
   });
-};
+}
 
 S.hitButton = function(x,y){
   for(var i=buttons.length-1;i>=0;i--){

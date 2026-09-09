@@ -72,6 +72,7 @@ cv.addEventListener('pointermove', function(e){
   if(!down) return;
   var p=toVirt(e);
   if(S.state==='waschen') S.tapBear(p[0],p[1]);
+  if(S.state==='massage') S.dragBear(p[0],p[1],lastX,lastY);
   lastX=p[0]; lastY=p[1];
 }, {passive:false});
 function up(e){ e&&e.preventDefault(); down=false; holdBtn=null; S.foehn=false; }
@@ -102,6 +103,22 @@ function update(dt){
       spawn(Math.random()*S.VW, -10, ['#e91e63','#f1c40f','#2ecc71','#3498db','#9b59b6'][Math.floor(Math.random()*5)],3,120,2.5,7); }
     if(S.stars>0){ S.stars-=dt*60;
       spawn(Math.random()*S.VW, Math.random()*S.VH*0.5, '#ffd24d',2,80,1.5,8); }
+  }
+  // Idle: Atmen + Blinzeln (alle Screens)
+  b.breathe = (b.breathe||0)+dt;
+  if(b._blinkT===undefined) b._blinkT = 2+Math.random()*3;
+  b._blinkT -= dt;
+  if(b._blinkT<0){ b.blink=1; if(b._blinkT<-0.12){ b.blink=0; b._blinkT=2.5+Math.random()*3.5; } }
+  // Massage: Entspannung + Herzen
+  if(S.state==='massage' && S.mass){
+    var rt = Math.min(1, S.mass.prog/100);
+    b.relax += (rt-b.relax)*Math.min(1,dt*2.5);
+    for(var hi=S.mass.herzen.length-1;hi>=0;hi--){
+      var h=S.mass.herzen[hi]; h.y+=h.vy*dt; h.a-=dt*0.7;
+      if(h.a<=0) S.mass.herzen.splice(hi,1);
+    }
+  } else if(b.relax>0){
+    b.relax=Math.max(0,b.relax-dt*0.8);
   }
   // Verbeugen animieren
   var bt=S.state==='finish-done'?1:0;
