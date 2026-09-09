@@ -1,8 +1,8 @@
 // art.js — Bär prozedural zeichnen. Kein externes Material.
 (function(){
 'use strict';
-window.BS_VER = 15;
-console.log('BS v15');
+window.BS_VER = 16;
+console.log('BS v16');
 
 var Art = window.BSArt = {};
 

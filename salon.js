@@ -90,9 +90,14 @@ function btn(x,y,w,h,label,fn,opt){
   if(opt) for(var k in opt) b[k]=opt[k];
   buttons.push(b); return b;
 }
+function muteButton(){
+  var b = btn(S.VW-72,16,56,56, S.muted?'🔇':'🔊', function(){ S.toggleMute(); });
+  return b;
+}
 
 S.buildUI = function(){
   buttons.length = 0;
+  if(typeof S.toggleMute==='function') muteButton();
   var st = S.state;
   if(st==='menu'){
     // Menü-Vorschau: IMMER Braunbär (idx 0), Frisur+Haarfarbe+1 Accessoire wechseln zufällig
