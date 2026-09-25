@@ -68,7 +68,12 @@ Art.liveBear = null;
 // Schulter-Pivot (±90,-2) · Füße (±58,158), Zehen/Krallen (±58+(i-1)*16, ~178) — passend zu den Hit-Zonen in salon.js
 var HEAD_Y=-82, BODY_Y=70, EAR_X=70, EAR_Y=-68, SNOUT_Y=24, EYE_X=34, EYE_Y=-16, ARM_X=90, ARM_Y=-2, FOOT_X=58, FOOT_Y=158;
 
-function headPath(g){ g.beginPath(); g.ellipse(0,-6,100,84,0,0,TAU); g.moveTo(112,26); g.ellipse(0,26,112,58,0,0,TAU); }
+function headPath(g){ // EINE glatte Kontur: runde Stirn, volle Wangen
+  g.beginPath(); g.moveTo(0,-90);
+  g.bezierCurveTo(64,-90,100,-58,104,-16); g.bezierCurveTo(116,18,114,66,62,82);
+  g.bezierCurveTo(30,91,-30,91,-62,82); g.bezierCurveTo(-114,66,-116,18,-104,-16);
+  g.bezierCurveTo(-100,-58,-64,-90,0,-90); g.closePath();
+}
 function bodyPath(g){
   g.beginPath(); g.moveTo(0,-112);
   g.bezierCurveTo(80,-112,126,-34,124,34); g.bezierCurveTo(122,92,76,112,0,112);
@@ -133,13 +138,13 @@ function furTile(){
     }
   }
   for(var i=0;i<26;i++) dab(R()<0.5?lt:dk,R()*N,R()*N,18+R()*22,18+R()*22,0,0.10);
-  for(var j=0;j<760;j++){ var r=1.6+R()*3.4; dab(R()<0.55?lt:dk,R()*N,R()*N,r,r*2.1,(R()-0.5)*0.9,0.22+R()*0.3); }
+  for(var j=0;j<620;j++){ var r=2.2+R()*3.6; dab(R()<0.55?lt:dk,R()*N,R()*N,r,r*2.2,(R()-0.5)*0.9,0.12+R()*0.2); }
   g.globalAlpha=1;
   return (furCv=c);
 }
 function fur(g,x,y,w,h,amt){
   var pat=g.createPattern(furTile(),'repeat');
-  g.save(); g.globalCompositeOperation='soft-light'; g.globalAlpha=amt===undefined?0.7:amt;
+  g.save(); g.globalCompositeOperation='soft-light'; g.globalAlpha=amt===undefined?0.62:amt;
   g.scale(0.62,0.62); g.fillStyle=pat; g.fillRect(x/0.62,y/0.62,w/0.62,h/0.62);
   g.restore();
 }
@@ -163,14 +168,14 @@ function shadeForm(g,ox,oy,rx,ry,str){
   g.restore();
 }
 // komplettes Körperteil: weiche Kontur (Schatten-Blur) → Farbe → Muster → Flausch → Form-Schatten → Innen-Kante
-function paintPart(g,k,path,col,kon,ox,oy,rx,ry,inner,furAmt){
+function paintPart(g,k,path,col,kon,ox,oy,rx,ry,inner,furAmt,noEdge){
   g.save(); g.shadowColor=Fx.alpha(kon,0.85); g.shadowBlur=Math.max(1.2,2.6*k);
   path(g); g.fillStyle=col; g.fill(); g.restore();
   g.save(); path(g); g.clip();
   if(inner) inner(g);
   fur(g,ox-rx*1.3,oy-ry*1.3,rx*2.6,ry*2.6,furAmt);
   shadeForm(g,ox,oy,rx,ry);
-  path(g); g.lineWidth=3.2; g.strokeStyle=Fx.alpha(kon,0.42); g.stroke();
+  if(!noEdge){ path(g); g.lineWidth=3.2; g.strokeStyle=Fx.alpha(kon,0.4); g.stroke(); }
   g.restore();
 }
 // weich auslaufende Ellipse (Flecken, Bauch, Wangen)
@@ -491,7 +496,10 @@ function buildSet(idx,k){
     });
   });
   S.foot=bake(-62,-40,124,82,k,function(g,k){
-    paintPart(g,k,footPath,P.beine,P.kontur,0,4,50,36,function(g){ if(M.foot) M.foot(g,P,k); });
+    paintPart(g,k,footPath,P.beine,P.kontur,0,4,50,36,function(g){
+      if(M.foot) M.foot(g,P,k);
+      [-8,8].forEach(function(x){ softEll(g,x,24,2.2,9,Fx.alpha(Fx.warmShadow(P.beine,0.6),0.55),0,0.9); });
+    },undefined,true);
     for(var i=0;i<3;i++){ var x=(i-1)*16, y=(i===1?21:18)+8; softEll(g,x,y,5,3.6,P.nail,0,0.3); }
   });
   if(M.top) S.top=bake(-160,-240,320,350,k,function(g,k){ M.top(g,P,k); });
@@ -511,10 +519,12 @@ function tuft(g,k,x,y,len,w,rot,col,kon){ // abgerundete Strähne (Tropfenform, 
 }
 var HAIR={
   lockig:function(g,k,c,kon){
-    var i,a;
-    for(i=0;i<9;i++){ a=-2.72+i*0.29; lump(g,k,Math.cos(a)*90,-4+Math.sin(a)*80,23,21,0,c,kon); }
-    for(i=0;i<6;i++){ a=-2.45+i*0.26; lump(g,k,Math.cos(a)*62,-4+Math.sin(a)*72,20,18,0,c,kon); }
-    for(i=0;i<3;i++) lump(g,k,-22+i*22,-66+(i===1?-4:0),16,14,0,c,kon);
+    var i,a, hl=Fx.alpha(Fx.warmLight(c,0.7),0.55);
+    function curl(x,y,r){ lump(g,k,x,y,r,r*0.92,0,c,kon);
+      g.strokeStyle=hl; g.lineWidth=r*0.2; g.lineCap='round'; g.beginPath(); g.arc(x+r*0.08,y+r*0.05,r*0.5,Math.PI*0.9,Math.PI*2.1); g.stroke(); }
+    for(i=0;i<11;i++){ a=-2.78+i*0.24; curl(Math.cos(a)*92,-2+Math.sin(a)*80,17+(i%2)*3); }
+    for(i=0;i<8;i++){ a=-2.55+i*0.23; curl(Math.cos(a)*62,-6+Math.sin(a)*70,15+(i%3)*2); }
+    for(i=0;i<4;i++) curl(-33+i*22,-64+(i%2)*6,13);
   },
   kurz:function(g,k,c,kon){
     obj(g,k,function(g){ g.beginPath(); g.moveTo(-94,-34); g.bezierCurveTo(-104,-120,104,-120,94,-34);
