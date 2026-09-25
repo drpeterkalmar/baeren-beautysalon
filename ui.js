@@ -386,7 +386,7 @@ function drawWahl(g){
 }
 
 // ---- Finale-Overlay
-UI.starPos=function(i){ var y=(L.top?L.top.y:20)+(L.port?100:46); var gap=L.port?60:52; return [L.W/2+(i-1)*gap+(L.port?0:0), y+(i===1?-8:0)]; };
+UI.starPos=function(i){ var y=(L.top?L.top.y:20)+(L.port?100:78); var gap=L.port?60:52; return [L.W/2+(i-1)*gap+(L.port?0:0), y+(i===1?-8:0)]; };
 function drawFinale(g){
   var F=S.fin, FIN=S.FIN; if(!F) return;
   var t=F.t, P=L.port, top=L.top.y;
