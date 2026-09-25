@@ -847,7 +847,7 @@ Art.drawBear = function(g,b,opt){
   // Schaum
   if((b.schaum||0)>0.01) drawFoam(g,b.schaum,now);
   // Glanz-Sweep übers Fell (Finale)
-  if(p.glint>=0 && p.glint<=1){
+  if(p.glint>=0 && p.glint<=1 && Fx.Q.tier>0){
     g.save(); g.clip(silPath()); g.globalCompositeOperation='screen';
     var gx=-260+p.glint*520;
     var lg=g.createLinearGradient(gx-60,-200,gx+60,-140);
