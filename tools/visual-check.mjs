@@ -1,5 +1,5 @@
 // DEV-TOOL (nicht Teil des Spiels): Headless-Prüfung gegen CHECKS.md.
-// Aufruf: node tools/visual-check.mjs <label> [--fps] [--throttle=4] [--land] [--only=flow|finale|stations|models]
+// Aufruf: node tools/visual-check.mjs <label> [--fps] [--throttle=4] [--land] [--swraster] [--only=flow|finale|stations|models] [--model=N]
 // Android-Viewport 412×915 @ DPR 2, Touch. Ergebnis: shots/r18/<label>/*.png + report.json
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -21,7 +21,10 @@ const outDir = path.join(root, 'shots', 'r18', label);
 fs.mkdirSync(outDir, { recursive: true });
 const report = { label, land, throttle: thr, errors: [], fps: {}, smallButtons: [], notes: [] };
 
-const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+// Standard: GPU-Raster (ANGLE) wie auf Android-Chrome; --swraster = Software-Raster (Worst Case, Headless-typisch)
+const sw = process.argv.includes('--swraster');
+const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'].concat(sw ? [] : ['--use-angle=metal', '--enable-gpu']) });
+report.raster = sw ? 'software' : 'gpu';
 const ctx = await browser.newContext({
   viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
   userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Mobile Safari/537.36'

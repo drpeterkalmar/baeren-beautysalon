@@ -457,8 +457,13 @@ Art.MUSTER = MU;
 
 // ================================================================ Sprite-Sätze (pro Modell × Auflösung, LRU)
 var sets=[];
-function getSet(idx,k){
-  for(var i=0;i<sets.length;i++){ var st=sets[i]; if(st.idx===idx && st.k===k){ if(i>0){ sets.splice(i,1); sets.unshift(st); } return st; } }
+// Hysterese: vorhandenen Satz wiederverwenden, wenn er höchstens ~20 % hoch- oder 2,2× herunterskaliert würde
+// (Kamera-Zoom im Finale backt so nicht jede Stufe neu)
+function getSet(idx,k,sc){
+  var best=-1;
+  for(var i=0;i<sets.length;i++){ var st=sets[i]; if(st.idx!==idx) continue;
+    if(st.k===k || (sc && st.k>=sc*0.82 && st.k<=sc*2.2 && (best<0 || st.k<sets[best].k))) { best=i; if(st.k===k) break; } }
+  if(best>=0){ var hit=sets[best]; if(best>0){ sets.splice(best,1); sets.unshift(hit); } return hit; }
   var ns=buildSet(idx,k); sets.unshift(ns); if(sets.length>10) sets.pop(); Art.bakes=(Art.bakes||0)+1; return ns;
 }
 function buildSet(idx,k){
@@ -547,16 +552,17 @@ var HAIR={
     },
     front:function(g,k,c,kon){ for(var i=0;i<7;i++){ var a=-2.7+i*0.36; lump(g,k,Math.cos(a)*84,-2+Math.sin(a)*76,22,19,0,c,kon); } }
   },
-  wirr:function(g,k,c,kon){ // Vorher-Bild: zerzaust (runde, abstehende Büschel)
+  wirr:function(g,k,c,kon){ // Vorher-Bild: zerzaust — runde, schief abstehende Büschel (keine Spitzen)
     var R=Fx.rand(7);
-    for(var i=0;i<11;i++){ var a=-3.0+i*0.3+R()*0.2; tuft(g,k,Math.cos(a)*88,-4+Math.sin(a)*76,26+R()*26,13,a+Math.PI/2+(R()-0.5)*1.1,c,kon); }
-    for(var j=0;j<5;j++){ var b=-2.9+j*0.8; tuft(g,k,Math.cos(b)*104,30+Math.sin(b)*40+30,22,11,b+Math.PI/2+(R()-0.5),c,kon); }
+    for(var i=0;i<10;i++){ var a=-2.95+i*0.33+R()*0.15, rr=86+R()*14; lump(g,k,Math.cos(a)*rr,-4+Math.sin(a)*(rr-8),16+R()*6,11+R()*4,a+Math.PI/2+(R()-0.5)*0.9,c,kon); }
+    for(var j=0;j<4;j++){ var b=[-2.6,-0.5,2.7,0.45][j]; lump(g,k,Math.cos(b)*110,20+Math.sin(b)*40,14,9,b+(R()-0.5),c,kon); }
   }
 };
 var hairSets=[];
-function getHair(style,col,k){
-  var key=style+'|'+col+'|'+k;
+function getHair(style,col,k,sc){
+  var key=style+'|'+col+'|'+k, pre=style+'|'+col+'|';
   for(var i=0;i<hairSets.length;i++) if(hairSets[i].key===key) return hairSets[i];
+  for(i=0;i<hairSets.length;i++){ var h=hairSets[i]; if(h.key.indexOf(pre)===0){ var hk=+h.key.slice(pre.length); if(sc && hk>=sc*0.82 && hk<=sc*2.2) return h; } }
   var H=HAIR[style]; if(!H) return null;
   var kon=Fx.warmShadow(col,0.6), hs={key:key};
   if(typeof H==='function') hs.front=bake(-170,-190,340,300,k,function(g,k){ H(g,k,col,kon); });
@@ -761,7 +767,7 @@ Art.drawBear = function(g,b,opt){
   var idx=b.fellIdx||0; if(!Art.MODELS[idx]) idx=0;
   var m=Art.MODELS[idx], P=pal(idx), vor=!!opt.vorher;
   var T=g.getTransform(), sc=Math.sqrt(T.a*T.a+T.b*T.b)*s, k=quant(sc);
-  var set=getSet(idx,k), p=b._p||STATIC, R=reactCurves(p);
+  var set=getSet(idx,k,sc), p=b._p||STATIC, R=reactCurves(p);
   if(b._p) b._geo={cx:cx,cy:cy,s:s};
   var t=p.t, now=performance.now()/1000;
   var breath=Math.sin((b.breathe||t)*2.2), fl=b.fluff||0, goose=p.goose?Math.sin(t*60)*0.012*p.goose:0;
@@ -805,7 +811,7 @@ Art.drawBear = function(g,b,opt){
   var hb=breath*1.4+(p.relax*6), hr=p.tilt+R.hrot+Math.sin(t*14)*0.02*p.wind+(vor?0.06:0);
   var hj=1+jig(p,'head')*0.07;
   g.save(); g.translate(0,HEAD_Y+hb); g.translate(0,70); g.rotate(hr); g.translate(0,-70); g.scale(hj*(1+fl*0.02),hj*(1+fl*0.02));
-  var hs=(b.frisur && HAIR[b.frisur]) ? getHair(b.frisur,b.haar||Art.HAAR[0],k) : null;
+  var hs=(b.frisur && HAIR[b.frisur]) ? getHair(b.frisur,b.haar||Art.HAAR[0],k,sc) : null;
   if(hs && hs.back) put(g,hs.back,0,0);
   for(sd=-1;sd<=1;sd+=2){
     var ej=jig(p,sd<0?'earL':'earR');
@@ -814,7 +820,7 @@ Art.drawBear = function(g,b,opt){
   put(g,set.head,0,0);
   // Spa-Maske (mint, weich) unter Augen/Schnauze
   var spa=b._spa||0;
-  if(spa>0.02 && !vor){ g.globalAlpha=Math.min(1,spa)*0.88; softEll(g,0,6,96,70,'#c9ecd2',0,0.35); softEll(g,-30,-40,40,22,'#d7f3dd',0,0.5); g.globalAlpha=1; }
+  if(spa>0.02 && !vor && (!window.BSSalon || window.BSSalon.state==='spa')){ g.globalAlpha=Math.min(1,spa)*0.88; softEll(g,0,6,96,70,'#c9ecd2',0,0.35); softEll(g,-30,-40,40,22,'#d7f3dd',0,0.5); g.globalAlpha=1; }
   // Wangen / Rouge
   if(!vor){
     var rc=mk&&mk.rouge?Fx.alpha(mk.rouge,0.62):'rgba(255,140,160,0.28)';

@@ -377,7 +377,7 @@ function drawWahl(g){
       label(g,m.name,w/2,h-15,f,INK,w-10);
     });
     blit(g,card,x,y,q.tw,q.th);
-    if(Art.thumbReady(i,thumbPx) || built<3){ if(!Art.thumbReady(i,thumbPx)) built++; g.drawImage(Art.thumb(i,thumbPx),x+q.tw*0.04,y+2,q.tw*0.92,q.tw*0.92); }
+    if(Art.thumbReady(i,thumbPx) || built<1){ if(!Art.thumbReady(i,thumbPx)) built++; g.drawImage(Art.thumb(i,thumbPx),x+q.tw*0.04,y+2,q.tw*0.92,q.tw*0.92); }
     else { Fx.glow(g,x+q.tw/2,y+q.tw*0.46,q.tw*0.3,m.fell,0.6); }
     if(surprise){ var tw=Fx.S.twinkle(); for(var s=0;s<3;s++){ var a=t*2+s*2.1, z=8+8*Math.max(0,Math.sin(a)); g.drawImage(tw,x+q.tw*(0.2+0.3*s)-z/2,y+q.tw*(0.2+0.25*(s%2))-z/2,z,z); } }
   }
@@ -394,7 +394,7 @@ function drawFinale(g){
   var qt=Fx.seg(t,FIN.title,FIN.title+0.45);
   if(qt>0){
     var m=Art.MODELS[S.baer.fellIdx||0]||Art.MODELS[0];
-    var tw=Math.min(L.W-24,420), th=P?78:56;
+    var tw=P?Math.min(420,L.W-2*(L.top.x+62)):Math.min(L.W-2*(L.top.x+140),520), th=P?78:56;
     var c=cached('finTitle|'+m.name+'|'+tw+'|'+P+'|'+L.dpr,tw,th,function(g,w,h){
       var f=(P?'900 38px ':'900 32px ')+FONT;
       g.font=f; g.textAlign='center'; g.textBaseline='middle'; g.lineJoin='round';
