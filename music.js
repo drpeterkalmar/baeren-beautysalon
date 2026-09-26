@@ -8,7 +8,7 @@ S.muted = false;
 try{ S.muted = localStorage.getItem('bs_muted')==='1'; }catch(e){}
 S.musicWanted = false;
 
-var musicEl = new Audio('audio/salon.m4a?v=16');
+var musicEl = new Audio('audio/salon.m4a?v=17');
 musicEl.loop = true;
 musicEl.preload = 'auto';
 musicEl.volume = 1.0;

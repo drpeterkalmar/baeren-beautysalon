@@ -1,4 +1,2 @@
-node_modules/
+shots/
 .DS_Store
-*.pyc
-.k3-runde*.md

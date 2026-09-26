@@ -2,6 +2,13 @@
 (function(){
 'use strict';
 var Art = window.BSArt;
+var Fx = window.BSFx;
+// Juice-Helfer: Sound + Partikel + Bär-Reaktion (alle optional, falls Module fehlen)
+function sfx(n,o){ if(window.BSSfx) window.BSSfx.play(n,o); }
+function react(k,a){ if(S.baer) Art.react(S.baer,k,a); }
+function emit(type,x,y,o){ if(Fx) Fx.P.emit(type,x,y,o); }
+function headPos(){ var s=Math.min(S.VW,S.VH)/420; return [S.VW*0.5, S.VH*0.58-82*s]; }
+function accPop(key){ if(!S.baer._accT) S.baer._accT={}; S.baer._accT[key]=performance.now()/1000; }
 
 var S = window.BSSalon = {};
 S.VW = 900; S.VH = 600;
@@ -91,7 +98,7 @@ function btn(x,y,w,h,label,fn,opt){
   buttons.push(b); return b;
 }
 function muteButton(){
-  var b = btn(S.VW-72,16,56,56, S.muted?'🔇':'🔊', function(){ S.toggleMute(); });
+  var b = btn(S.VW-72,16,56,56, S.muted?'🔇':'🔊', function(){ S.toggleMute(); if(window.BSSfx) window.BSSfx.syncMute(); },{nav:'mute'});
   return b;
 }
 
@@ -117,21 +124,21 @@ S.buildUI = function(){
   S._prev = st;
   if(st==='menu'){
     if(S.saved && S.saved.fell){
-      btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.state='waschen'; S.buildUI(); },{big:1});
-      btn(230,534,440,64,'🌟 Bär wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1});
+      btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.state='waschen'; S.buildUI(); },{big:1,cta:1,primary:1});
+      btn(230,534,440,64,'🌟 Neuen Bären wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1,cta:1});
     } else {
-      btn(230,500,440,70,'▶️ Start',function(){ S.state='wahl'; S.buildUI(); },{big:1});
+      btn(230,500,440,70,'▶️ Los geht’s!',function(){ S.state='wahl'; S.buildUI(); },{big:1,cta:1,primary:1});
     }
     return;
   }
   if(st==='wahl'){
-    btn(16,16,120,56,'⬅️ Start',function(){ S.state='menu'; S.buildUI(); });
-    // Kacheln (5 Spalten, dynamisch), Hit-Test in tapBear
+    btn(16,16,120,56,'🏠',function(){ S.state='menu'; S.buildUI(); },{nav:'home'});
     return;
   }
   if(st==='finish-done'){
-    btn(150,518,280,62,'🐻 Bär wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1});
-    btn(470,518,280,62,'🔄 Von vorne',function(){ S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1});
+    btn(16,16,120,56,'🏠',function(){ S.fin=null; S.state='menu'; S.buildUI(); },{nav:'home'});
+    btn(150,518,280,62,'🐻 Neuer Bär',function(){ S.fin=null; S.state='wahl'; S.buildUI(); },{big:1,cta:1,finCta:1});
+    btn(470,518,280,62,'🔄 Nochmal',function(){ S.fin=null; S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1,cta:1,finCta:1,primary:1});
     return;
   }
   backButtons();
@@ -162,12 +169,12 @@ S.buildUI = function(){
 };
 
 function backButtons(){
-  btn(16,16,120,56,'⬅️ Start',function(){ S.state='menu'; S.buildUI(); });
+  btn(16,16,120,56,'🏠',function(){ S.state='menu'; S.buildUI(); },{nav:'home'});
   var i = S.STATIONS.map(function(s){return s.id;}).indexOf(S.state);
   if(i>=0 && i < S.STATIONS.length-1){
-    btn(S.VW-150,16,134,56,'Weiter ➡️',function(){
+    btn(S.VW-150,16,134,56,'➜',function(){
       S.state = S.STATIONS[i+1].id; S.buildUI(); S.save();
-    });
+    },{nav:'next'});
   }
 }
 
@@ -177,7 +184,7 @@ function stationTabs(){
     (function(st,j){
       btn(6+(j%12)*74, S.VH-118+Math.floor(j/12)*56, 70, 52, st.icon+' '+st.name, function(){
         S.state = st.id; S.buildUI();
-      }, {active:function(){ return S.state===st.id; }, small:1, tiny:1});
+      }, {active:function(){ return S.state===st.id; }, small:1, tiny:1, tab:st.id, icon:st.icon, name:st.name});
     })(S.STATIONS[j],j);
   }
 }
@@ -185,8 +192,12 @@ function stationTabs(){
 function buildWaschen(){
   stationTabs();
   S.hinweis = 'Seife antippen, dann Schaum rubbeln! 🧼';
-  btn(30,110,150,64,'🧼 Seife',function(){ S.baer.schaum=Math.min(1,S.baer.schaum+0.5); },{active:function(){return S.baer.schaum>0.2;}});
-  btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; },{active:function(){return !!S.dusche;}});
+  btn(30,110,150,64,'🧼 Seife',function(){
+    S.baer.schaum=Math.min(1,S.baer.schaum+0.5);
+    sfx('bubble'); sfx('bubble',{delay:0.08}); react('happy',0.8);
+    emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
+  },{active:function(){return S.baer.schaum>0.2;}});
+  btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
 }
 function buildFoehnen(){
   stationTabs();
@@ -198,14 +209,19 @@ function buildSchneiden(){
   stationTabs();
   S.hinweis = 'Wähle Frisur und Farbe! ✂️';
   Art.FRISEURE.forEach(function(f,i){
-    btn(30+(i%2)*130, 100+Math.floor(i/2)*62, 122, 56, FRISUR_NAMEN[f], function(){
+    btn(30+(i%2)*130, 100+Math.floor(i/2)*62, 122, 56, '✂️ '+FRISUR_NAMEN[f], function(){
       S.baer.frisur=f; S.save(); S.buildUI();
-    },{active:function(){return S.baer.frisur===f;},small:1});
+      sfx('snip'); react('snip');
+      var hp=headPos(); emit('hair',hp[0],hp[1]-70,{n:16,speed:180,dir:-Math.PI/2,spread:2.6,grav:520,drag:1.8,size:9,life:1.4,colors:[S.baer.haar],jx:60});
+    },{active:function(){return S.baer.frisur===f;},small:1,row:0});
   });
   Art.HAAR.forEach(function(c,i){
     btn(30+(i%4)*62, 310+Math.floor(i/4)*62, 56, 56, '', function(){
       S.baer.haar=c; S.save(); S.buildUI();
-    },{fill:c,active:function(){return S.baer.haar===c;}});
+      sfx('sparkle'); react('happy',0.7);
+      var hp=headPos(); emit('puff',hp[0],hp[1]-80,{n:8,speed:90,size:26,life:0.6,grav:-40,colors:[c],jx:50});
+      emit('star',hp[0],hp[1]-80,{n:8,speed:260,size:10,life:0.8,grav:300,colors:['#ffe7a8',c]});
+    },{fill:c,active:function(){return S.baer.haar===c;},row:1});
   });
 }
 function buildPfoten(){
@@ -270,12 +286,13 @@ function buildParfum(){
     btn(30+(i%2)*170, 100+Math.floor(i/2)*130, 162, 56, d.icon+' '+d.name, function(){
       S.baer.duft=i; S.save(); S.buildUI();
       window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
-    },{active:function(){return S.baer.duft===i;}});
+      sfx('sparkle'); react('happy',1.2);
+    },{active:function(){return S.baer.duft===i;},row:0});
     // kleiner Flakon unter dem Knopf
     btn(80+(i%2)*170, 162+Math.floor(i/2)*130, 30, 46, '', function(){
       S.baer.duft=i; S.save(); S.buildUI();
       window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
-    },{fill:d.c,tiny:1});
+    },{fill:d.c,tiny:1,hideInTray:1});
   });
   btn(30, 372, 150, 50, '🧽 Kein Duft', function(){
     S.baer.duft=null; S.save(); S.buildUI();
@@ -288,14 +305,14 @@ function buildMakeup(){
   // Rouge-Farben
   Art.ROUGE.forEach(function(c,i){
     btn(30+i*52, 100, 46, 46, '', function(){
-      mk.rouge=c; S.save(); S.buildUI();
-    },{fill:c,active:function(){return mk.rouge===c;}});
+      mk.rouge=c; S.save(); S.buildUI(); sfx('kiss'); react('kiss');
+    },{fill:c,active:function(){return mk.rouge===c;},row:0,rowLabel:i===0?'Rouge':null});
   });
   // Lidschatten
   Art.LIDSCHATTEN.forEach(function(c,i){
     btn(30+i*52, 156, 46, 46, '', function(){
-      mk.lid=c; S.save(); S.buildUI();
-    },{fill:c,active:function(){return mk.lid===c;}});
+      mk.lid=c; S.save(); S.buildUI(); sfx('sparkle'); react('blink');
+    },{fill:c,active:function(){return mk.lid===c;},row:1,rowLabel:i===0?'Lidschatten':null});
   });
   btn(30, 216, 200, 50, '✨ Glitzer-Modus', function(){
     S.glitzMode = !S.glitzMode; S.buildUI();
@@ -311,27 +328,24 @@ function buildSchmuecken(){
     var on = S.baer.acc[a.key]!==null && S.baer.acc[a.key]!==undefined;
     btn(30+(i%2)*150, 100+Math.floor(i/2)*130, 142, 60, a.icon+' '+a.name, function(){
       var cur = S.baer.acc[a.key];
-      if(cur===null||cur===undefined) S.baer.acc[a.key]=0;
-      else S.baer.acc[a.key]=null;
+      if(cur===null||cur===undefined){ S.baer.acc[a.key]=0; accPop(a.key); sfx('pop'); react('happy');
+        var hp=headPos(); emit('star',hp[0],hp[1]-40,{n:10,speed:240,size:10,life:0.8,grav:260}); }
+      else { S.baer.acc[a.key]=null; sfx('pop',{pitch:0.7}); }
       S.save(); S.buildUI();
-    },{active:function(){return on;}});
+    },{active:function(){return on;},row:i});
     if(on){
       a.colors.forEach(function(c,k){
         btn(30+(i%2)*150+k*46, 166+Math.floor(i/2)*130, 40, 40, '', function(){
-          S.baer.acc[a.key]=k; S.save(); S.buildUI();
-        },{fill:c,active:function(){return S.baer.acc[a.key]===k;},tiny:1});
+          S.baer.acc[a.key]=k; accPop(a.key); S.save(); S.buildUI(); sfx('sparkle');
+        },{fill:c,active:function(){return S.baer.acc[a.key]===k;},tiny:1,row:i});
       });
     }
   });
 }
 function buildFinish(){
   S.hinweis = 'Perfekt! ✨';
-  btn(330,470,240,70,'🎉 Fertig!',function(){
-    S.state='finish-done'; S.baer.bowTarget=1; S.confetti=220; S.stars=120; S.glitzerRing=1; S.badge=1; S.rainbow=1;
-    startFeuerwerk();
-    S.vorhang=3.4; S.finale=1.6; // Grand Finale: goldener Vorhang + Verbeugung mit Hut-Zug
-    S.save(); S.buildUI();
-  },{big:1});
+  S.hinweis = 'Bereit für den großen Auftritt? ✨';
+  btn(330,470,240,70,'🎉 Fertig!',function(){ S.startFinale(); },{big:1,cta:1,primary:1,hero:1});
 }
 function buildEis(){
   stationTabs();
@@ -519,158 +533,19 @@ function buildAquarium(){
 }
 
 // ---- Zeichnen ----------------------------------------------
+// ---- Zeichnen: nur noch WELT (Kamera, Raum, Licht, HUD/Buttons kommen aus game.js + ui.js) ----------
 S.draw = function(g){
   var W=S.VW,H=S.VH;
-  var grad=g.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#ffe6f2'); grad.addColorStop(0.65,'#fff3e0'); grad.addColorStop(0.65,'#d9b38c'); grad.addColorStop(1,'#c49a6c');
-  g.fillStyle=grad; g.fillRect(0,0,W,H);
   drawDeko(g);
-
-  if(S.state==='menu'){ drawSchmetterlinge(g); drawMenu(g); return; }
-  if(S.state==='wahl'){ drawSchmetterlinge(g); drawWahl(g); return; }
-
-  if(S.state==='finish-done'){
-    g.textAlign='center';
-    g.font='bold 54px sans-serif';
-    g.lineWidth=8; g.strokeStyle='#fff';
-    g.strokeText('Perfekt! ✨', W/2, 72);
-    g.fillStyle='#7a4b8f'; g.fillText('Perfekt! ✨', W/2, 72);
-    // GRAND FINALE: goldener Bühnen-Vorhang blendet hinter dem Bären kurz ein
-    if(S.vorhang>0){
-      var va=Math.min(1,S.vorhang/0.6, (3.4-S.vorhang)/0.6);
-      g.save();
-      g.globalAlpha=Math.max(0,va)*0.95;
-      var vgrd=g.createLinearGradient(0,0,0,H*0.66);
-      vgrd.addColorStop(0,'#8a5a00'); vgrd.addColorStop(0.25,'#d4a017'); vgrd.addColorStop(1,'#f5d76e');
-      g.fillStyle=vgrd; g.fillRect(0,0,W,H*0.66);
-      // Vorhang-Falten
-      g.globalAlpha=Math.max(0,va)*0.35; g.fillStyle='#6e4400';
-      for(var vf=0;vf<9;vf++) g.fillRect(vf*(W/8)-8,0,16,H*0.66);
-      // Volant oben
-      g.globalAlpha=Math.max(0,va);
-      g.fillStyle='#c0392b';
-      for(var vv=0;vv<8;vv++){
-        g.beginPath(); g.arc(vv*(W/7)+W/14,0,W/14,0,Math.PI); g.fill();
-      }
-      g.fillStyle='#ffd24d'; g.fillRect(0,0,W,10);
-      // Funkelsterne am Vorhang
-      var tV=performance.now()/1000;
-      for(var vs2=0;vs2<8;vs2++)
-        Art.drawSticker(g,'stern',(vs2*211)%W,40+((vs2*131)%320),(8+4*Math.sin(tV*4+vs2)),'rgba(255,255,200,'+(0.5+0.5*Math.sin(tV*3+vs2))+')');
-      g.restore();
-    }
-    if(S.rainbow) drawRegenbogen(g, W/2, 250, 190);
-    // 10/10 Badge mit Sternen-Animation über dem Bär
-    if(S.badge){
-      var bt=(performance.now()/1000)%10;
-      var by=118+Math.sin(bt*2)*4;
-      g.save();
-      g.translate(W/2,by);
-      // Kapsel
-      g.beginPath();
-      g.roundRect ? g.roundRect(-110,-30,220,60,30) : g.rect(-110,-30,220,60);
-      g.fillStyle='rgba(255,215,77,0.95)'; g.fill();
-      g.lineWidth=4; g.strokeStyle='#b8860b'; g.stroke();
-      g.fillStyle='#7a4b00'; g.font='bold 32px sans-serif';
-      g.fillText('10/10 ⭐',0,12);
-      // animierte Sterne drumherum
-      for(var si=0;si<5;si++){
-        var sa=bt*1.3+si*(Math.PI*2/5);
-        var sr=95+Math.sin(bt*3+si*2)*14;
-        Art.drawSticker(g,'stern',Math.cos(sa)*sr,Math.sin(sa)*sr*0.5,10+Math.sin(bt*4+si)*3,'#ffd24d');
-      }
-      g.restore();
-    }
-    g.save();
-    g.translate(0,-34);
-    S.baer.jubel = Math.min(1,(S.baer.jubel||0)+0); // Wert kommt aus update()
-    // Grand Finale: Bär verbeugt sich (bow statt jubel) während S.finale läuft
-    if(S.finale>0){
-      var bjPhase=1.6-S.finale; // 0..1.6
-      S.baer.bow=Math.sin(Math.min(1,bjPhase/0.7)*Math.PI)*0.9; // rein+raus
-      S.baer.jubel=0;
-    }
-    Art.drawBear(g,S.baer,{w:W,h:H});
-    drawStickers(g);
-    if(S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
-    if(S.glitzerRing) drawGlitzerRing(g);
-    // Hut-Zug: Bär HÄLT den Hut sichtbar an der Pfote und schwingt ihn groß
-    if(S.finale>0){
-      var tF=performance.now()/1000;
-      var bj=Math.sin(Math.min(1,(1.6-S.finale)/0.7)*Math.PI);
-      var sF=Math.min(W,H)/420;
-      // Hut startet am Ende der rechten Pfote (Pfoten-Ende unten-rechts)
-      var pfX=W/2+105*sF, pfY=H*0.58+40*sF+(1-bj)*60*sF; // folgt der Jubel-/Bow-Pfote
-      var sw=Math.sin(tF*4.5); // kräftiges Hin-und-Her-Schwingen
-      var hbX=pfX+sw*70*sF;             // große Amplitude
-      var hbY=pfY-Math.abs(sw)*90*sF-10*sF; // hebt sich oben
-      g.save();
-      g.translate(hbX,hbY);
-      g.rotate(sw*0.9*(0.4+bj)); // große Rotation beim Schwingen
-      // Pfoten-Stumpf am Hut (zeigt: Bär hält ihn)
-      g.fillStyle=S.baer.fell||'#a9744f';
-      g.beginPath(); g.ellipse(0,6*sF,16*sF*sF!==0?16*sF:16*sF,10*sF,0,0,Math.PI*2); g.fill();
-      // eleganter Zylinder, GROSS
-      var hS=1.5*sF*(0.5+0.5*bj)+0.9*sF; // skaliert mit Verbeugung, nie 0
-      ell2(g,0,-6*sF,52*sF,12*sF,'#2b2b3a');
-      g.fillStyle='#2b2b3a';
-      g.beginPath(); g.moveTo(-30*sF,-6*sF); g.lineTo(-23*sF,-72*sF); g.lineTo(23*sF,-72*sF); g.lineTo(30*sF,-6*sF); g.closePath(); g.fill();
-      g.fillStyle='#ffd24d'; g.fillRect(-26*sF,-26*sF,52*sF,9*sF); // Gold-Band
-      Art.drawSticker(g,'stern',0,-80*sF,11*sF,'#ffd24d');
-      // Glanzstreifen
-      g.globalAlpha=0.5; g.fillStyle='#6b6b80'; g.fillRect(-30*sF,-60*sF,7*sF,54*sF); g.globalAlpha=1;
-      g.restore();
-      // Funke-Spur folgt der Hutbahn (deutlicher)
-      for(var hs=0;hs<10;hs++){
-        var hq=((tF*1.7+hs/10)%1);
-        var hx2=hbX-sw*40*sF*(1-hq)+Math.sin(hq*9+hs)*14*sF;
-        var hy3=hbY+hq*70*sF;
-        g.globalAlpha=(1-hq)*(0.4+0.6*bj);
-        Art.drawSticker(g,'stern',hx2,hy3,(7+7*(1-hq))*sF,'#ffe9a8');
-      }
-      g.globalAlpha=1;
-    }
-    drawShootingStar(g);
-    g.restore();
-    drawFeuerwerk(g);
-    drawButtons(g);
-    return;
-  }
-
-  if(S.state==='finish-done') return; // schon in finish-done gezeichnet
+  if(S.state==='menu'){ drawSchmetterlinge(g); Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H}); return; }
+  if(S.state==='wahl') return;
+  if(S.state==='finish-done'){ drawFinaleWelt(g); return; }
   // Duft-Wolken im Stations-Screen
-  if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined && S.state!=='wahl' && S.state!=='menu') drawDuftWolken(g);
-
-  // Sternschnuppe über dem Menü
-  if(S.state==='menu') drawShootingStar(g);
-
-  // Eigene Screens: Malbuch (Bild statt Bär) & Aquarium (Becken + Bär davor)
-  if(S.state==='malbuch'){
-    g.fillStyle='#7a4b8f'; g.font='bold 26px sans-serif'; g.textAlign='center';
-    g.fillText('🎨 Malbuch', W/2, 50);
-    if(S.hinweis){ g.fillStyle='#9c6bb5'; g.font='20px sans-serif'; g.fillText(S.hinweis, W/2, 82); }
-    drawMalbuch(g); drawButtons(g); return;
-  }
-  if(S.state==='aquarium'){
-    drawAquarium(g);
-    // Titel + Hinweis darüber (nach dem Inhalt, damit lesbar)
-    g.textAlign='center';
-    g.fillStyle='#7a4b8f'; g.font='bold 26px sans-serif';
-    g.fillText('🐟 Aquarium', W/2, 50);
-    if(S.hinweis){ g.fillStyle='#9c6bb5'; g.font='20px sans-serif'; g.fillText(S.hinweis, W/2, 82); }
-    drawButtons(g); return;
-  }
-
-  // Massage-Deko (unter Titel)
+  if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
+  if(S.state==='malbuch'){ drawMalbuch(g); return; }
+  if(S.state==='aquarium'){ drawAquarium(g); return; }
   if(S.state==='massage') drawHerzen(g);
-
-  g.fillStyle='#7a4b8f'; g.font='bold 26px sans-serif'; g.textAlign='center';
-  var stt=S.STATIONS.filter(function(x){return x.id===S.state;})[0];
-  g.fillText(stt? stt.icon+' '+stt.name : '', W/2, 50);
-  if(S.hinweis){
-    g.fillStyle='#9c6bb5'; g.font='20px sans-serif';
-    g.fillText(S.hinweis, W/2, 82);
-  }
+  if(S.state==='waschen') drawWanne(g,false);
 
   // Tanz: Bär wippt/wiegt/nickt je nach Stil; Pirouette bei spin
   var tNow=performance.now()/1000;
@@ -754,196 +629,271 @@ S.draw = function(g){
     Art.drawEis(g, S.eis, S.VW*0.5, S.VH*0.58+40*s3, s3);
   }
   if(S.state==='foto') Art.drawFotoRahmen(g, S.fotoRahmen||0, S.flash||0, !!S.fotoBadge, S.VW, S.VH);
-  drawButtons(g);
+  if(S.state==='waschen') drawWanne(g,true);
+  if(S.state==='foehnen') drawFoehn(g);
 };
+
+// ================= HELD-MOMENT: Vorher/Nachher-Enthüllung =================
+// Zeitplan (Sekunden seit "Fertig!"):
+//  0.00 UI gleitet weg, Licht dimmt auf Spot, Musik duckt, Trommelwirbel
+//  0.35 Puff! → das Vorher-Foto (zerzaust, stumpf) steht da
+//  0.90–2.45 magische Licht-Klinge wischt diagonal und enthüllt den Nachher-Bären (Augen noch zu)
+//  2.50 TA-DA: Sprung (Squash&Stretch), Arme hoch, Blitz, Konfetti-Kanonen, Kamera-Punch aufs Gesicht
+//  2.95 Glanz-Sweep übers Fell · 3.1 Titel · 3.6 Vorher-Polaroid fliegt in die Ecke
+//  4.0/4.25/4.5 drei Sterne · 4.9 Knöpfe · danach Feier-Loop (Winken, Nieseln, Funkeln)
+var FIN = S.FIN = {poof:0.35, wipe0:0.9, wipe1:2.45, tada:2.5, glint:2.95, title:3.1, pola:3.6, star:4.0, cta:4.9};
+S.startFinale = function(){
+  S.state='finish-done';
+  S.fin={t:0, fired:{}, vorher:null};
+  S.save(); S.buildUI();
+  sfx('whoosh');
+};
+// Tipp während der Spannung: direkt zur Enthüllung springen
+S.finaleSkip = function(){ var F=S.fin; if(F && F.t>0.5 && F.t<FIN.wipe1-0.3){ F.t=FIN.wipe1-0.3; } };
+function fire(F,key,at,fn){ if(!F.fired[key] && F.t>=at){ F.fired[key]=1; fn(); } }
+S.updateFinale = function(dt){
+  var F=S.fin; if(!F) return;
+  F.t+=dt; var t=F.t, W=S.VW, H=S.VH, s=Math.min(W,H)/420, cx=W/2, cy=H*0.58;
+  var G=window.BSGame||{}, X=window.BSSfx;
+  if(!F.vorher && G.pxPerUnit) F.vorher=Art.renderVorher(S.baer, Math.min(2.4,G.pxPerUnit()*1.2));
+  fire(F,'duck',0.02,function(){ if(X) X.duck(0.3); });
+  fire(F,'drum',0.3,function(){ sfx('drumroll',{dur:FIN.tada-0.3}); });
+  fire(F,'poof',FIN.poof,function(){
+    sfx('poof');
+    emit('puff',cx,cy+10*s,{n:30,speed:300,size:70,life:0.95,grav:-30,drag:3,colors:['#fff6ea','#fbe7d2','#f6dcc4'],jx:110*s,jy:150*s});
+  });
+  fire(F,'magic',FIN.wipe0,function(){ sfx('magic'); });
+  fire(F,'tada',FIN.tada,function(){
+    sfx('tada'); sfx('cannon'); sfx('cannon',{delay:0.07});
+    react('pop',1.7);
+    if(G.cannons) G.cannons();
+    emit('star',cx,cy-60*s,{n:28,speed:560,size:15,life:1.25,grav:420,drag:1.5,colors:['#ffe19a','#fff4d6','#f6a57a','#f4a6b8','#b9d4ad']});
+    emit('ring',cx,cy-40*s,{n:1,speed:0,size:430*s,life:0.75,grav:0,drag:0,colors:['#fff1d6']});
+    emit('twinkle',cx,cy-60*s,{n:16,speed:420,size:30,life:1.0,grav:0,drag:2.4});
+  });
+  fire(F,'land',FIN.tada+0.56,function(){
+    react('land',1); sfx('boing');
+    emit('puff',cx,cy+196*s,{n:12,speed:230,dir:0,spread:Math.PI*2,size:36,life:0.6,grav:-20,drag:4,colors:['#fff3e3','#f8e2c8'],jx:120*s});
+  });
+  fire(F,'title',FIN.title,function(){ sfx('sparkle'); });
+  fire(F,'pola',FIN.pola,function(){ sfx('whoosh'); });
+  [0,1,2].forEach(function(i){ fire(F,'star'+i,FIN.star+i*0.25,function(){ sfx('ding',{i:i}); if(G.starBurst) G.starBurst(i); }); });
+  fire(F,'cta',FIN.cta,function(){ sfx('pop'); });
+  fire(F,'unduck',5.8,function(){ if(X) X.duck(1); });
+  // Funken an der Licht-Klinge
+  if(t>FIN.wipe0 && t<FIN.wipe1){
+    var lx=S.finWipeX(), yy=cy-240*s+Math.random()*480*s, lxx=lx+(yy-cy)*0.22;
+    if(Math.random()<dt*45) emit('twinkle',lxx,yy,{n:1,speed:70,size:20,life:0.7,grav:-40,drag:2});
+    if(Math.random()<dt*80) emit('spark',lxx,yy,{n:1,speed:160,dir:Math.PI,spread:1.3,size:11,life:0.8,grav:60,colors:['#ffe3a8','#fff6e0','#f6b98f']});
+  }
+  // Feier-Loop
+  if(t>FIN.cta){
+    F.dz=(F.dz||0)+dt;
+    if(F.dz>0.14){ F.dz=0; if(G.drizzle) G.drizzle(); }
+    if(Math.random()<dt*1.4) emit('twinkle',cx+(Math.random()-0.5)*320*s,cy+(Math.random()-0.62)*400*s,{n:1,speed:10,size:24,life:0.8,grav:0});
+  }
+};
+S.finWipeX = function(){
+  var F=S.fin; if(!F) return 2000;
+  return Fx.lerp(80,830,Fx.ease.inOutCubic(Fx.seg(F.t,FIN.wipe0,FIN.wipe1)));
+};
+// Pose-Umgebung für Art.updateBear im Finale
+S.finaleEnv = function(env){
+  var F=S.fin; if(!F) return env;
+  var t=F.t;
+  if(t<FIN.tada-0.18){
+    env.sleepy=t>FIN.poof?1:0; env.mouth=0; env.happy=0; env.arms=0; env.jumpY=0; env.pointer=null;
+  } else {
+    var j=t-FIN.tada, up=0.27, dn=0.29;
+    env.jumpY = j<0?0 : (j<up? 78*Fx.ease.outCubic(j/up) : (j<up+dn? 78*(1-Fx.ease.inQuad((j-up)/dn)) : 0));
+    env.arms = j<1.8 ? 1.12 : 0;
+    env.armR = j>=1.8 ? 1.05 : 0;
+    env.wave = j>=1.8 ? 1 : 0;
+    env.happy = j<1.25 ? 1 : 0;
+    env.mouth = j<2.2 ? 1 : 0.5;
+    var gl=-1;
+    if(t>=FIN.glint && t<=FIN.glint+0.9) gl=(t-FIN.glint)/0.9;
+    else if(t>7 && (t-7)%5<0.9) gl=((t-7)%5)/0.9;
+    env.glint=gl;
+    if(j<1.6) env.pointer={x:450,y:260,age:0};
+  }
+  return env;
+};
+// Kamera-Choreografie: Zoom-Faktor, vertikaler Welt-Versatz, Wackeln (px)
+S.finaleCam = function(){
+  var F=S.fin; if(!F) return null;
+  var t=F.t, z, oy=0, shake=0;
+  if(t<FIN.tada){ z=1+0.09*Fx.ease.inOutCubic(Fx.seg(t,0.35,FIN.tada)); }
+  else {
+    var j=t-FIN.tada;
+    var pin=Fx.ease.outCubic(Fx.seg(j,0,0.22)), pout=Fx.ease.inOutCubic(Fx.seg(j,0.9,2.4));
+    var p=pin*(1-pout), idle=1+0.012*Math.sin(t*0.9);
+    z=Fx.lerp(Fx.lerp(1.09,1.55,pin),idle,pout);
+    oy=-110*p;
+    shake=Math.max(0,1-j/0.4)*8;
+  }
+  return {z:z, oy:oy, shake:shake};
+};
+S.finaleDim = function(){
+  var F=S.fin; if(!F) return 0; var t=F.t;
+  if(t<FIN.tada) return 0.66*Fx.ease.inOutCubic(Fx.seg(t,0.02,0.55));
+  return 0.66*(1-Fx.ease.outCubic(Fx.seg(t,FIN.tada,FIN.tada+0.8)));
+};
+S.finaleFlash = function(){ var F=S.fin; if(!F) return 0; var j=F.t-FIN.tada; return j<0?0:0.85*(1-Fx.ease.outCubic(Fx.seg(j,0,0.6))); };
+
+function drawFinaleWelt(g){
+  var F=S.fin, t=F?F.t:99, W=S.VW, H=S.VH, s=Math.min(W,H)/420, cx=W/2, cy=H*0.58;
+  // Gottesstrahlen + warmer Halo hinter dem Bären (ab TA-DA)
+  var ra=t<FIN.tada?0:Math.min(1,(t-FIN.tada)/0.3)*(t<FIN.tada+1.2?0.8:0.5);
+  if(ra>0){
+    g.save(); g.globalCompositeOperation='lighter';
+    if(Fx.Q.tier>0){ g.globalAlpha=ra*0.85; g.translate(cx,cy-60*s); g.rotate(t*0.1); var R=600*s; g.drawImage(Fx.S.rays(),-R,-R,2*R,2*R); }
+    g.restore();
+    g.save(); g.globalCompositeOperation='lighter'; Fx.glow(g,cx,cy-50*s,340*s,'#ffe4b8',0.55*ra); g.restore();
+  }
+  var live=function(){
+    Art.drawBear(g,S.baer,{w:W,h:H});
+    if(S.baer.duft!==null && S.baer.duft!==undefined && t>FIN.tada) drawDuftWolken(g);
+  };
+  if(!F || t<FIN.poof || !F.vorher || t>=FIN.wipe1){ live(); return; }
+  // Diagonaler Wisch: links Nachher (live), rechts Vorher (Foto)
+  var lx=S.finWipeX(), sl=0.22, yc=cy;
+  var left=new Path2D(); left.moveTo(-4000,-4000); left.lineTo(lx+(-4000-yc)*sl,-4000); left.lineTo(lx+(4000-yc)*sl,4000); left.lineTo(-4000,4000); left.closePath();
+  var right=new Path2D(); right.moveTo(lx+(-4000-yc)*sl,-4000); right.lineTo(5000,-4000); right.lineTo(5000,4000); right.lineTo(lx+(4000-yc)*sl,4000); right.closePath();
+  g.save(); g.clip(left); live(); g.restore();
+  var V=F.vorher;
+  g.save(); g.clip(right); g.drawImage(V.img,V.x,V.y,V.w,V.h);
+  // grummelige Staubwolke über dem Vorher-Kopf
+  var dt2=t*1.3;
+  g.globalAlpha=0.55;
+  for(var k=0;k<4;k++) Fx.ball(g,cx+40*s+Math.cos(dt2+k*1.7)*26*s+k*12*s-20*s,cy-262*s+Math.sin(dt2*1.3+k)*6*s,(15+k*3)*s,(12+k*2)*s,'#c9b7a6');
+  g.globalAlpha=1;
+  g.restore();
+  // Licht-Klinge
+  if(t>FIN.wipe0-0.05){
+    g.save(); g.globalCompositeOperation='lighter';
+    g.translate(lx,yc); g.rotate(-Math.atan(sl));
+    var hgt=620*s;
+    g.globalAlpha=0.9; g.drawImage(Fx.S.glow('#ffd9a0'),-70*s,-hgt*0.6,140*s,hgt*1.2);
+    var cg=g.createLinearGradient(0,-hgt*0.5,0,hgt*0.5);
+    cg.addColorStop(0,'rgba(255,250,235,0)'); cg.addColorStop(0.2,'rgba(255,250,235,0.95)');
+    cg.addColorStop(0.8,'rgba(255,250,235,0.95)'); cg.addColorStop(1,'rgba(255,250,235,0)');
+    g.globalAlpha=1; g.fillStyle=cg; g.fillRect(-3*s,-hgt*0.5,6*s,hgt);
+    g.restore();
+  }
+}
+
+// Badewanne (Waschen): Rückwand hinter dem Bären, Front davor — der Bär sitzt IN der Wanne
+function drawWanne(g,front){
+  var s=Math.min(S.VW,S.VH)/420, cx=S.VW*0.5, y=S.VH*0.58+128*s;
+  var w=210*s, h=92*s, t=performance.now()/1000;
+  if(!front){
+    Fx.contactShadow(g,cx,y+h+14*s,w*1.05,26*s,0.8);
+    var bg=g.createLinearGradient(0,y-30*s,0,y+10*s);
+    bg.addColorStop(0,'#f3e6d6'); bg.addColorStop(1,'#e2cfb9');
+    g.fillStyle=bg; g.beginPath(); g.ellipse(cx,y,w,26*s,0,Math.PI,0); g.fill();
+    // Brause-Kopf über dem Bären (Messing)
+    var hx=cx-150*s, hyb=S.VH*0.58-250*s;
+    g.strokeStyle='#caa06a'; g.lineWidth=7*s; g.lineCap='round';
+    g.beginPath(); g.moveTo(hx-60*s,hyb-120*s); g.lineTo(hx-60*s,hyb-20*s); g.quadraticCurveTo(hx-60*s,hyb,hx-30*s,hyb); g.lineTo(hx,hyb); g.stroke();
+    g.save(); g.translate(hx+14*s,hyb+8*s); g.rotate(0.5);
+    var sg=g.createLinearGradient(-22*s,0,22*s,0); sg.addColorStop(0,'#f2d49c'); sg.addColorStop(0.5,'#d8ab6a'); sg.addColorStop(1,'#a97a45');
+    g.fillStyle=sg; g.beginPath(); g.moveTo(-10*s,-14*s); g.lineTo(10*s,-14*s); g.lineTo(26*s,10*s); g.lineTo(-26*s,10*s); g.closePath(); g.fill();
+    Fx.ball(g,0,10*s,26*s,7*s,'#e7c28a');
+    g.restore();
+    S._brause=[hx+26*s,hyb+26*s];
+    return;
+  }
+  // Wannen-Front (Emaille creme, Rand apricot) + Schaum-Krone am Rand
+  var fg=g.createLinearGradient(0,y,0,y+h);
+  fg.addColorStop(0,'#fffaf2'); fg.addColorStop(0.55,'#f6ebdd'); fg.addColorStop(1,'#e5d2bd');
+  g.fillStyle=fg;
+  g.beginPath(); g.moveTo(cx-w,y); g.lineTo(cx+w,y); g.quadraticCurveTo(cx+w*0.98,y+h,cx+w*0.7,y+h); g.lineTo(cx-w*0.7,y+h); g.quadraticCurveTo(cx-w*0.98,y+h,cx-w,y); g.fill();
+  g.fillStyle='rgba(255,255,255,0.6)'; g.beginPath(); g.ellipse(cx-w*0.55,y+h*0.35,w*0.22,h*0.14,-0.1,0,Math.PI*2); g.fill();
+  var rg=g.createLinearGradient(0,y-10*s,0,y+12*s); rg.addColorStop(0,'#f7c09c'); rg.addColorStop(1,'#e2946e');
+  g.fillStyle=rg; g.beginPath(); g.ellipse(cx,y,w+8*s,11*s,0,0,Math.PI*2); g.fill();
+  // Füße (Messing)
+  [-1,1].forEach(function(sg){ Fx.ball(g,cx+sg*w*0.62,y+h+8*s,16*s,11*s,'#d8ab6a'); });
+  // Schaumkrone (wächst mit Schaum)
+  var sc=Math.max(0.25,S.baer.schaum||0);
+  for(var i=0;i<16;i++){
+    var q=i/15, bx=cx-w*0.95+q*w*1.9, br=(12+((i*37)%9))*s*(0.6+0.6*sc);
+    Fx.ball(g,bx,y-4*s-Math.sin(q*Math.PI)*6*s+Math.sin(t*2+i)*1.5*s,br,br*0.85,'#fffaf3');
+  }
+}
+// Föhn (hängt links oben, zielt auf den Kopf) + warme Luftwellen
+function drawFoehn(g){
+  var s=Math.min(S.VW,S.VH)/420, t=performance.now()/1000;
+  var fx=S.VW*0.5-175*s, fy=S.VH*0.58-190*s, on=!!S.foehn;
+  var wob=on?Math.sin(t*40)*1.2*s:0;
+  g.save(); g.translate(fx+wob,fy); g.rotate(0.35);
+  Fx.contactShadow(g,6*s,40*s,50*s,14*s,0.25);
+  // Griff
+  var hg=g.createLinearGradient(-12*s,0,12*s,0); hg.addColorStop(0,'#f6c29f'); hg.addColorStop(1,'#d88a63');
+  g.fillStyle=hg; g.beginPath(); g.moveTo(-26*s,6*s); g.lineTo(-6*s,6*s); g.lineTo(-14*s,70*s); g.lineTo(-34*s,66*s); g.closePath(); g.fill();
+  // Körper
+  Fx.ball(g,-10*s,0,40*s,30*s,'#f2a57e');
+  var ng=g.createLinearGradient(0,-18*s,0,18*s); ng.addColorStop(0,'#f0d3a0'); ng.addColorStop(1,'#b98c55');
+  g.fillStyle=ng; g.beginPath(); g.moveTo(20*s,-18*s); g.lineTo(58*s,-13*s); g.lineTo(58*s,13*s); g.lineTo(20*s,18*s); g.closePath(); g.fill();
+  Fx.ball(g,58*s,0,6*s,13*s,'#8f6a4a');
+  g.fillStyle='rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(-22*s,-14*s,14*s,6*s,-0.3,0,Math.PI*2); g.fill();
+  g.restore();
+  if(on && S.baer.schaum<0.1){
+    g.save(); g.lineCap='round';
+    for(var i=0;i<5;i++){
+      var ph=((t*1.6+i/5)%1);
+      g.globalAlpha=Math.sin(ph*Math.PI)*0.55;
+      g.strokeStyle=i%2?'#ffe6c4':'#fff4e4'; g.lineWidth=(5-ph*3)*s;
+      var sx=fx+60*s, sy=fy+22*s, ex=S.VW*0.5+10*s, ey=S.VH*0.58-100*s+(i-2)*22*s;
+      var mx=sx+(ex-sx)*ph, my=sy+(ey-sy)*ph;
+      g.beginPath(); g.moveTo(mx-30*s,my-8*s);
+      g.quadraticCurveTo(mx-15*s,my-8*s+Math.sin(t*14+i)*9*s,mx,my); g.quadraticCurveTo(mx+15*s,my+Math.sin(t*14+i+1)*9*s,mx+30*s,my+6*s);
+      g.stroke();
+    }
+    g.restore();
+  }
+}
 
 // Stations-Deko: kleine prozedurale Details, zurückhaltend
 function drawDeko(g){
   var W=S.VW,H=S.VH;
-  if(S.state==='wahl') return;
-  if(S.state==='schneiden'){ // Spiegel links oben
-    g.fillStyle='#d7ecf5'; g.strokeStyle='#b08cc7'; g.lineWidth=5;
-    g.beginPath(); g.arc(790,150,72,0,Math.PI*2); g.fill(); g.stroke();
-    g.fillStyle='rgba(255,255,255,0.5)';
-    g.beginPath(); g.arc(768,128,26,0,Math.PI*2); g.fill();
+  if(S.state==='wahl'||S.state==='menu'||S.state==='finish-done') return;
+  if(S.state==='waschen' && S.album && S.album.length){
+    // Bilderrahmen mit dem letzten Album-Foto an der Wand
+    var last=S.album[S.album.length-1];
+    var bx=205, by=118, bw=104, bh=116;
+    Fx.contactShadow(g,bx+bw/2+6,by+bh/2+8,bw*0.62,bh*0.62,0.35);
+    var fg=g.createLinearGradient(bx,by,bx+bw,by+bh); fg.addColorStop(0,'#e6b98f'); fg.addColorStop(1,'#b98460');
+    g.fillStyle=fg; g.fillRect(bx-7,by-7,bw+14,bh+14);
+    g.fillStyle='#fbf3e8'; g.fillRect(bx,by,bw,bh);
+    var mod2=Art.MODELS[last.fellIdx]||Art.MODELS[0];
+    var th=Art.thumb(last.fellIdx||0,160);
+    g.drawImage(th,bx+6,by+4,bw-12,bw-12);
+    g.fillStyle='#6b4a3a'; g.font='bold 11px sans-serif'; g.textAlign='center';
+    g.fillText('⭐ '+(last.modell||mod2.name), bx+bw/2, by+bh-6);
   }
-  if(S.state==='waschen'||S.state==='foehnen'){ // Duschkopf-Deko
-    g.fillStyle='#8a97a5';
-    g.fillRect(824,40,10,54);
-    g.beginPath(); g.arc(829,104,26,0,Math.PI); g.fill();
-    g.fillStyle='rgba(120,190,255,0.75)';
-    for(var k=-2;k<=2;k++) g.fillRect(829+k*9,108,3,16);
-    // Bilderrahmen mit letztem Album-Foto an der Wand
-    if(S.album && S.album.length){
-      var last=S.album[S.album.length-1];
-      var bx=760, by=170, bw=110, bh=118;
-      g.fillStyle='#8a5a2a'; g.fillRect(bx-6,by-6,bw+12,bh+12);
-      g.fillStyle='#f7ede2'; g.fillRect(bx,by,bw,bh);
-      g.strokeStyle='#5a3a1e'; g.lineWidth=2; g.strokeRect(bx,by,bw,bh);
-      var mod2=Art.MODELS[last.fellIdx]||Art.MODELS[0];
-      var mini2={
-        fellIdx:last.fellIdx, fell:mod2.fell, haar:last.haar||Art.HAAR[0], frisur:last.frisur||'lockig',
-        lack:{}, schaum:0, tropfen:[], fluff:0, bow:0, breathe:0, blink:0, relax:0,
-        gurkeL:false, gurkeR:false, duft:null,
-        makeup:{rouge:null,lid:null,gp:[]},
-        acc:{hut:null,schleife:null,brille:null,kette:null}, sticker:[]
-      };
-      g.save(); g.beginPath(); g.rect(bx,by,bw,bh-22); g.clip();
-      g.translate(bx+bw/2, by+8); g.scale(0.2,0.2); g.translate(-225,-40);
-      Art.drawBear(g, mini2, {w:450,h:330});
-      g.restore();
-      g.fillStyle='#5d3a75'; g.font='10px sans-serif'; g.textAlign='center';
-      g.fillText('⭐ '+last.modell, bx+bw/2, by+bh-6);
-    }
-  }
-  if(S.state==='spa'||S.state==='parfum'||S.state==='pfoten'||S.state==='makeup'||S.state==='massage'){ // Teppich
-    g.fillStyle='rgba(154,107,181,0.16)';
-    g.beginPath(); g.ellipse(W/2,H-160,250,60,0,0,Math.PI*2); g.fill();
-    g.strokeStyle='rgba(122,75,143,0.35)'; g.lineWidth=3;
-    g.beginPath(); g.ellipse(W/2,H-160,220,48,0,0,Math.PI*2); g.stroke();
-    g.beginPath(); g.ellipse(W/2,H-160,180,35,0,0,Math.PI*2); g.stroke();
-  }
-  if(S.state==='schmuecken'){ // Regal mit Fläschchen
-    g.fillStyle='#c49a6c'; g.fillRect(690,180,180,14);
-    var fl=['#e91e63','#9b59b6','#f1c40f'];
-    for(var i=0;i<3;i++){
-      g.fillStyle=fl[i]; g.fillRect(710+i*50,146,26,34);
-      g.fillStyle='#fff'; g.fillRect(716+i*50,138,14,10);
-    }
-  }
-  if(S.state==='eis'){ // Eis-Stand-Deko
-    g.fillStyle='#c49a6c'; g.fillRect(690,300,180,16);
-    g.fillStyle='#7a4b8f'; g.fillRect(700,316,12,110); g.fillRect(848,316,12,110);
-    Art.EIS_FARBEN.forEach(function(c,i){
-      g.fillStyle=c; g.beginPath(); g.arc(720+i*30,288,13,0,Math.PI*2); g.fill();
-    });
+  if(S.state==='eis'){ // Eis-Stand
+    Fx.contactShadow(g,780,430,110,14,0.4);
+    var sg=g.createLinearGradient(0,296,0,318); sg.addColorStop(0,'#f0d2ae'); sg.addColorStop(1,'#c7976f');
+    g.fillStyle=sg; g.fillRect(690,300,180,16);
+    g.fillStyle='#e99f78'; g.fillRect(700,316,12,110); g.fillRect(848,316,12,110);
+    Art.EIS_FARBEN.forEach(function(c,i){ Fx.ball(g,720+i*30,288,13,13,c); });
     g.fillStyle='#d9a94f';
     g.beginPath(); g.moveTo(800,296); g.lineTo(830,296); g.lineTo(815,340); g.closePath(); g.fill();
   }
-  if(S.state==='foto'){ // Foto-Studio: Scheinwerfer
-    g.fillStyle='#2b2b2b'; g.fillRect(60,60,10,90); g.fillRect(830,60,10,90);
+  if(S.state==='foto'){ // Foto-Studio: warme Scheinwerfer
     g.save();
-    [['#fff0b3',65,58,-0.5],['#fff0b3',835,58,0.5]].forEach(function(d){
-      g.fillStyle=d[0];
-      g.beginPath(); g.arc(d[1],d[2],20,0,Math.PI*2); g.fill();
-      g.globalAlpha=0.12;
-      g.beginPath(); g.moveTo(d[1],d[2]);
-      g.lineTo(d[1]+(d[3]>0?-160:160)+d[3]*200, 400); g.lineTo(d[1]+d[3]*280, 430);
-      g.closePath(); g.fill(); g.globalAlpha=1;
+    [[65,58,-0.5],[835,58,0.5]].forEach(function(d){
+      g.fillStyle='#6b5446'; g.fillRect(d[0]-5,d[1],10,90);
+      Fx.ball(g,d[0],d[1],20,20,'#fff0cf');
+      g.globalCompositeOperation='lighter'; g.globalAlpha=0.14; g.fillStyle='#ffe8c0';
+      g.beginPath(); g.moveTo(d[0],d[1]);
+      g.lineTo(d[0]+(d[2]>0?-160:160)+d[2]*200, 400); g.lineTo(d[0]+d[2]*280, 430);
+      g.closePath(); g.fill(); g.globalAlpha=1; g.globalCompositeOperation='source-over';
     });
     g.restore();
   }
 }
-function drawMenu(g){
-  var W=S.VW,H=S.VH;
-  var grad=g.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#ffe6f2'); grad.addColorStop(1,'#e8d5f5');
-  g.fillStyle=grad; g.fillRect(0,0,W,H);
-  for(var i=0;i<14;i++){
-    var x=(i*167)%W, y=40+((i*97)%520);
-    Art.drawSticker(g,'stern',x,y,8+(i%3)*4,'rgba(255,210,77,0.45)');
-  }
-  g.textAlign='center';
-  g.fillStyle='#7a4b8f'; g.font='bold 52px sans-serif';
-  var bTitle='Bären-Beautysalon';
-  var tw=g.measureText(bTitle).width;
-  g.font='68px sans-serif';
-  var ew=g.measureText('🧸').width;
-  g.textAlign='left';
-  g.fillText('🧸', W/2-(tw+ew+12)/2, 70);
-  g.fillStyle='#7a4b8f'; g.font='bold 52px sans-serif';
-  g.fillText(bTitle, W/2-(tw+ew+12)/2+ew+12, 64);
-  g.textAlign='center';
-  g.fillStyle='#9c6bb5'; g.font='24px sans-serif';
-  g.fillText('Mach den Bären ganz hübsch!', W/2, 106);
-  g.fillStyle='#8a6aa0'; g.font='14px sans-serif';
-  g.fillText('🧸 Bären-Beautysalon v'+window.BS_VER, W/2, H-14);
-  g.save();
-  g.translate(0, H*0.13);
-  Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H*0.62});
-  g.restore();
-  drawButtons(g);
-}
-
-// ---- Bären-Auswahl: Raster dynamisch aus MODELS -------
-function kacheln(){
-  var n=Art.MODELS.length, cols=5, rows=Math.ceil(n/cols);
-  var pitchX=152, w=138;
-  // Reihen wachsen dynamisch: Höhe anpassen, damit alle sichtbar bleiben
-  var y0=118;
-  var pitchY=Math.min(94, Math.floor((S.VH-y0-26)/rows));
-  var h=pitchY-10;
-  var x0=(S.VW-(cols*pitchX-14))/2;
-  var out=[];
-  for(var i=0;i<n;i++){
-    out.push({i:i, x:x0+(i%cols)*pitchX, y:y0+Math.floor(i/cols)*pitchY, w:w, h:h});
-  }
-  return out;
-}
-// Kontrast-Hintergrund für helle Kacheln: Modell-Kontur aufhellen (sonst hellblau)
-function shadeK(hex){
-  var n=parseInt(hex.slice(1),16);
-  var r=Math.min(255,((n>>16)&255)+70), gn=Math.min(255,((n>>8)&255)+70), bl=Math.min(255,(n&255)+70);
-  return 'rgba('+r+','+gn+','+bl+',0.35)';
-}
-
-function drawWahl(g){
-  var W=S.VW,H=S.VH;
-  var grad=g.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#e8f4ff'); grad.addColorStop(1,'#f5e6ff');
-  g.fillStyle=grad; g.fillRect(0,0,W,H);
-  for(var i=0;i<10;i++){
-    Art.drawSticker(g,'stern',(i*211)%W, 30+((i*131)%540), 7+(i%3)*3, 'rgba(154,107,181,0.25)');
-  }
-  g.textAlign='center';
-  g.fillStyle='#7a4b8f'; g.font='bold 44px sans-serif';
-  g.fillText('Wähle deinen Bären! 🐻', W/2, 70);
-  g.fillStyle='#9c6bb5'; g.font='20px sans-serif';
-  g.fillText('Antippen und los geht’s!', W/2, 104);
-  kacheln().forEach(function(k){
-    var m=Art.MODELS[k.i];
-    var act = S.baer.fellIdx===k.i;
-    g.save();
-    g.beginPath();
-    g.roundRect ? g.roundRect(k.x,k.y,k.w,k.h,16) : g.rect(k.x,k.y,k.w,k.h);
-    // helle Bären: Kontrast-Hintergrund abhängig von Fellhelligkeit
-    g.fillStyle = act?'#fbeaff':'rgba(255,255,255,0.94)';
-    if(!act){
-      var nhex=parseInt(m.fell.slice(1),16);
-      var lum=((nhex>>16)&255)*0.3+((nhex>>8)&255)*0.59+(nhex&255)*0.11;
-      if(m.hell||lum>190) g.fillStyle = m.kontur ? shadeK(m.kontur) : '#d8ecff';
-    }
-    g.fill();
-    g.lineWidth = act?5:2; g.strokeStyle = act?'#7a4b8f':'#c9aede';
-    g.stroke();
-    // Mini-Bär (auf Kachel skaliert)
-    var mini = Object.assign({}, S.baer, {fellIdx:k.i, fell:m.fell, schaum:0, tropfen:[],
-      fluff:0, bow:0, relax:0, blink:0, lack:{}, sticker:[], makeup:{rouge:null,lid:null,gp:[]},
-      gurkeL:false, gurkeR:false, duft:null,
-      acc:{hut:null,schleife:null,brille:null,kette:null}});
-    // Idle-Bounce: aktives Bärchen hüpft leicht (nur im Wahl-Screen)
-    var bounceY = act ? -Math.abs(Math.sin(performance.now()/1000*4.2+k.i*1.7))*8 : 0;
-    // Überraschungs-Kachel: wackelnde Animation
-    if(k.i===Art.MODELS.length-1){
-      var wt=performance.now()/1000;
-      g.rotate(0); // noop für Klarheit
-      bounceY = -Math.abs(Math.sin(wt*5))*6;
-      g.translate(0,0);
-    }
-    g.save();
-    g.beginPath(); g.rect(k.x,k.y,k.w,k.h-24); g.clip();
-    g.translate(k.x+k.w/2, k.y+2+bounceY); g.scale(0.26,0.26);
-    if(k.i===Art.MODELS.length-1) g.rotate(Math.sin(performance.now()/1000*6)*0.12);
-    g.translate(-225,-40);
-    Art.drawBear(g, mini, {w:450, h:330});
-    g.restore();
-    g.fillStyle='#5d3a75'; g.font='bold 15px sans-serif';
-    g.fillText(m.name, k.x+k.w/2, k.y+k.h-10);
-    g.restore();
-  });
-  drawButtons(g);
-}
-
 // ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
 var NICONS=['🎵','🎶','♪','♫'];
 function drawNoten(g){
@@ -1145,99 +1095,7 @@ function drawAlbumVorschau(g){
     g.fillText(p.datum, x+aw/2, ay+76);
   });
   g.restore();
-  // Zuletzt gewählter Bär hüpft in drawWahl/drawMenu separat
 }
-// Finish-Feuerwerk: Raketen steigen + große Bursts + Boden-Fontänen links/rechts
-function drawFeuerwerk(g){
-  if(!S.fw) return;
-  var t=performance.now()/1000;
-  S.fw.raketen.forEach(function(f){
-    var dt2=t-f.t0;
-    if(dt2<0) return;
-    if(f.phase===0){ // Rakete steigt
-      var p=Math.min(1,dt2/0.9);
-      var x=f.x0+(f.x1-f.x0)*p, y=f.y0-f.h*p;
-      g.globalAlpha=Math.min(1,dt2*6);
-      g.strokeStyle='rgba(255,240,180,0.95)'; g.lineWidth=3.5; g.lineCap='round';
-      g.beginPath(); g.moveTo(x,y+30); g.lineTo(x,y); g.stroke();
-      g.fillStyle='#fff'; g.beginPath(); g.arc(x,y,4.5,0,Math.PI*2); g.fill();
-      g.globalAlpha=1;
-      if(p>=1){ f.phase=1; f.t0=t; }
-    } else { // Burst: breite Farb-Fontäne, länger sichtbar
-      var q=dt2/3.0; // Burst dauert 3 s (war 2 s)
-      if(q>1){ f.dead=1; return; }
-      for(var i=0;i<f.nP;i++){
-        var a=f.ang[i], sp=f.spd[i]*(1-q*0.22);
-        var x=f.x1+Math.cos(a)*sp*q*190;
-        var y=f.y0-f.h+Math.sin(a)*sp*q*190 + q*q*150;
-        g.globalAlpha=Math.max(0,1-q*0.92);
-        g.fillStyle=f.cols[i%f.cols.length];
-        g.beginPath(); g.arc(x,y,4.6-q*2.2,0,Math.PI*2); g.fill();
-      }
-      g.globalAlpha=1;
-    }
-  });
-  // Fontänen links+rechts am Boden (2 s lang, Farbfontäne)
-  S.fw.fontaenen.forEach(function(ft){
-    var dt3=t-ft.t0;
-    if(dt3<0) return;
-    var q=dt3/2.0;
-    if(q>1){ ft.dead=1; return; }
-    for(var i=0;i<ft.nP;i++){
-      var p2=ft.parts[i];
-      var px=ft.x + Math.sin(p2.seed*7+t*3)*6;
-      var py=ft.y - p2.vy*q*90 + 180*q*q*0.6;
-      var drift=p2.vx*q*40;
-      g.globalAlpha=Math.max(0,1-q);
-      g.fillStyle=p2.c;
-      g.beginPath(); g.arc(px+drift, py, 3.4-q*1.4, 0, Math.PI*2); g.fill();
-    }
-    g.globalAlpha=1;
-  });
-  S.fw.raketen=S.fw.raketen.filter(function(f){return !f.dead;});
-  S.fw.fontaenen=S.fw.fontaenen.filter(function(f){return !f.dead;});
-  if(!S.fw.raketen.length && !S.fw.fontaenen.length) S.fw=null;
-}
-function startFeuerwerk(){
-  var cols=[['#e74c3c','#f4c20d','#3498db'],['#9b59b6','#ff9eb5','#ffd24d'],['#2ecc71','#7ab8f5','#fff'],['#ff8fb3','#8fd48a','#ffd24d']];
-  var t0=performance.now()/1000;
-  S.fw={raketen:[],fontaenen:[]};
-  var n=6; // 6 Raketen (war 4-6)
-  for(var k=0;k<n;k++){
-    var ang=[], spd=[];
-    for(var i=0;i<34;i++){ ang.push(-Math.PI*0.12-Math.random()*Math.PI*0.76); spd.push(0.5+Math.random()*0.9); }
-    S.fw.raketen.push({x0:S.VW*(0.22+Math.random()*0.56), y0:S.VH*0.92,
-      x1:S.VW*(0.16+k*(0.68/Math.max(1,n-1))+Math.random()*0.06), h:230+Math.random()*90,
-      t0:t0+k*0.42, phase:0, nP:34, ang:ang, spd:spd, cols:cols[k%4]});
-  }
-  // zwei Fontänen: links & rechts am Boden, je 2 s
-  [0.06,0.94].forEach(function(fr,fi){
-    var ps=[];
-    for(var j=0;j<64;j++){
-      ps.push({vx:(Math.random()-0.5)*3, vy:1.6+Math.random()*1.5, seed:Math.random(),
-        c:cols[(j+fi)%4][j%3]});
-    }
-    S.fw.fontaenen.push({x:S.VW*fr, y:S.VH-14, t0:t0, parts:ps, nP:64});
-  });
-}
-
-function drawShootingStar(g){
-  // Sternschnuppe: alle ~6 s quer über den oberen Bereich
-  var t = performance.now()/1000;
-  var cyc = t % 6;
-  if(cyc>1) return;
-  var p = cyc/1;
-  var x = S.VW*0.15 + p*S.VW*0.7;
-  var y = 40 + p*60 + Math.sin(p*Math.PI)*10;
-  g.globalAlpha = Math.sin(p*Math.PI);
-  var grd=g.createLinearGradient(x-40,y-8,x,y);
-  grd.addColorStop(0,'rgba(255,255,255,0)'); grd.addColorStop(1,'rgba(255,235,140,0.9)');
-  g.strokeStyle=grd; g.lineWidth=2.5; g.lineCap='round';
-  g.beginPath(); g.moveTo(x-40,y-8); g.lineTo(x,y); g.stroke();
-  Art.drawSticker(g,'stern',x,y,7,'#fff5c8');
-  g.globalAlpha=1;
-}
-
 function drawDuftWolken(g){
   // kleine Duft-Wolke beim Bären (Finish / Stationen)
   var d = Art.DUFTE[S.baer.duft]; if(!d) return;
@@ -1270,28 +1128,7 @@ function drawHerzen(g){
   g.globalAlpha=1;
 }
 
-function drawGlitzerRing(g){
-  // Kreis aus Sternen um den Bären (Finish)
-  var t = (performance.now()/1000)%10;
-  for(var i=0;i<18;i++){
-    var a = i/18*Math.PI*2 + t*0.6;
-    var R = 235 + Math.sin(t*3+i)*12;
-    var x = S.VW*0.5 + Math.cos(a)*R;
-    var y = S.VH*0.55 + Math.sin(a)*R*0.72;
-    var sz = 9 + Math.sin(t*5+i*1.7)*4;
-    Art.drawSticker(g,'stern',x,y,Math.max(4,sz), i%2?'#ffd24d':'#ff9eb5');
-  }
-}
-
-function drawStickers(g){
-  var s = Math.min(S.VW,S.VH)/420;
-  var cy = S.VH*0.58;
-  var pos = {L0:[-85,180],L1:[-55,180],L2:[-25,180],R0:[25,180],R1:[55,180],R2:[85,180]};
-  S.baer.sticker.forEach(function(st){
-    var p = pos[st.ziel]; if(!p) return;
-    Art.drawSticker(g, st.typ, S.VW*0.5+p[0]*s, cy+p[1]*s, 10*s, st.farbe);
-  });
-}
+function drawStickers(g){ /* v17: Sticker sitzen auf den Krallen (art.js) */ }
 
 function clawPos(key){
   var s = Math.min(S.VW,S.VH)/420;
@@ -1301,28 +1138,19 @@ function clawPos(key){
   var p=map[side];
   return [cx + (p[0]+(i-1)*16)*s, cy+p[1]*s, 14*s];
 }
+// Bär aus der Auswahl übernehmen (ui.js ruft das beim Kachel-Tipp)
+S.chooseBear = function(i){
+  var surprise = i===Art.MODELS.length-1;
+  var idx = surprise ? Math.floor(Math.random()*(Art.MODELS.length-1)) : i;
+  S.baer = neuerBaer(idx); S.save();
+  S.state='waschen'; S.buildUI();
+  sfx(surprise?'tada':'chime');
+  if(surprise){ window.BSGame && window.BSGame.konfettiBurst(S.VW/2, S.VH*0.4);
+    window.BSGame && window.BSGame.sternExplosion(S.VW/2, S.VH*0.5); }
+  react('happy',1.4);
+};
 S.tapBear = function(x,y){
-  if(S.state==='wahl'){
-    var ks=kacheln();
-    for(var i=0;i<ks.length;i++){
-      var k=ks[i];
-      if(x>=k.x&&x<=k.x+k.w&&y>=k.y&&y<=k.y+k.h){
-        if(k.i===Art.MODELS.length-1){ // Überraschungs-Kachel: zufälliger Bär 0..23
-          var rix=Math.floor(Math.random()*(Art.MODELS.length-1));
-          S.baer = neuerBaer(rix); S.save();
-          S.state='waschen'; S.buildUI();
-          // Konfetti-Puff + Sternchen-Explosion beim Erscheinen
-          window.BSGame && window.BSGame.konfettiBurst(S.VW/2, S.VH*0.4);
-          window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S.VW/2, S.VH*0.5);
-        } else {
-          S.baer = neuerBaer(k.i); S.save();
-          S.state='waschen'; S.buildUI();
-        }
-        return true;
-      }
-    }
-    return false;
-  }
+  if(S.state==='finish-done'){ S.finaleSkip(); return true; }
   if(S.state==='geschenke' && S.geschenk){
     // Paket antippen: schütteln → Deckel fliegt mit Überraschungs-Puff; danach neues Paket
     var gpak=S._pakHit;
@@ -1476,6 +1304,8 @@ S.tapBear = function(x,y){
           S.baer.lack[k]=S.lackColor||'#e91e63';
         }
         S.save();
+        sfx('pop',{pitch:1.4}); react('happy',0.6);
+        emit('star',p[0],p[1],{n:7,speed:170,size:8,life:0.6,grav:200,colors:['#ffe7a8',S.lackColor||'#e91e63']});
       }
     });
     return true;
@@ -1762,27 +1592,6 @@ function drawSchmetterlinge(g){
 function roundRect(g,x,y,w,h,r){  g.beginPath();
   g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
   g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
-}
-
-function drawButtons(g){
-  buttons.forEach(function(b){
-    var act = b.active && b.active();
-    g.save();
-    roundRect(g,b.x,b.y,b.w,b.h,14);
-    if(b.fill){ g.fillStyle=b.fill; }
-    else g.fillStyle = act ? '#7a4b8f' : 'rgba(255,255,255,0.92)';
-    g.fill();
-    g.lineWidth = act?4:2;
-    g.strokeStyle = act ? '#ffd24d' : '#b08cc7';
-    g.stroke();
-    if(b.label){
-      g.fillStyle = act ? '#fff' : '#5d3a75';
-      g.font = (b.tiny?'13px sans-serif':b.small?'16px sans-serif':b.big?'bold 24px sans-serif':'19px sans-serif');
-      g.textAlign='center'; g.textBaseline='middle';
-      g.fillText(b.label, b.x+b.w/2, b.y+b.h/2);
-    }
-    g.restore();
-  });
 }
 
 S.hitButton = function(x,y){
