@@ -523,7 +523,8 @@ function buildAquarium(){
   btn(30, 170, 190, 64, '🥫 Futter!', function(){
     var aq=S.aqua;
     for(var i=0;i<8;i++){
-      aq.futter.push({x:S.VW*0.5+(Math.random()-0.5)*120, y:96, vy:22+Math.random()*30,
+      var AL=aquaLayout(); // r19: Körner fallen aus der Dose ins freie Wasser
+      aq.futter.push({x:AL.canX+(Math.random()-0.5)*120, y:AL.by0+6-Math.random()*10, vy:22+Math.random()*30,
         ph:Math.random()*6});
     }
     aq.fuetter=1.2;
@@ -618,7 +619,7 @@ S.draw = function(g){
   drawStickers(g);
   }
   }
-  // Zirkus: jonglierende Bälle auf Parabel-Bahnen über den Pfoten
+  // Zirkus: jonglierende Bälle auf Parabel-Bahnen zwischen den Pfoten
   if(S.state==='zirkus' && S.zirkus) drawJonglage(g);
   if(S.state==='geburtstag') drawKuchen(g);
   if(S.state==='disco') drawDisco(g);
@@ -1045,26 +1046,34 @@ function drawDisco(g){
 function circle2(g,x,y,r,c){ g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); }
 function ell2(g,x,y,rx,ry,c){ g.fillStyle=c; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,Math.PI*2); g.fill(); }
 
+// r19: Bälle starten/landen IN den echten Pfoten (Art.drawBear → baer._paws), Scheitel ≈ Kopfhöhe.
+// L→R hoch (Kopf oben), R→L flacher (Augenhöhe): die Bahnen treffen sich nur in den Pfoten, 2–3 Bälle berühren sich nie
+// (simuliert: Mindestabstand ≥ 55 Welt-Einheiten bei Ø 46).
+var BALL_R=23;      // Ball-Radius (war 17, +35 %)
+var JONG_T=1.7;     // Sekunden pro Ball-Runde (L→R fliegen, halten, R→L fliegen, halten)
 function drawJonglage(g){
-  var z=S.zirkus, bälle=z.bälle, n=bälle.length;
-  var t=performance.now()/1000;
-  var cx=S.VW*0.5, cy=S.VH*0.36;
-  var handL=cx-150, handR=cx+150, handY=S.VH*0.6;
+  var z=S.zirkus, bälle=z.bälle, n=bälle.length, b=S.baer, geo=b._geo;
+  var t=performance.now()/1000, R=BALL_R, k=R/17;
+  var s=geo?geo.s:Math.min(S.VW,S.VH)/420, cy=geo?geo.cy:S.VH*0.58;
+  var pw=b._paws||[[S.VW*0.5-160*s,cy+45*s],[S.VW*0.5+160*s,cy+45*s]];
+  var hand=[[pw[0][0],pw[0][1]-R*0.5],[pw[1][0],pw[1][1]-R*0.5]]; // Ball liegt in der Pfote
+  var apex=[cy-160*s, cy-100*s]; // Kopf oben ≈ cy-172s, Augen ≈ cy-98s
+  var FL=0.42, DW=0.08;
+  z._pos=[]; z._r=R;
   for(var i=0;i<n;i++){
-    // Jeder Ball eine phasenverschobene Parabel zwischen den Pfoten
-    var ph=(t*1.4 + i/n)%1; var p=ph<0.5? ph*2 : 2-ph*2;
-    var x=handL+(handR-handL)*p;
-    var y=cy - Math.sin(p*Math.PI)*(90+ (i%2)*40) - 40*Math.sin(((t*1.4+i/n)%1)*Math.PI*2);
-    var b=bälle[i];
-    g.fillStyle=b.c; g.beginPath(); g.arc(x,y,17,0,Math.PI*2); g.fill();
-    g.strokeStyle='rgba(0,0,0,0.25)'; g.lineWidth=2; g.stroke();
+    var ph=(t/JONG_T+i/n)%1, lr=ph<0.5, q=lr?ph:ph-0.5, P0=hand[lr?0:1], P1=hand[lr?1:0], x, y;
+    if(q<FL){ // Flug
+      var u=q/FL, h=Math.max(0,Math.min(P0[1],P1[1])-apex[lr?0:1]);
+      x=P0[0]+(P1[0]-P0[0])*u; y=P0[1]+(P1[1]-P0[1])*u-4*h*u*(1-u);
+    } else { // Halten: kurz in die Pfote plumpsen
+      x=P1[0]; y=P1[1]+Math.sin((q-FL)/DW*Math.PI)*8*s;
+    }
+    z._pos.push([x,y]);
+    g.fillStyle=bälle[i].c; g.beginPath(); g.arc(x,y,R,0,Math.PI*2); g.fill();
+    g.strokeStyle='rgba(0,0,0,0.25)'; g.lineWidth=2*k; g.stroke();
     g.fillStyle='rgba(255,255,255,0.65)';
-    g.beginPath(); g.arc(x-5,y-6,5,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(x-5*k,y-6*k,5*k,0,Math.PI*2); g.fill();
   }
-  // Pfoten-Stubs als Jonglier-Hände andeuten
-  g.fillStyle='rgba(122,75,143,0.5)';
-  g.beginPath(); g.arc(handL,handY,13,0,Math.PI*2); g.fill();
-  g.beginPath(); g.arc(handR,handY,13,0,Math.PI*2); g.fill();
 }
 function drawAlbumVorschau(g){
   if(!S.album || !S.album.length) return;
@@ -1996,49 +2005,71 @@ function drawMalRahmen(g,rx,ry,rw,rh,style){
   g.restore();
 }
 // ---- Runde 9: Aquarium ------------------------------------------------------
-function aquaInit(aq){
+// r19: Der Bär steht NEBEN (quer) bzw. UNTER (hoch) dem Becken und schaut hinein — Fische, Futter, Blasen und Deko
+// bleiben sichtbar. Fische schwimmen nur im freien Teil des Beckens (fr). Kamera-Ausschnitt: S.aquaFocus (game.js).
+var FISCH_K=1.35, FUTTER_R=5; // r19: Fische ×1.35, Futterkorn 4 → 5
+function aquaLayout(){
+  var L=window.BSUI && window.BSUI.L, port=L ? L.port!==false : true, o;
+  if(port) o={port:true, bx0:140, by0:30, bw:620, bh:350, bear:{cx:450, cy:625, s:1.05}, deko:0.2, focus:[120,-35,780,860]};
+  else o={port:false, bx0:-30, by0:60, bw:720, bh:430, bear:{cx:855, cy:392, s:1.0}, deko:0.3, focus:[-60,-10,1085,625]};
+  var fr={x0:o.bx0+26, x1:o.bx0+o.bw-26, y0:o.by0+24, y1:o.by0+o.bh-40};
+  if(!port) fr.x1=Math.min(fr.x1, o.bear.cx-150*o.bear.s-30); // quer: nicht hinter den Bären schwimmen
+  o.fr=fr; o.canX=(fr.x0+fr.x1)/2; return o;
+}
+S.aquaFocus=function(){ return aquaLayout().focus; };
+// Blickziel für den Bären: Futter, sonst abwechselnd ein Fisch
+S.aquaBlick=function(){
+  var aq=S.aqua; if(!aq || !aq.fisch) return null;
+  if(aq.futter.length) { var f=aq.futter[0]; return [f.x,f.y]; }
+  var fi=aq.fisch[Math.floor(performance.now()/2600)%aq.fisch.length]; return fi?[fi.x,fi.y]:null;
+};
+function aquaInit(aq,fr){
   if(aq.fisch) return;
   aq.fisch=[];
   for(var i=0;i<6;i++){
     aq.fisch.push({
-      x:80+Math.random()*740, y:150+Math.random()*220,
+      x:fr.x0+Math.random()*(fr.x1-fr.x0), y:fr.y0+Math.random()*(fr.y1-fr.y0),
       vx:(Math.random()<0.5?-1:1)*(26+Math.random()*30),
       vy:(Math.random()-0.5)*18,
-      c:AQUA_FARBEN[i%6], ph:Math.random()*6, s:0.75+Math.random()*0.5,
+      c:AQUA_FARBEN[i%6], ph:Math.random()*6, s:(0.75+Math.random()*0.5)*FISCH_K,
       ziel:null
     });
   }
 }
 function drawAquarium(g){
   var aq=S.aqua; if(!aq) return;
-  aquaInit(aq);
+  var A=aquaLayout(), fr=A.fr;
+  aquaInit(aq,fr);
+  aq._futterR=FUTTER_R;
   var t=performance.now()/1000;
   var W=S.VW,H=S.VH;
-  // Becken: Wasser-Gradient + Sand + Glas-Rand (Bedienraum bleibt oben links frei)
-  var bx0=240, by0=110, bw=W-270, bh=H*0.66-110+140;
+  // Becken: Wasser-Gradient + Sand + Glas-Rand
+  var bx0=A.bx0, by0=A.by0, bw=A.bw, bh=A.bh;
   var grd=g.createLinearGradient(0,by0,0,by0+bh);
   grd.addColorStop(0,'#9fdcf5'); grd.addColorStop(0.7,'#3f9fd8'); grd.addColorStop(1,'#1a6fae');
   g.fillStyle=grd; g.fillRect(bx0,by0,bw,bh);
   g.fillStyle='#e8d9ac'; g.fillRect(bx0,by0+bh-26,bw,26); // Sand
-  for(var sd=0;sd<14;sd++){ circle2(g,bx0+20+sd*46,by0+bh-10-((sd*29)%10),3,'#d9c48c'); }
+  for(var sd=0;sd<Math.floor(bw/46);sd++){ circle2(g,bx0+20+sd*46,by0+bh-10-((sd*29)%10),3,'#d9c48c'); }
   g.strokeStyle='rgba(255,255,255,0.75)'; g.lineWidth=4; g.strokeRect(bx0,by0,bw,bh);
-  g.strokeStyle='rgba(60,120,160,0.35)'; g.lineWidth=1; 
+  g.strokeStyle='rgba(60,120,160,0.35)'; g.lineWidth=1;
   for(var wl=0;wl<4;wl++){ // Wellen-Linien
     g.beginPath();
-    for(var wxl=0;wxl<=20;wxl++) g.lineTo(bx0+wxl*(bw/20), by0+18+wl*44+Math.sin(t*2+wxl*0.8+wl)*4);
+    for(var wxl=0;wxl<=20;wxl++) g.lineTo(bx0+wxl*(bw/20), by0+18+wl*bh*0.1+Math.sin(t*2+wxl*0.8+wl)*4);
     g.stroke();
   }
-  // Deko
-  if(aq.deko===1) drawSchiff(g, bx0+bw*0.32, by0+bh-64, 1);
-  else if(aq.deko===2) drawSchatz(g, bx0+bw*0.32, by0+bh-58, 1, t);
-  // Titel über Becken-Zeichnung hier nicht; Titel/Hinweis kommen weiter unten
+  // Deko (im freien Teil des Beckens)
+  var dx=bx0+bw*A.deko;
+  if(aq.deko===1){ drawSchiff(g, dx, by0+bh-64, 1); aq._dekoBox=[dx-50,by0+bh-64-54,100,78]; }
+  else if(aq.deko===2){ drawSchatz(g, dx, by0+bh-58, 1, t); aq._dekoBox=[dx-34,by0+bh-58-42,68,60]; }
+  else aq._dekoBox=null;
   // Futter-Körner: sinken, wabern
   for(var fi=aq.futter.length-1;fi>=0;fi--){
     var fd=aq.futter[fi];
+    if(fd.y<by0+6) fd.y=by0+6; // r19: Körner starten an der Dose über dem freien Wasser
     fd.y+=fd.vy*0.016; fd.vy=Math.min(fd.vy+8*0.016, 46);
     fd.x+=Math.sin(t*3+fd.ph)*0.6;
-    g.fillStyle='#8a5a2a'; circle2(g,fd.x,fd.y,4,'#8a5a2a');
-    g.fillStyle='#b8842f'; circle2(g,fd.x-1,fd.y-1,1.8,'#c99a4f');
+    circle2(g,fd.x,fd.y,FUTTER_R,'#8a5a2a');
+    circle2(g,fd.x-1.2,fd.y-1.2,FUTTER_R*0.45,'#c99a4f');
     if(fd.y>by0+bh-30) aq.futter.splice(fi,1);
   }
   // Fische: idle schwimmen; Futter = schwimmen heran und schnappen
@@ -2052,10 +2083,11 @@ function drawAquarium(g){
     if(naechstes){
       var dx=naechstes.x-f.x, dy=naechstes.y-f.y, dd=Math.sqrt(nd)||1;
       f.vx+=(dx/dd)*90*0.016; f.vy+=(dy/dd)*90*0.016;
-      if(dd<16){ // schnappen!
+      if(dd<16*f.s/FISCH_K+4){ // schnappen!
         var idx=aq.futter.indexOf(naechstes); aq.futter.splice(idx,1);
         for(var bp=0;bp<5;bp++) aq.blasen.push({x:f.x+(Math.random()-0.5)*10,y:f.y-8,t:0,v:-60-Math.random()*30});
         window.BSGame && window.BSGame.spaTupfer && window.BSGame.spaTupfer(f.x,f.y);
+        if(t-(aq._freuT||0)>0.9){ aq._freuT=t; react('happy',0.5); } // r19: Bär freut sich mit
       }
     } else {
       // sanfte Idle-Wanderung
@@ -2065,10 +2097,10 @@ function drawAquarium(g){
     var vmax=70, vmag=Math.hypot(f.vx,f.vy)||1;
     if(vmag>vmax){ f.vx*=vmax/vmag; f.vy*=vmax/vmag; }
     f.x+=f.vx*0.016*3.4; f.y+=f.vy*0.016*3.4;
-    if(f.x<bx0+26){ f.x=bx0+26; f.vx=Math.abs(f.vx); }
-    if(f.x>bx0+bw-26){ f.x=bx0+bw-26; f.vx=-Math.abs(f.vx); }
-    if(f.y<by0+24){ f.y=by0+24; f.vy=Math.abs(f.vy)*0.6; }
-    if(f.y>by0+bh-40){ f.y=by0+bh-40; f.vy=-Math.abs(f.vy)*0.6; }
+    if(f.x<fr.x0){ f.x=fr.x0; f.vx=Math.abs(f.vx); }
+    if(f.x>fr.x1){ f.x=fr.x1; f.vx=-Math.abs(f.vx); }
+    if(f.y<fr.y0){ f.y=fr.y0; f.vy=Math.abs(f.vy)*0.6; }
+    if(f.y>fr.y1){ f.y=fr.y1; f.vy=-Math.abs(f.vy)*0.6; }
     drawFisch(g, f.x, f.y, f.s, f.c, f.vx<0, t+f.ph);
     if(Math.random()<0.006) aq.blasen.push({x:f.x,y:f.y-8,t:0,v:-40-Math.random()*25});
   });
@@ -2082,13 +2114,17 @@ function drawAquarium(g){
     if(bl.y<by0+6 || bl.t>2.2) aq.blasen.splice(bi,1);
   }
   g.globalAlpha=1;
-  // Futter-Dose oben rechts sichtbar
-  g.fillStyle='#c0392b'; g.fillRect(bx0+bw-64,by0-46,52,40);
-  g.fillStyle='#e74c3c'; g.fillRect(bx0+bw-68,by0-52,60,10);
+  // Futter-Dose über dem freien Wasser, kippt beim Füttern
+  if(aq.fuetter>0) aq.fuetter=Math.max(0,aq.fuetter-0.016);
+  var cx=A.canX, tilt=Math.sin(Math.min(1,aq.fuetter/1.2)*Math.PI)*0.5;
+  g.save(); g.translate(cx,by0-26); g.rotate(tilt);
+  g.fillStyle='#c0392b'; g.fillRect(-26,-20,52,40);
+  g.fillStyle='#e74c3c'; g.fillRect(-30,-26,60,10);
   g.fillStyle='#fff'; g.font='11px sans-serif'; g.textAlign='center';
-  g.fillText('Futter',bx0+bw-38,by0-24);
-  // Bär schaut fasziniert zu (links unten, groß)
-  Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
+  g.fillText('Futter',0,2);
+  g.restore();
+  // Bär steht am Becken und schaut hinein
+  Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget, cx:A.bear.cx, cy:A.bear.cy, s:A.bear.s});
   drawStickers(g);
 }
 function drawFisch(g,x,y,sc,c,flip,t){

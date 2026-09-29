@@ -35,9 +35,9 @@ var cam={x:450,y:335,z:0.8}, vp={x:0,y:0,w:100,h:100}, tw=null, firstCam=true, c
 var FOCUS={ _def:[205,15,695,655], menu:[190,-20,710,660], 'finish-done':[150,-75,750,655],
   geburtstag:[190,15,810,655], eis:[205,15,770,655], geschenke:[205,15,820,655], keks:[110,15,850,655],
   zuckerwatte:[190,15,760,655], ballon:[205,-40,860,655], zauber:[205,-40,760,655], karussell:[150,20,760,665],
-  aquarium:[225,80,885,655], malbuch:[190,70,710,450], foto:[190,25,710,655], disco:[190,15,710,655],
+  malbuch:[190,70,710,450], foto:[190,25,710,655], disco:[190,15,710,655],
   zirkus:[170,-20,730,655], tanz:[190,-30,710,655], wahl:[205,15,695,655] };
-S.focusRect=function(st){ return FOCUS[st]||FOCUS._def; };
+S.focusRect=function(st){ if(st==='aquarium' && S.aquaFocus) return S.aquaFocus(); return FOCUS[st]||FOCUS._def; }; // r19: Aquarium je Orientierung
 function camTarget(){
   var fr=S.focusRect(S.state), v=UI.L.vp, fw=fr[2]-fr[0], fh=fr[3]-fr[1];
   var z=Math.min(v.w/fw,v.h/fh);
@@ -260,6 +260,8 @@ function update(dt){
     if(st==='foehnen' && S.foehn && b.schaum<0.1){ env.wind=1; env.happy=1; }
     if(st==='massage' && G._massT && t-G._massT<0.35){ env.goose=1; env.happy=b.relax<0.6?1:0; }
     if(st==='tanz'){ env.mouth=0.7; env.sway=0; }
+    if(st==='aquarium' && S.aquaBlick && !(env.pointer && env.pointer.age<2.5)){ var aqb=S.aquaBlick(); if(aqb) env.pointer={x:aqb[0],y:aqb[1],age:0}; }
+    if(st==='zirkus') env.arms=0.3; // r19: Pfoten zum Jonglieren seitlich vorgestreckt
     if(st==='menu'){ var ph=(t%7); env.wave=ph<2.2?1:0; env.armR=ph<2.2?1:0; }
     if(st==='finish-done' && S.finaleEnv) S.finaleEnv(env);
     Art.updateBear(live,dt,env);

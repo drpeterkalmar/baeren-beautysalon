@@ -1,6 +1,7 @@
 // DEV-TOOL (nicht Teil des Spiels): Headless-Prüfung gegen CHECKS.md.
-// Aufruf: node tools/visual-check.mjs <label> [--fps] [--throttle=4] [--land] [--swraster] [--only=flow|finale|stations|models] [--model=N]
-// Android-Viewport 412×915 @ DPR 2, Touch. Ergebnis: shots/r18/<label>/*.png + report.json
+// Aufruf: node tools/visual-check.mjs <label> [--fps] [--novsync] [--throttle=4] [--land] [--swraster] [--only=flow|finale|stations|models|r19] [--model=N]
+// Android-Viewport 412×915 @ DPR 2, Touch. Ergebnis: shots/r19/<label>/*.png + report.json
+// --only=r19: Aquarium-Verdeckung (Bär-Maske gegen Fisch/Futter/Blasen/Deko, 10 s Füttern) + Zirkus-Bahnen + Bursts
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import path from 'path';
@@ -17,13 +18,15 @@ const arg = (k) => (process.argv.find(a => a.startsWith('--' + k + '=')) || '').
 const label = process.argv[2] || 'run';
 const doFps = process.argv.includes('--fps'), land = process.argv.includes('--land');
 const thr = +(arg('throttle') || 0), only = arg('only');
-const outDir = path.join(root, 'shots', 'r18', label);
+const outDir = path.join(root, 'shots', 'r19', label);
 fs.mkdirSync(outDir, { recursive: true });
 const report = { label, land, throttle: thr, errors: [], fps: {}, smallButtons: [], notes: [] };
 
 // Standard: GPU-Raster (ANGLE) wie auf Android-Chrome; --swraster = Software-Raster (Worst Case, Headless-typisch)
 const sw = process.argv.includes('--swraster');
-const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'].concat(sw ? [] : ['--use-angle=metal', '--enable-gpu']) });
+// --novsync: rAF ungebremst (Headless ohne Display taktet sonst ~11 Hz) — FPS = Durchsatz, nur relativ vergleichbar
+const novs = process.argv.includes('--novsync');
+const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'].concat(sw ? [] : ['--use-angle=metal', '--enable-gpu', '--enable-unsafe-swiftshader']).concat(novs ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
 report.raster = sw ? 'software' : 'gpu';
 const ctx = await browser.newContext({
   viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
@@ -169,6 +172,89 @@ if (only === 'models') {
   console.log('models', res.n, 'bad', res.bad);
   await setState('wahl', 1500); await shot('wahl');
   await page.evaluate(() => { const L = window.BSUI.L; });
+}
+// ---------------------------------------------------------------- r19: Aquarium-Verdeckung + Jonglage
+if (only === 'r19') {
+  await setState('waschen'); await styleBear(+(arg('model') || 0));
+  // Messhaken: Welt-Transform (S.draw) und Bär-Aufruf (Art.drawBear) mitschneiden — unabhängig von der Implementierung
+  await page.evaluate(() => {
+    const S = window.BSSalon, A = window.BSArt, R = window.__r19 = { ob: A.drawBear };
+    const od = S.draw; S.draw = function (g) { R.T0 = g.getTransform(); return od.apply(this, arguments); };
+    A.drawBear = function (g, b, opt) { if (b === S.baer) R.bear = { Tb: g.getTransform(), opt: opt, st: S.state }; return R.ob.apply(this, arguments); };
+    R.m = document.createElement('canvas'); R.q = 0.5; R.ox = -400; R.oy = -400; R.m.width = 2000 * R.q; R.m.height = 1700 * R.q;
+    R.acc = {}; R.n = 0;
+    R.sample = function () {
+      if (!R.bear || !R.T0 || R.bear.st !== 'aquarium') return false;
+      const mg = R.m.getContext('2d', { willReadFrequently: true });
+      mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, R.m.width, R.m.height);
+      const rel = R.T0.inverse().multiply(R.bear.Tb);
+      mg.setTransform(new DOMMatrix().scale(R.q).translate(-R.ox, -R.oy).multiply(rel));
+      R.ob(mg, S.baer, R.bear.opt);
+      const img = mg.getImageData(0, 0, R.m.width, R.m.height).data, MW = R.m.width, MH = R.m.height;
+      const cov = (x, y) => { const i = Math.round((x - R.ox) * R.q), j = Math.round((y - R.oy) * R.q); return i >= 0 && j >= 0 && i < MW && j < MH && img[(j * MW + i) * 4 + 3] > 100; };
+      const L = window.BSUI.L, vp = L.vp, w2s = window.BSGame.worldToScreen;
+      const off = (x, y) => { const p = w2s(x, y); return p[0] < vp.x || p[0] > vp.x + vp.w || p[1] < vp.y || p[1] > vp.y + vp.h; };
+      const add = (cat, cx, cy, rx, ry) => { // Ellipse mit 3-Einheiten-Raster abtasten (Punkte ∝ Fläche)
+        const a = R.acc[cat] || (R.acc[cat] = { pts: 0, hid: 0, off: 0 });
+        for (let y = cy - ry; y <= cy + ry; y += 3) for (let x = cx - rx; x <= cx + rx; x += 3) {
+          const u = (x - cx) / rx, v = (y - cy) / ry; if (u * u + v * v > 1) continue;
+          a.pts++; if (cov(x, y)) a.hid++; else if (off(x, y)) a.off++;
+        }
+      };
+      const aq = S.aqua; if (!aq) return false;
+      (aq.fisch || []).forEach(f => { const d = f.vx < 0 ? 1 : -1, k = f.s; add('fisch', f.x + d * 5 * k, f.y, 21 * k, 9 * k); });
+      const fr = aq._futterR || 4; (aq.futter || []).forEach(f => add('futter', f.x, f.y, fr, fr));
+      const bk = aq._blasenK || 1; (aq.blasen || []).forEach(b => { const r = (3 + b.t * 2) * bk; add('blasen', b.x, b.y, r, r); });
+      if (aq.deko) {
+        let bx = aq._dekoBox; // [x,y,w,h]; Fallback = Geometrie vor r19 (Becken 240/110/630/426, Deko bei bw*0.32)
+        if (!bx) { const x = 240 + 630 * 0.32, yb = 110 + 426; bx = aq.deko === 1 ? [x - 50, yb - 64 - 54, 100, 78] : [x - 34, yb - 58 - 42, 68, 60]; }
+        add('deko', bx[0] + bx[2] / 2, bx[1] + bx[3] / 2, bx[2] / 2, bx[3] / 2);
+      }
+      R.n++; return true;
+    };
+  });
+  await setState('aquarium', 1500);
+  await page.evaluate(() => { window.BSSalon.aqua.deko = 1; window.BSSalon.buildUI(); });
+  await W(300); await shot('aq-01-schiff');
+  const t0 = Date.now(); let k = 0;
+  while (Date.now() - t0 < 10000) {
+    if (k % 14 === 0) await tapBtn("/Futter/.test(b.label)");
+    if (k === 50) await page.evaluate(() => { window.BSSalon.aqua.deko = 2; window.BSSalon.buildUI(); });
+    if (k === 6) await shot('aq-02-fuettern-schiff');
+    if (k === 60) await shot('aq-03-fuettern-schatz');
+    await page.evaluate(() => window.__r19.sample()); await W(80); k++;
+  }
+  const occ = await page.evaluate(() => { const R = window.__r19; let P = 0, H = 0, O = 0; const o = { samples: R.n };
+    for (const c in R.acc) { const a = R.acc[c]; P += a.pts; H += a.hid; O += a.off; o[c] = { verdeckt: +(100 * a.hid / a.pts).toFixed(1), ausserhalb: +(100 * a.off / a.pts).toFixed(1) }; }
+    o.gesamt = { verdeckt: +(100 * H / P).toFixed(1), ausserhalb: +(100 * O / P).toFixed(1) }; return o; });
+  report.aquarium = occ; console.log('AQUARIUM', JSON.stringify(occ));
+  await W(1500); await shot('aq-04-schatz-ruhe');
+  // Zirkus: 1/2/3 Bälle, je Burst 6 Bilder à 160 ms; Bahn-Metriken falls S.zirkus._pos / baer._paws vorhanden
+  await setState('zirkus', 1500);
+  await page.evaluate(() => { window.BSSalon.zirkus.bälle = [{ c: '#e74c3c' }]; window.BSSalon.buildUI(); }); await W(400);
+  for (const n of [1, 2, 3]) {
+    if (n > 1) { await tapBtn(n === 2 ? "b.fill==='#f4c20d'" : "b.fill==='#3498db'"); await W(500); }
+    for (let i = 0; i < 6; i++) { await shot(`zi-${n}ball-${i + 1}`); await W(160); }
+  }
+  const zm = await page.evaluate(() => new Promise(res => {
+    const S = window.BSSalon, out = { frames: 0, overlapFrames: 0, minDist: 1e9, lowDy: [], apexY: 1e9, lowY: -1e9 };
+    const t0 = performance.now();
+    (function f() {
+      const P = S.zirkus && S.zirkus._pos, pw = S.baer._paws, geo = S.baer._geo;
+      if (P && P.length) {
+        out.frames++; let ov = false;
+        for (let i = 0; i < P.length; i++) { out.apexY = Math.min(out.apexY, P[i][1]); out.lowY = Math.max(out.lowY, P[i][1]);
+          for (let j = i + 1; j < P.length; j++) { const d = Math.hypot(P[i][0] - P[j][0], P[i][1] - P[j][1]); out.minDist = Math.min(out.minDist, d); if (d < (S.zirkus._r || 17) * 2) ov = true; } }
+        if (ov) out.overlapFrames++;
+        if (pw) out.paws = pw.map(p => p.map(Math.round));
+        if (geo) { out.headTop = Math.round(geo.cy - 172 * geo.s); out.headMid = Math.round(geo.cy - 82 * geo.s); }
+      }
+      if (performance.now() - t0 < 4000) requestAnimationFrame(f); else res(out);
+    })();
+  }));
+  if (zm.frames) zm.overlapPct = +(100 * zm.overlapFrames / zm.frames).toFixed(1);
+  report.zirkus = zm; console.log('ZIRKUS', JSON.stringify(zm));
+  if (doFps) { await setState('aquarium', 800); await tapBtn("/Futter/.test(b.label)"); await fps('aquarium', 5000); await setState('zirkus', 800); await fps('zirkus', 5000); }
 }
 if (doFps && only === 'stations') { await setState('waschen', 800); await fps('waschen', 6000); }
 report.errors.push(...(await page.evaluate(() => window.__errors || [])).map(e => 'window.__errors: ' + e));

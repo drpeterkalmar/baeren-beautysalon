@@ -28,10 +28,14 @@ salon.js / game.js / music.js / index.html sind unverändert; die neuen Module b
 Anatomie in Einheiten `s = min(W,H)/420` um `(cx,cy) = (W/2, H*0.58)` — passend zu den Hit-Zonen in salon.js
 (Kopf `cy-82s`, Augen `(±30s, cy-105s)`, Krallen `(±55s±16s, cy+175s)`, Körper `cy+70s`).
 
+**r19:** `Art.drawBear(g,b,{…, cx, cy, s})` darf den Bären frei platzieren (Aquarium: neben/unter dem Becken); `_geo`, Antippen und Blick folgen.
+Beim Zeichnen schreibt der Bär `b._paws = [[xL,yL],[xR,yR]]` (Pfotenballen in Welt-Koordinaten, inkl. Arm-Pose/Squash) — die Jonglage wirft von dort.
+Aquarium-Layout je Orientierung: `aquaLayout()` in salon.js, Kamera über `S.aquaFocus()` (game.js `S.focusRect`).
+
 ## UI (ui.js)
 Buttons kommen als Daten aus salon.js; ui.js ordnet sie pro Orientierung neu an und setzt `b.r` (Bildschirm-Rechteck, ≥48 px):
 Kopfzeile (🏠 / Titel / ➜ / 🔊), Werkzeug-Tablett (Fließlayout, scrollbar), Stations-Leiste (horizontal scrollbar), Hinweis.
 Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Backen). Wahl-Raster: Thumbnails lazy, max. 1 Bake pro Frame.
 
 ## Prüfung
-`tools/visual-check.mjs` (siehe CHECKS.md) — Screenshots nach `shots/r18/<label>/` (gitignored).
+`tools/visual-check.mjs` (siehe CHECKS.md) — Screenshots nach `shots/r19/<label>/` (gitignored).

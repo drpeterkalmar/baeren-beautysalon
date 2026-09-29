@@ -2,7 +2,8 @@
 
 Geschrieben VOR dem Code. Der Vision-Loop prüft gegen diese Liste, nicht gegen Geschmack.
 Prüfwerkzeug: `node tools/visual-check.mjs <label> [--fps] [--land] [--throttle=4] [--swraster] [--only=flow|finale|stations|models]`
-(Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster als Worst Case. Playwright aus `~/.cache/r18-pw`.)
+(r19: `--only=r19` = Aquarium-Verdeckung + Jonglage-Bahnen, `--novsync` = ungebremster rAF für relative FPS-Vergleiche; Ausgabe `shots/r19/<label>/`.
+Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster als Worst Case. Playwright aus `~/.cache/r18-pw`.)
 (Android-Viewport 412×915 @ DPR 2, Touch; `--land` = 915×412). Ergebnis: `shots/r18/<label>/` + `report.json`.
 
 ## C1 — Fehlerfreiheit (automatisch, hart)
@@ -68,3 +69,14 @@ Prüfwerkzeug: `node tools/visual-check.mjs <label> [--fps] [--land] [--throttle
 - C4 Hinweis: ohne GPU fiel die Qualitätsstufe früher durch Headless-Software-Raster (nicht durch Render-Arbeit); mit GPU bleibt Stufe 2 durchgehend.
 - Keine Änderungen an salon.js / game.js / index.html / music.js (`git diff 5284c92` leer). Interface-Anpassung nur in ui.js: `S.buildUI` wird umhüllt,
   um `UI.dirty` zu setzen (Layout/Kamera reagieren sofort auf Zustandswechsel).
+
+## R19 — Aquarium sichtbar, Jonglierbälle an den Pfoten (gemessen 29.09.2026)
+- [x] R19.1 Aquarium: Anteil der Fisch-/Futter-/Blasen-/Deko-Fläche, den der Bär verdeckt (Bär-Maske gegen Objekte, 10 s Füttern, Futter alle ~1,4 s,
+      Deko Schiff → Schatzkiste): **vorher 93,3 % hoch / 87,7 % quer → nachher 0,0 % hoch / 0,0 % quer** (Ziel < 10 %). Außerhalb des Bildausschnitts: 0 %.
+- [x] R19.2 Jonglage: Bälle starten/landen an `baer._paws` (Pfotenballen aus der echten Arm-Pose), tiefster Punkt = Pfote (y≈424),
+      Scheitel y≈120 (Kopf oben 102, Kopfmitte 231). Ball-Radius 23 (war 17). 3 Bälle: 0 % Frames mit Berührung, Mindestabstand 55 (Ø 46).
+- [x] R19.3 C1 `--only=stations` hoch + quer: 0 Fehler, 0 Buttons < 48 px. Flow hoch + quer: 0 Fehler
+      (Hinweis „Pusten nicht gefunden“ = Skript-Timing, identisch auf dem alten Stand).
+- [x] R19.4 FPS (`--only=r19 --fps --novsync`, ungebremster Durchsatz, Rauschen ±3 %): Aquarium 536/528 → 517/537 (hoch), 545 → 542 (quer);
+      Zirkus 541/531 → 535/547 (hoch), 554 → 540 (quer). Keine Verschlechterung. (Mit V-Sync taktet Headless auf diesem Mac zurzeit nur ~11 Hz,
+      auch bei einer leeren Seite — deshalb der ungebremste Vergleich.)

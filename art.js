@@ -764,6 +764,8 @@ Art.drawBear = function(g,b,opt){
   if(!b) return;
   opt=opt||{};
   var W=opt.w||900, H=opt.h||600, s=Math.min(W,H)/420, cx=W/2, cy=H*0.58;
+  // r19: optionale Platzierung (Aquarium: Bär steht neben/unter dem Becken) — _geo/poke/Blick folgen automatisch
+  if(opt.s) s=opt.s; if(opt.cx!==undefined) cx=opt.cx; if(opt.cy!==undefined) cy=opt.cy;
   var idx=b.fellIdx||0; if(!Art.MODELS[idx]) idx=0;
   var m=Art.MODELS[idx], P=pal(idx), vor=!!opt.vorher;
   var T=g.getTransform(), sc=Math.sqrt(T.a*T.a+T.b*T.b)*s, k=quant(sc);
@@ -805,6 +807,15 @@ Art.drawBear = function(g,b,opt){
   if(aL<0.7) Fx.contactShadow(g,-84,60,30,64,0.55*(1-aL/0.7));
   if(aR<0.7) Fx.contactShadow(g,84,60,30,64,0.55*(1-aR/0.7));
   drawArm(g,set.arm,-1,aL); drawArm(g,set.arm,1,aR);
+  // r19: Pfoten-Mitte (Arm-lokal (-16,92)) in Welt-Koordinaten — für Jonglage & Co.
+  if(b._p){
+    var jU=-jumpU+R.dy, cr=Math.cos(R.rot), sr=Math.sin(R.rot);
+    b._paws=[[-1,aL],[1,aR]].map(function(q){
+      var a=q[1], u=q[0]*(ARM_X+16*Math.cos(a)+92*Math.sin(a)), v=ARM_Y-16*Math.sin(a)+92*Math.cos(a)-190;
+      var x=(u*cr-v*sr)*R.sx*(1+goose), y=(u*sr+v*cr)*R.sy*(1-goose)+190+jU;
+      return [cx+x*s, cy+y*s];
+    });
+  }
   // Kopf-Kontaktschatten auf dem Körper
   Fx.contactShadow(g,0,8,104,30,0.75);
   // Kopf-Gruppe
