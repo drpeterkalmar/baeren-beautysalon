@@ -15,11 +15,12 @@ const out = path.join(root, 'tests', 'shots', 'deko', 'live'); fs.mkdirSync(out,
 const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization'] });
 const ctx = await browser.newContext({ viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
-const errs = [], bad = [];
+const errs = [], bad = [], media = [];
 page.on('pageerror', e => errs.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
 page.on('response', r => { if (r.status() >= 400) bad.push(r.status() + ' ' + r.url()); });
-page.on('requestfailed', r => bad.push('failed ' + r.url()));
+page.on('requestfailed', r => { const f = (r.failure() || {}).errorText || ''; // Medien-Abbruch (Headless ohne AAC-Codec) ist kein Seitenfehler
+  if (/\.m4a/.test(r.url()) && /ERR_ABORTED/.test(f)) { media.push(f + ' ' + r.url()); return; } bad.push('failed ' + f + ' ' + r.url()); });
 const resp = await page.goto(url, { waitUntil: 'load' });
 await page.waitForFunction(() => window.BSSalon && window.BSGame, null, { timeout: 30000 });
 await page.waitForTimeout(1500);
@@ -36,6 +37,6 @@ await st('finish'); await page.waitForTimeout(800); await page.evaluate(() => wi
 await page.waitForTimeout(6500); await page.screenshot({ path: path.join(out, tag + '-4-finale.png') });
 errs.push(...(await page.evaluate(() => window.__errors || [])).map(e => 'window.__errors: ' + e));
 const ok = resp.status() === 200 && !errs.length && !bad.length && (!expect || ver === expect);
-console.log(JSON.stringify({ url, status: resp.status(), version: ver, deko, errors: errs, badRequests: bad, ok }));
+console.log(JSON.stringify({ url, status: resp.status(), version: ver, deko, errors: errs, badRequests: bad, mediaAborted: media.length, ok }));
 await browser.close();
 process.exit(ok ? 0 : 1);

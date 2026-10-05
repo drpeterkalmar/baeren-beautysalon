@@ -752,11 +752,13 @@ function drawFinaleWelt(g){
     g.restore();
     g.save(); g.globalCompositeOperation='lighter'; Fx.glow(g,cx,cy-50*s,340*s,'#ffe4b8',0.55*ra); g.restore();
   }
+  var DKF=Fx.DEKO && window.BSDeko && window.BSDeko.finaleBack;
+  if(DKF) window.BSDeko.finaleBack(g,t,cx,cy,s,FIN); // r20: Licht-Kugeln + hintere Hälfte der Glitzer-Bahn
   var live=function(){
     Art.drawBear(g,S.baer,{w:W,h:H});
     if(S.baer.duft!==null && S.baer.duft!==undefined && t>FIN.tada) drawDuftWolken(g);
   };
-  if(!F || t<FIN.poof || !F.vorher || t>=FIN.wipe1){ live(); return; }
+  if(!F || t<FIN.poof || !F.vorher || t>=FIN.wipe1){ live(); if(DKF) window.BSDeko.finaleFront(g,t,cx,cy,s,FIN); return; }
   // Diagonaler Wisch: links Nachher (live), rechts Vorher (Foto)
   var lx=S.finWipeX(), sl=0.22, yc=cy;
   var left=new Path2D(); left.moveTo(-4000,-4000); left.lineTo(lx+(-4000-yc)*sl,-4000); left.lineTo(lx+(4000-yc)*sl,4000); left.lineTo(-4000,4000); left.closePath();

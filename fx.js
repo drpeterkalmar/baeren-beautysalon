@@ -5,7 +5,7 @@
 var Fx = window.BSFx = {};
 var TAU = Math.PI*2;
 Fx.TAU = TAU;
-window.BS_VERSION = '20.2';
+window.BS_VERSION = '20.3';
 // r20 Deko-Runde: neue Optik (Licht, Einrichtung, Glitzer) — ?deko=0 zeigt das alte Aussehen (A/B-Vergleich)
 Fx.DEKO = !/[?&]deko=0(&|$)/.test(location.search||'');
 // "Bewegung reduzieren" (Betriebssystem): weniger Wackeln, kein Bildschirm-Schütteln, weniger Partikelregen

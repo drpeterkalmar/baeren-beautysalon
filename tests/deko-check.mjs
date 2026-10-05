@@ -110,6 +110,14 @@ if (mode === 'shots') {
     await W(1200); await shot('09-zirkus');
   }
   if (want('disco')) { await setState('disco'); await W(1400); await shot('10-disco'); }
+  if (only.includes('burst')) { // Serienbilder: Stationswechsel (Funkel-Schwung + Freu-Hüpfer) und Finale (TA-DA, Glitzer)
+    await setState('waschen'); await W(1400);
+    await page.evaluate(() => { const b = window.BSSalon.buttons.find(x => x.nav === 'next'); if (b) b.onTap(); });
+    for (let i = 0; i < 8; i++) { await shot('b-wechsel-' + i); await W(90); }
+    await setState('finish'); await W(1200); await page.evaluate(() => window.BSSalon.startFinale());
+    await W(2450); for (let i = 0; i < 6; i++) { await shot('b-tada-' + i); await W(110); }
+    await W(4200); for (let i = 0; i < 3; i++) { await shot('b-feier-' + i); await W(400); }
+  }
   if (want('finale')) {
     await setState('finish'); await W(1000); await page.evaluate(() => window.BSSalon.startFinale());
     await W(1500); await shot('11-finale-wisch'); await W(1500); await shot('12-finale-tada'); await W(4200); await shot('13-finale-feier');

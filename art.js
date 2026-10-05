@@ -592,6 +592,14 @@ Art.updateBear = function(b,dt,env){
   if(!b) return;
   var p=pose(b); env=env||{}; p.t+=dt;
   if(p.rk){ p.rt+=dt; if(p.rt>1.8) p.rk=''; }
+  // r20: Landung des Freu-Hüpfers → zwei Funkel-Sterne + goldene Pünktchen an den Füßen
+  if(Fx.DEKO && !Fx.RM && Fx.Q.tier>0 && p.rk==='happy' && p.ra>=0.5 && p.rt>=0.46 && p.rt-dt<0.46 && b._geo){
+    var LG=b._geo;
+    for(var ls=-1;ls<=1;ls+=2){
+      Fx.P.emit('twinkle',LG.cx+ls*78*LG.s,LG.cy+186*LG.s,{n:1,speed:30,size:15,life:0.55,grav:-30,drag:2});
+      Fx.P.emit('spark',LG.cx+ls*70*LG.s,LG.cy+192*LG.s,{n:3,speed:110,dir:-Math.PI/2+ls*0.7,spread:0.9,size:6,life:0.55,grav:160,drag:2,colors:['#ffe7a8','#fff6dc']});
+    }
+  }
   // Blinzeln (gelegentlich doppelt)
   p.blinkT-=dt;
   if(p.blinkT<=0 && p.blinkPh===0){ p.blinkPh=0.0001; p.blinkT=2.2+Math.random()*3.4; p.dbl=Math.random()<0.22; }
@@ -649,7 +657,14 @@ function reactCurves(p){
   var t=p.rt, a=p.ra, w;
   switch(p.rk){
     case 'pop': w=Math.exp(-t*6)*Math.sin(t*24)*0.09*a; o.sy=1+w; o.sx=1-w*0.8; break;
-    case 'happy': o.dy=-Math.max(0,Math.sin(Math.min(1,t/0.42)*Math.PI))*14*a; w=Math.exp(-t*7)*Math.sin(t*20)*0.05*a; o.sy=1+w; o.sx=1-w; break;
+    case 'happy':
+      if(Fx.DEKO && !Fx.RM){ // r20 Freu-Hüpfer: höher, Strecken im Flug, Stauchen + Nachfedern bei der Landung
+        var HT=0.46, hq=Math.min(1,t/HT), hv=Math.abs(Math.cos(hq*Math.PI));
+        o.dy=-Math.sin(hq*Math.PI)*22*a;
+        if(t<HT){ o.sy=1+0.07*a*hv; o.sx=1-0.05*a*hv; }
+        else { w=Math.exp(-(t-HT)*9)*Math.cos((t-HT)*24)*0.11*a; o.sy=1-w; o.sx=1+w*0.8; }
+        break; }
+      o.dy=-Math.max(0,Math.sin(Math.min(1,t/0.42)*Math.PI))*14*a; w=Math.exp(-t*7)*Math.sin(t*20)*0.05*a; o.sy=1+w; o.sx=1-w; break;
     case 'shake': w=Math.max(0,1-t/0.9); o.rot=Math.sin(t*38)*0.07*w; o.hrot=Math.sin(t*38+0.7)*0.14*w; break;
     case 'snip': o.hrot=-Math.exp(-t*8)*Math.sin(t*18)*0.1; break;
     case 'kiss': o.kiss=Math.max(0,Math.min(1,t*6))*Math.max(0,Math.min(1,(1.4-t)*4)); break;

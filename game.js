@@ -76,28 +76,60 @@ G.pxPerUnit=function(){
 
 // ---- Raum-Cache: nur bei neuer Kamera-Ruhelage neu rendern ----
 var room={cv:null,key:'',x0:0,y0:0,ww:0,wh:0};
-function ensureRoom(){
-  var T=G.camRest; if(!T) return;
+// Plan für die Ruhelage der Kamera: Welt-Ausschnitt (+14 % Rand), Auflösung k, Schlüssel
+function roomPlan(){
+  var T=G.camRest; if(!T) return null;
   var c=T.cam, v=T.vp, cxs=v.x+v.w/2, cys=v.y+v.h/2;
   var x0=c.x-cxs/c.z, x1=c.x+(view.W-cxs)/c.z, y0=c.y-cys/c.z, y1=c.y+(view.H-cys)/c.z;
   var mx=(x1-x0)*0.14, my=(y1-y0)*0.14; x0-=mx; x1+=mx; y0-=my; y1+=my;
   var k=c.z*view.dpr;
   var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'');
-  if(key===room.key) return;
   var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.6e6,4e6][Fx.Q.tier];
   if(pw*ph>maxPx){ var f=Math.sqrt(maxPx/(pw*ph)); k*=f; pw*=f; ph*=f; }
+  return {key:key,c:c,cxs:cxs,cys:cys,x0:x0,y0:y0,x1:x1,y1:y1,k:k,pw:pw,ph:ph};
+}
+function roomCtx(cv,P){
+  cv.width=Math.ceil(P.pw); cv.height=Math.ceil(P.ph);
+  var rg=cv.getContext('2d'); rg.setTransform(P.k,0,0,P.k,-P.x0*P.k,-P.y0*P.k); return rg;
+}
+function roomGrade(rg,P){ // r20: Grading (Vignette + Lichtschleier) einmal in den Raum backen statt jedes Bild als Vollbild-Ebene
+  if(!Fx.DEKO) return;
+  var c=P.c, k=P.k, gz=k/c.z;
+  rg.setTransform(gz,0,0,gz,k*(c.x-P.x0)-gz*P.cxs,k*(c.y-P.y0)-gz*P.cys);
+  Fx.gradingPaint(rg,view.W,view.H,P.cxs+(P.x0-c.x)*c.z,P.cys+(P.y0-c.y)*c.z,(P.x1-P.x0)*c.z,(P.y1-P.y0)*c.z);
+}
+function roomCommit(cv,P){ room.cv=cv; room.key=P.key; room.x0=P.x0; room.y0=P.y0; room.ww=cv.width/P.k; room.wh=cv.height/P.k; }
+function ensureRoom(){
+  var P=roomPlan(); if(!P || P.key===room.key) return;
   if(!room.cv) room.cv=document.createElement('canvas');
-  room.cv.width=Math.ceil(pw); room.cv.height=Math.ceil(ph);
-  var rg=room.cv.getContext('2d');
-  rg.setTransform(k,0,0,k,-x0*k,-y0*k);
-  Room.draw(rg,x0,y0,x1,y1);
-  if(Fx.DEKO){ // r20: Grading (Vignette + Lichtschleier) einmal in den Raum backen statt jedes Bild als Vollbild-Ebene
-    var gz=k/c.z;
-    rg.setTransform(gz,0,0,gz,k*(c.x-x0)-gz*cxs,k*(c.y-y0)-gz*cys);
-    var sxa=cxs+(x0-c.x)*c.z, sya=cys+(y0-c.y)*c.z;
-    Fx.gradingPaint(rg,view.W,view.H,sxa,sya,(x1-x0)*c.z,(y1-y0)*c.z);
+  var rg=roomCtx(room.cv,P);
+  Room.draw(rg,P.x0,P.y0,P.x1,P.y1);
+  roomGrade(rg,P);
+  roomCommit(room.cv,P);
+}
+// r20 (Deko): während der Kamerafahrt den neuen Raum in Portionen in einen zweiten Canvas backen (je Bild ~2,5 ms,
+// danach erzwungenes Rastern über eine 1-px-Kopie) und erst am Ende der Fahrt austauschen → kein großer Ruckler.
+var bake=null, spareCv=null, flushCv=null;
+function flushRoom(cv){
+  if(!flushCv){ flushCv=document.createElement('canvas'); flushCv.width=flushCv.height=256; }
+  var fg=flushCv.getContext('2d'); fg.drawImage(cv,0,0,1,1,0,0,1,1); fg.clearRect(0,0,256,256);
+}
+function stepRoom(){
+  var P=roomPlan(); if(!P) return;
+  if(P.key===room.key){ if(bake){ spareCv=bake.cv; bake=null; } return; }
+  if(!room.cv || !tw){ if(!bake || bake.key!==P.key){ ensureRoom(); return; } }
+  if(!bake || bake.key!==P.key){
+    var cvN=(bake&&bake.cv)||spareCv||document.createElement('canvas'); spareCv=null;
+    var rg=roomCtx(cvN,P), steps=Room.steps(rg,P.x0,P.y0,P.x1,P.y1);
+    steps.push(function(){ roomGrade(rg,P); });
+    bake={key:P.key,P:P,cv:cvN,steps:steps,i:0};
   }
-  room.key=key; room.x0=x0; room.y0=y0; room.ww=room.cv.width/k; room.wh=room.cv.height/k;
+  var t0=performance.now();
+  while(bake.i<bake.steps.length){
+    bake.steps[bake.i++]();
+    if(tw){ flushRoom(bake.cv); if(performance.now()-t0>2.5) break; }
+  }
+  if(bake.i>=bake.steps.length && !tw){ spareCv=room.cv; roomCommit(bake.cv,bake.P); bake=null; }
 }
 
 // ---- Partikel-Helfer (API für salon.js) ----
@@ -368,7 +400,7 @@ function frame(ts){
   if(UI.dirty){ UI.layout(view,g); UI.dirty=false; }
   update(dt);
   updateCamera(dt);
-  if(!tw) ensureRoom();
+  if(Fx.DEKO && Room.steps) stepRoom(); else if(!tw) ensureRoom();
   var w0=performance.now();
   render(t);
   tiers(dtRaw*1000,performance.now()-w0,dt);
