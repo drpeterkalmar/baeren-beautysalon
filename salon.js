@@ -753,7 +753,7 @@ function drawFinaleWelt(g){
     g.save(); g.globalCompositeOperation='lighter'; Fx.glow(g,cx,cy-50*s,340*s,'#ffe4b8',0.55*ra); g.restore();
   }
   var DKF=Fx.DEKO && window.BSDeko && window.BSDeko.finaleBack;
-  if(DKF) window.BSDeko.finaleBack(g,t,cx,cy,s,FIN); // r20: Licht-Kugeln + hintere Hälfte der Glitzer-Bahn
+  if(DKF) window.BSDeko.finaleBack(g,t,cx,cy,s,FIN); // r20: hintere Hälfte der Funkel-Bahn (Sterne kreisen um den Bären)
   var live=function(){
     Art.drawBear(g,S.baer,{w:W,h:H});
     if(S.baer.duft!==null && S.baer.duft!==undefined && t>FIN.tada) drawDuftWolken(g);

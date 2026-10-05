@@ -1,2 +1,7 @@
-shots/
+/shots/
 .DS_Store
+# Test-Screenshots bleiben lokal — nur die Vorher/Nachher-Collagen der Deko-Runde kommen ins Repo
+tests/shots/*
+!tests/shots/deko/
+tests/shots/deko/*
+!tests/shots/deko/vergleich_*.jpg

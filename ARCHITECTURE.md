@@ -32,6 +32,22 @@ Anatomie in Einheiten `s = min(W,H)/420` um `(cx,cy) = (W/2, H*0.58)` — passen
 Beim Zeichnen schreibt der Bär `b._paws = [[xL,yL],[xR,yR]]` (Pfotenballen in Welt-Koordinaten, inkl. Arm-Pose/Squash) — die Jonglage wirft von dort.
 Aquarium-Layout je Orientierung: `aquaLayout()` in salon.js, Kamera über `S.aquaFocus()` (game.js `S.focusRect`).
 
+## r20: Deko-Runde (deko.js)
+Ladereihenfolge: `fx.js → art.js → room.js → deko.js → salon.js → …`. `Fx.DEKO` (fx.js) ist an, außer bei `?deko=0` —
+dann bleibt deko.js still und alle alten Pfade laufen unverändert (A/B). `Fx.RM` = Betriebssystem „Bewegung reduzieren“.
+- **Raum** (`Room.draw` / `Room.steps`): Tapete mit Motiven, Vertäfelung, Holzdielen, Hollywood-Spiegel, Lichterkette,
+  Regale, Bilder, Sessel, Pflanzen, Fensterbank mit Fischglas — alles in den Raum-Cache gebacken. Weiche Lichter liegen
+  in einer winzigen Lichtkarte (0,1 px/Einheit, einmal gemalt), Schatten ohne `shadowBlur`. Stufe 0 backt schlanker.
+- **Grading** (Vignette + Lichtschleier) wird in den Raum gebacken (`Fx.gradingPaint`), nicht mehr jedes Bild als Vollbild-Ebene.
+- **Backen in Portionen** (game.js `stepRoom`): während der Kamerafahrt wird der neue Raum schrittweise in einen zweiten
+  Canvas gebacken (je Bild ~2,5 ms + 1-px-Kopie zum Rastern) und am Ende getauscht → kein großer Ruckler.
+- **Pro Bild** (`Room.ambient`, nur Stufe ≥ 1 und ohne „Bewegung reduzieren“): Vorhänge (Sprite + Scherung), Wolken im
+  Fenster, Fisch im Glas, Funkeln der Lämpchen. Station: `BSDeko.tubFront/duck` (Wanne + Badeente), `aquaBack`
+  (gebackenes Becken + Pflanzen/Blasen live), `finaleBack/Front` (Funkel-Bahn), `update` (Seifenblasen, Übergangs-Funkeln,
+  Freu-Hüpfer beim Stationswechsel, Glitzer im Finale). Freu-Hüpfer selbst: `reactCurves('happy')` in art.js.
+- Prüf-/Messwerkzeuge: `tests/deko-check.mjs` (Screenshots, Leistung), `tests/hitch-check.mjs` (Ruckler beim Wechsel),
+  `tests/live-check.mjs`, `tests/ladegroesse.py`, `tests/collage.py`, `tests/perf-tabelle.py`.
+
 ## UI (ui.js)
 Buttons kommen als Daten aus salon.js; ui.js ordnet sie pro Orientierung neu an und setzt `b.r` (Bildschirm-Rechteck, ≥48 px):
 Kopfzeile (🏠 / Titel / ➜ / 🔊), Werkzeug-Tablett (Fließlayout, scrollbar), Stations-Leiste (horizontal scrollbar), Hinweis.

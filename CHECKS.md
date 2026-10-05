@@ -80,3 +80,14 @@ Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster 
 - [x] R19.4 FPS (`--only=r19 --fps --novsync`, ungebremster Durchsatz, Rauschen ±3 %): Aquarium 536/528 → 517/537 (hoch), 545 → 542 (quer);
       Zirkus 541/531 → 535/547 (hoch), 554 → 540 (quer). Keine Verschlechterung. (Mit V-Sync taktet Headless auf diesem Mac zurzeit nur ~11 Hz,
       auch bei einer leeren Seite — deshalb der ungebremste Vergleich.)
+
+## R20 — Deko-Runde: mehr Details, ressourcenschonend (gemessen 05.10.2026)
+Messung: Handy-Viewport 412×915 @ DPR 2, CPU 4× gedrosselt (CDP), je Szene 10,5 s (Menü, Waschen, Aquarium, Finale),
+Stufe fest (Auto-Drossel aus) bzw. Auto. Alt = Export von 283f890, abwechselnd mit neu gemessen. Details: DEKO_BERICHT.md.
+- [x] R20.1 p95 Bildzeit höchstens +10 % (Stufe 2, Software-Raster = Worst Case): **−8 … −21 %** (alle 4 Szenen schneller).
+- [x] R20.2 Stufe 0 / Auto-Drossel gleich oder besser: Stufe 0 **−10 … −16 %**, Auto **−7 … −18 %** (End-Stufe 0 wie vorher).
+- [x] R20.3 GPU-Raster (realistisch): p95 unverändert (V-Sync), JS-Arbeit p95 gleich (z. B. Finale 4,3 → 4,3 ms).
+- [x] R20.4 Ruckler beim Stationswechsel (längstes Bild): Software Stufe 0 59 → 54 ms, Stufe 2 107 → 97 ms, GPU 27,5 → 28 ms.
+- [x] R20.5 Ladegröße gzip 289 → 309 KB (+19 KB, Budget +1 MB), keine neuen Requests, keine Fremd-Assets.
+- [x] R20.6 `?deko=0` = altes Aussehen (Pixel-Abweichung so klein wie zwischen zwei Läufen des alten Stands).
+- [x] R20.7 C1/R19 weiter grün: Flow hoch + quer 0 Fehler, 0 Knöpfe < 48 px; Aquarium-Verdeckung 0 % hoch + quer.
