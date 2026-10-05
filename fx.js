@@ -5,6 +5,16 @@
 var Fx = window.BSFx = {};
 var TAU = Math.PI*2;
 Fx.TAU = TAU;
+window.BS_VERSION = '20.1';
+// r20 Deko-Runde: neue Optik (Licht, Einrichtung, Glitzer) — ?deko=0 zeigt das alte Aussehen (A/B-Vergleich)
+Fx.DEKO = !/[?&]deko=0(&|$)/.test(location.search||'');
+// "Bewegung reduzieren" (Betriebssystem): weniger Wackeln, kein Bildschirm-Schütteln, weniger Partikelregen
+Fx.RM = false;
+try{
+  var rmq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  if(rmq){ Fx.RM = !!rmq.matches; var rmf=function(e){ Fx.RM=!!e.matches; Fx.RMver=(Fx.RMver||0)+1; };
+    if(rmq.addEventListener) rmq.addEventListener('change',rmf); else if(rmq.addListener) rmq.addListener(rmf); }
+}catch(e){}
 
 // ---------------------------------------------------------------- Mathe / Easing
 Fx.lerp = function(a,b,t){ return a+(b-a)*t; };
@@ -238,11 +248,22 @@ Fx.grading = function(W,H){
   g.fillStyle=lg; g.fillRect(0,0,w,h);
   grad.cv=c; grad.key=key; return c;
 };
+// r20: dasselbe Grading direkt auf ein Rechteck in Bildschirm-Koordinaten malen (CSS-px, Bildschirm W×H).
+// Wird einmal in den Raum-Cache gebacken → kein Vollbild-Durchgang pro Bild mehr.
+Fx.gradingPaint = function(g,W,H,x,y,w,h){
+  var R=Math.hypot(W,H)/2;
+  var vg=g.createRadialGradient(W/2,H*0.46,R*0.35,W/2,H*0.5,R*1.05);
+  vg.addColorStop(0,'rgba(110,52,50,0)'); vg.addColorStop(0.7,'rgba(110,52,50,0.08)'); vg.addColorStop(1,'rgba(96,40,48,0.26)');
+  g.fillStyle=vg; g.fillRect(x,y,w,h);
+  var lg=g.createLinearGradient(0,0,0,H*0.5);
+  lg.addColorStop(0,'rgba(255,226,180,0.10)'); lg.addColorStop(1,'rgba(255,226,180,0)');
+  g.fillStyle=lg; g.fillRect(x,y,w,h);
+};
 
 // ---------------------------------------------------------------- Qualitätsstufen
 Fx.Q = { tier:2,
   dpr: function(){ return [1.25,1.6,2][Fx.Q.tier]; },
-  pmul: function(){ return [0.45,0.75,1][Fx.Q.tier]; } };
+  pmul: function(){ var m=[0.45,0.75,1][Fx.Q.tier]; return (Fx.DEKO && Fx.RM) ? m*0.6 : m; } };
 
 // ---------------------------------------------------------------- Partikel
 var DEF = {

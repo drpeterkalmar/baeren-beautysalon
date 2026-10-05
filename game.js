@@ -60,7 +60,7 @@ function updateCamera(dt){
   G.camRest=T;
   shx=shy=0;
   var fc=S.state==='finish-done'&&S.finaleCam?S.finaleCam():null;
-  if(fc){ cam.z*=fc.z; cam.y+=fc.oy; if(fc.shake>0){ shx=(Math.random()-0.5)*fc.shake; shy=(Math.random()-0.5)*fc.shake; } }
+  if(fc){ cam.z*=fc.z; cam.y+=fc.oy; if(fc.shake>0 && !(Fx.DEKO && Fx.RM)){ shx=(Math.random()-0.5)*fc.shake; shy=(Math.random()-0.5)*fc.shake; } }
 }
 function w2s(wx,wy){ return [vp.x+vp.w/2+(wx-cam.x)*cam.z+shx, vp.y+vp.h/2+(wy-cam.y)*cam.z+shy]; }
 function s2w(sx,sy){ return [(sx-vp.x-vp.w/2-shx)/cam.z+cam.x, (sy-vp.y-vp.h/2-shy)/cam.z+cam.y]; }
@@ -82,7 +82,7 @@ function ensureRoom(){
   var x0=c.x-cxs/c.z, x1=c.x+(view.W-cxs)/c.z, y0=c.y-cys/c.z, y1=c.y+(view.H-cys)/c.z;
   var mx=(x1-x0)*0.14, my=(y1-y0)*0.14; x0-=mx; x1+=mx; y0-=my; y1+=my;
   var k=c.z*view.dpr;
-  var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier;
+  var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'');
   if(key===room.key) return;
   var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.6e6,4e6][Fx.Q.tier];
   if(pw*ph>maxPx){ var f=Math.sqrt(maxPx/(pw*ph)); k*=f; pw*=f; ph*=f; }
@@ -91,6 +91,12 @@ function ensureRoom(){
   var rg=room.cv.getContext('2d');
   rg.setTransform(k,0,0,k,-x0*k,-y0*k);
   Room.draw(rg,x0,y0,x1,y1);
+  if(Fx.DEKO){ // r20: Grading (Vignette + Lichtschleier) einmal in den Raum backen statt jedes Bild als Vollbild-Ebene
+    var gz=k/c.z;
+    rg.setTransform(gz,0,0,gz,k*(c.x-x0)-gz*cxs,k*(c.y-y0)-gz*cys);
+    var sxa=cxs+(x0-c.x)*c.z, sya=cys+(y0-c.y)*c.z;
+    Fx.gradingPaint(rg,view.W,view.H,sxa,sya,(x1-x0)*c.z,(y1-y0)*c.z);
+  }
   room.key=key; room.x0=x0; room.y0=y0; room.ww=room.cv.width/k; room.wh=room.cv.height/k;
 }
 
@@ -318,8 +324,8 @@ function render(t){
   // Blitz der Enthüllung
   var fl=S.state==='finish-done'&&S.finaleFlash?S.finaleFlash():0;
   if(fl>0.005){ g.fillStyle='rgba(255,247,232,'+fl+')'; g.fillRect(0,0,W,H); }
-  // Color-Grading: warmer Vignetten-Layer (gecacht)
-  g.drawImage(Fx.grading(W,H,dpr),0,0,W,H);
+  // Color-Grading: warmer Vignetten-Layer (gecacht) — r20 (Deko): steckt schon im Raum-Cache
+  if(!Fx.DEKO) g.drawImage(Fx.grading(W,H,dpr),0,0,W,H);
   UI.draw(g,view);
   Fx.P.draw(g,'screen');
   // Crossfade vom alten Bild (kein harter Schnitt)

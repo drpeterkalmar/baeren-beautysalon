@@ -339,6 +339,9 @@ function drawMenu(g){
     g.drawImage(tw,L.W*(0.18+i*0.21)-s/2,R.y+R.h*(0.2+0.5*((i*37)%10)/10)-s/2,s,s); }
   g.globalAlpha=1;
   drawButtons(g,'top'); drawButtons(g,'cta');
+  // Versions-Kennung (klein, oben links, frei von Knöpfen und Titel) — "alte Optik" bei ?deko=0
+  g.font='600 10.5px '+FONT; g.fillStyle='rgba(107,63,74,0.5)'; g.textAlign='left'; g.textBaseline='alphabetic';
+  g.fillText('v'+(window.BS_VERSION||'')+(Fx.DEKO?'':' · alte Optik'),L.safe.l+10,L.safe.t+16);
 }
 
 // ---- Bären-Wahl
