@@ -806,6 +806,8 @@ function drawWanne(g,front){
     return;
   }
   // Wannen-Front (Emaille creme, Rand apricot) + Schaum-Krone am Rand
+  var DK=Fx.DEKO && window.BSDeko && window.BSDeko.tubFront;
+  if(DK){ window.BSDeko.tubFront(g); } else {
   var fg=g.createLinearGradient(0,y,0,y+h);
   fg.addColorStop(0,'#fffaf2'); fg.addColorStop(0.55,'#f6ebdd'); fg.addColorStop(1,'#e5d2bd');
   g.fillStyle=fg;
@@ -815,12 +817,14 @@ function drawWanne(g,front){
   g.fillStyle=rg; g.beginPath(); g.ellipse(cx,y,w+8*s,11*s,0,0,Math.PI*2); g.fill();
   // Füße (Messing)
   [-1,1].forEach(function(sg){ Fx.ball(g,cx+sg*w*0.62,y+h+8*s,16*s,11*s,'#d8ab6a'); });
+  }
   // Schaumkrone (wächst mit Schaum)
   var sc=Math.max(0.25,S.baer.schaum||0);
   for(var i=0;i<16;i++){
     var q=i/15, bx=cx-w*0.95+q*w*1.9, br=(12+((i*37)%9))*s*(0.6+0.6*sc);
     Fx.ball(g,bx,y-4*s-Math.sin(q*Math.PI)*6*s+Math.sin(t*2+i)*1.5*s,br,br*0.85,'#fffaf3');
   }
+  if(DK) window.BSDeko.duck(g,t,!!S.dusche || (S.baer.schaum||0)>0.3); // r20: Badeente schaukelt auf dem Wannenrand
 }
 // Föhn (hängt links oben, zielt auf den Kopf) + warme Luftwellen
 function drawFoehn(g){
@@ -2045,6 +2049,7 @@ function drawAquarium(g){
   var W=S.VW,H=S.VH;
   // Becken: Wasser-Gradient + Sand + Glas-Rand
   var bx0=A.bx0, by0=A.by0, bw=A.bw, bh=A.bh;
+  if(Fx.DEKO && window.BSDeko && window.BSDeko.aquaBack){ window.BSDeko.aquaBack(g,A,t); } else { // r20: gebackenes Becken + Pflanzen
   var grd=g.createLinearGradient(0,by0,0,by0+bh);
   grd.addColorStop(0,'#9fdcf5'); grd.addColorStop(0.7,'#3f9fd8'); grd.addColorStop(1,'#1a6fae');
   g.fillStyle=grd; g.fillRect(bx0,by0,bw,bh);
@@ -2056,6 +2061,7 @@ function drawAquarium(g){
     g.beginPath();
     for(var wxl=0;wxl<=20;wxl++) g.lineTo(bx0+wxl*(bw/20), by0+18+wl*bh*0.1+Math.sin(t*2+wxl*0.8+wl)*4);
     g.stroke();
+  }
   }
   // Deko (im freien Teil des Beckens)
   var dx=bx0+bw*A.deko;

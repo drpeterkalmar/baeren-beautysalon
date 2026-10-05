@@ -273,6 +273,7 @@ function update(dt){
     Art.updateBear(live,dt,env);
   }
   if(st==='finish-done' && S.updateFinale) S.updateFinale(dt);
+  if(Fx.DEKO && window.BSDeko && window.BSDeko.update) window.BSDeko.update(dt,t,st,S); // r20: kleine Stations-Effekte
   // Dauer-Sounds
   if(window.BSSfx){
     window.BSSfx.loop('shower',st==='waschen' && !!S.dusche && b.schaum>0);
