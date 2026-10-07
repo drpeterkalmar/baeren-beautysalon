@@ -547,6 +547,7 @@ S.update = function(dt){
   var fr=dt*60, st=S.state;
   if(st==='aquarium' && S.aqua) updAquarium(fr);
   if(st==='zauber' && S.zauber) updZauber(fr);
+  if(st==='karussell' && S.karo) updKarussell(fr);
 };
 
 // ---- Zeichnen ----------------------------------------------
@@ -1833,7 +1834,7 @@ function updZauber(fr){
 // ---- Karussell: Zelt, Lichterketten, drehendes Pferd mit Bär ----
 function drawKarussell(g){
   var t=performance.now()/1000;
-  var k=S.karo; k.ang=(k.ang||0)+k.w*0.02;
+  var k=S.karo;
   var W=S.VW,H=S.VH;
   // Zelt-Dach
   g.fillStyle='#e74c3c';
@@ -1881,21 +1882,34 @@ function drawKarussell(g){
   g.translate(ex,ey-70*depth); g.scale(0.34*depth,0.34*depth); g.translate(-W/2,-300);
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   g.restore();
-  // Musiknoten schweben beim schnellen Dreh
-  if(k.w>1){
-    if(!k.noten) k.noten=[];
-    if(Math.random()<0.3) k.noten.push({x:W/2+(Math.random()-0.5)*300, y:H*0.72, t:0, wob:Math.random()*6});
-    for(var ni=k.noten.length-1;ni>=0;ni--){
-      var no=k.noten[ni]; no.t+=0.016;
-      no.y-=2.4; no.x+=Math.sin(t*3+no.wob)*2;
-      var na=Math.max(0,1-no.t/1.6);
-      if(na<=0){ k.noten.splice(ni,1); continue; }
+  // Musiknoten schweben beim schnellen Dreh (Bewegung in updKarussell; Farbe/Symbol nach Listenplatz wie früher)
+  var nb=k._notenBild;
+  if(k.w>1 && nb){
+    for(var ni=nb.length-1;ni>=0;ni--){
+      var no=nb[ni], na=Math.max(0,1-no.t/1.6);
+      if(na<=0) continue;
       g.globalAlpha=na; g.font='26px sans-serif'; g.textAlign='center';
       g.fillStyle=['#7a4b8f','#e91e63','#3498db'][ni%3];
       g.fillText(NICONS[ni%4], no.x, no.y);
     }
     g.globalAlpha=1;
-  } else if(k.noten) k.noten.length=0;
+  }
+}
+// Karussell-Simulation (aus S.update): Drehung und Noten; pro 60-Hz-Bild wie früher, × fr.
+// Zeichenliste _notenBild = Noten vor dem Entfernen → Listenplätze (Farbe/Symbol) im Bild wie früher.
+function updKarussell(fr){
+  var k=S.karo, t=performance.now()/1000, W=S.VW, H=S.VH;
+  k.ang=(k.ang||0)+k.w*0.02*fr;
+  if(k.w>1){
+    if(!k.noten) k.noten=[];
+    if(Math.random()<0.3*fr) k.noten.push({x:W/2+(Math.random()-0.5)*300, y:H*0.72, t:0, wob:Math.random()*6});
+    for(var ni=k.noten.length-1;ni>=0;ni--){
+      var no=k.noten[ni]; no.t+=0.016*fr;
+      no.y-=2.4*fr; no.x+=Math.sin(t*3+no.wob)*2*fr;
+    }
+    k._notenBild=k.noten.slice();
+    for(ni=k.noten.length-1;ni>=0;ni--) if(Math.max(0,1-k.noten[ni].t/1.6)<=0) k.noten.splice(ni,1);
+  } else { if(k.noten) k.noten.length=0; k._notenBild=null; }
 }
 function drawPferd(g,x,y,d,c){
   g.save(); g.translate(x,y); g.scale(d,d);

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, load, go } from './harness.mjs';
+import { ROOT, load, go, seeded } from './harness.mjs';
 import { SZENEN, spiele } from './sim-szenen.mjs';
 
 const REF = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'unit', 'fixtures', 'sim-ref-alt.json'), 'utf8'));
@@ -79,4 +79,22 @@ test('Zauber: Spruch dauert bei 60 und 120 Hz gleich lang (≈1,67 s, ±1 %)', (
   const a = dauer(60), b = dauer(120);
   assert.ok(nah(a, 100 / 60, 0.011), `60 Hz: ${a}`);     // wie früher: 100 Bilder à 1/60 s
   assert.ok(nah(a, b, 0.01), `${a} vs ${b}`);
+});
+
+test('Karussell: Drehung und Noten bei 60 und 120 Hz gleich schnell (±1 %)', () => {
+  const ang = (hz) => lauf('karussell', hz, 1, { setup: (H) => { H.S.karo.w = 1.6; H.S.karo.ang = 0; }, random: () => 0.9 }).S.karo.ang;
+  assert.ok(nah(ang(60), ang(120), 0.01), `${ang(60)} vs ${ang(120)}`);
+  assert.ok(nah(ang(60), 1.6 * 0.02 * 60, 1e-9));                 // wie früher: 0,02·w pro 60-Hz-Bild
+  // eine Note steigt in 1 s gleich weit und lebt gleich lang (Zufall 0,9 → keine neuen Noten)
+  const note = (hz) => lauf('karussell', hz, 1, { setup: (H) => { H.S.karo.w = 1.6; H.S.karo.noten = [{ x: 400, y: 432, t: 0, wob: 1 }]; }, random: () => 0.9 }).S.karo.noten[0];
+  const a = note(60), b = note(120);
+  assert.ok(nah(432 - a.y, 432 - b.y, 0.01) && nah(a.t, b.t, 0.01) && Math.abs(a.x - b.x) < 2, `${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+});
+
+test('Karussell: gleich viele neue Noten pro Sekunde bei 60 und 120 Hz (Mittel über 20 s)', () => {
+  const neu = (hz) => { let n = 0; const fr = 60 / hz;
+    lauf('karussell', hz, 20, { setup: (H) => { H.S.karo.w = 1.6; }, random: seeded(42),
+      tick: (H) => { n += (H.S.karo.noten || []).filter((x) => Math.abs(x.t - 0.016 * fr) < 1e-9).length; } }); return n / 20; };
+  const a = neu(60), b = neu(120);
+  assert.ok(Math.abs(a - 18) < 2.7 && Math.abs(b - 18) < 2.7, `${a}/s vs ${b}/s (erwartet 18/s)`);
 });
