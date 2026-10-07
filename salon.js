@@ -177,7 +177,6 @@ S.buildUI = function(){
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
   else if(st==='zirkus') buildZirkus();
-  else if(st==='parfum') buildParfum();
   else if(st==='makeup') buildMakeup();
   else if(st==='schmuecken') buildSchmuecken();
   else if(st==='eis') buildEis();
@@ -257,25 +256,6 @@ function buildZirkus(){
     },{fill:c});
   });
   btn(30, 170, 190, 52, '🧽 Neue Bälle', function(){ S.zirkus.bälle=[{c:'#e74c3c'}]; S.buildUI(); });
-}
-function buildParfum(){
-  stationTabs();
-  S.hinweis = 'Wähle einen Duft — ein Schnupper-Wölkchen bleibt! 🌸';
-  Art.DUFTE.forEach(function(d,i){
-    btn(30+(i%2)*170, 100+Math.floor(i/2)*130, 162, 56, d.icon+' '+d.name, function(){
-      S.baer.duft=i; S.save(); S.buildUI();
-      window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
-      sfx('sparkle'); react('happy',1.2);
-    },{active:function(){return S.baer.duft===i;},row:0});
-    // kleiner Flakon unter dem Knopf
-    btn(80+(i%2)*170, 162+Math.floor(i/2)*130, 30, 46, '', function(){
-      S.baer.duft=i; S.save(); S.buildUI();
-      window.BSGame && window.BSGame.parfumSpray(Art.DUFTE[i].c);
-    },{fill:d.c,tiny:1,hideInTray:1});
-  });
-  btn(30, 372, 150, 50, '🧽 Kein Duft', function(){
-    S.baer.duft=null; S.save(); S.buildUI();
-  });
 }
 function buildMakeup(){
   stationTabs();
