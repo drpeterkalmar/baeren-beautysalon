@@ -169,7 +169,6 @@ S.buildUI = function(){
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
   else if(st==='massage') buildMassage();
-  else if(st==='eis') buildEis();
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
   else if(st==='geschenke') buildGeschenke();
@@ -213,22 +212,6 @@ function buildMassage(){
   stationTabs();
   S.hinweis = 'Streiche mit dem Finger in Kreisen über den Bären! 💆';
   if(!S.mass) S.mass = {prog:0, ang:null, herzen:[]};
-}
-function buildEis(){
-  stationTabs();
-  S.hinweis = 'Waffel wählen, dann Kugel-Farben antippen — der Bär schleckt! 🍦';
-  if(!S.eis) S.eis = {waffel:0, kugeln:[], leck:true};
-  ['🍦 Tüte','🥤 Becher','❤️ Herz'].forEach(function(t,i){
-    btn(30+i*120, 100, 112, 54, t, function(){ S.eis.waffel=i; S.buildUI(); },
-      {active:function(){return S.eis.waffel===i;}, small:1});
-  });
-  Art.EIS_FARBEN.forEach(function(c,i){
-    btn(30+i*60, 166, 54, 54, '', function(){
-      if(S.eis.kugeln.length>=3) return;
-      S.eis.kugeln.push({c:i, scale:1}); S.eis.leck=true; S.buildUI();
-    },{fill:c});
-  });
-  btn(30, 232, 170, 50, '🧽 Neues Eis', function(){ S.eis.kugeln=[]; S.buildUI(); });
 }
 function buildZuckerwatte(){
   stationTabs();
@@ -377,10 +360,6 @@ S.draw = function(g){
   } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
   drawStickers(g);
-  }
-  if(S.state==='eis' && S.eis){
-    var s3=Math.min(S.VW,S.VH)/420;
-    Art.drawEis(g, S.eis, S.VW*0.5, S.VH*0.58+40*s3, s3);
   }
   if(S.state==='waschen') drawWanne(g,true);
 };
@@ -599,15 +578,6 @@ function drawDeko(g){
     g.drawImage(th,bx+6,by+4,bw-12,bw-12);
     g.fillStyle='#6b4a3a'; g.font='bold 11px sans-serif'; g.textAlign='center';
     g.fillText('⭐ '+(last.modell||mod2.name), bx+bw/2, by+bh-6);
-  }
-  if(S.state==='eis'){ // Eis-Stand
-    Fx.contactShadow(g,780,430,110,14,0.4);
-    var sg=g.createLinearGradient(0,296,0,318); sg.addColorStop(0,'#f0d2ae'); sg.addColorStop(1,'#c7976f');
-    g.fillStyle=sg; g.fillRect(690,300,180,16);
-    g.fillStyle='#e99f78'; g.fillRect(700,316,12,110); g.fillRect(848,316,12,110);
-    Art.EIS_FARBEN.forEach(function(c,i){ Fx.ball(g,720+i*30,288,13,13,c); });
-    g.fillStyle='#d9a94f';
-    g.beginPath(); g.moveTo(800,296); g.lineTo(830,296); g.lineTo(815,340); g.closePath(); g.fill();
   }
 }
 // ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
