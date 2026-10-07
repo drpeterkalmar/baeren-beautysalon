@@ -1,5 +1,6 @@
 // DEV-TOOL: Ruckler beim Stationswechsel (Raum wird nach der Kamerafahrt neu gebacken) — längstes Bild je Wechsel.
-// Aufruf: node tests/hitch-check.mjs [--src=DIR] [--swraster] [--throttle=4] [--resize]
+// Aufruf: node tests/hitch-check.mjs [--src=DIR] [--swraster] [--throttle=4] [--resize] [--novsync]
+// --novsync: rAF ungebremst (Headless-V-Sync taktet auf dem Mac mini teils nur ~12 Hz und rastet die Werte auf 83 ms)
 // --resize (Gutachten P2-1): 300 ms vor jedem Wechsel ein resize-Ereignis (wie Drehung/iOS-Leiste/Stufenwechsel).
 //   Vorher sprang die Kamera danach und der Raum wurde synchron gebacken; Erwartung nach dem Fix: längstes Bild
 //   in der Größenordnung der Wechsel ohne --resize. Gemessen wird nur ab dem Wechsel (nicht das Resize-Bild selbst).
@@ -17,8 +18,8 @@ if (!pwDir) { console.error('Playwright nicht gefunden: PW_DIR=<ordner mit node_
 const { chromium } = require(path.join(pwDir, 'playwright'));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-const src = path.resolve(arg('src', root)), sw = process.argv.includes('--swraster'), thr = +arg('throttle', '4'), rz = process.argv.includes('--resize');
-const browser = await chromium.launch({ args: sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu'] });
+const src = path.resolve(arg('src', root)), sw = process.argv.includes('--swraster'), thr = +arg('throttle', '4'), rz = process.argv.includes('--resize'), nv = process.argv.includes('--novsync');
+const browser = await chromium.launch({ args: (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu']).concat(nv ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));
@@ -41,5 +42,5 @@ const res = await page.evaluate(async (rz) => {
   }
   return out;
 }, rz);
-const v = Object.values(res).slice(1); console.log(JSON.stringify({ src: path.basename(src), sw, resize: rz, tier: +arg('tier', '2'), mittel: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1), max: Math.max(...v), res, errs }));
+const v = Object.values(res).slice(1); console.log(JSON.stringify({ src: path.basename(src), sw, resize: rz, novsync: nv, tier: +arg('tier', '2'), mittel: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1), max: Math.max(...v), res, errs }));
 await browser.close();

@@ -1,7 +1,8 @@
 // DEV-TOOL (nicht Teil des Spiels): Screenshots + Leistungsmessung für die Deko-Runde (r20).
 // Aufruf:
 //   node tests/deko-check.mjs shots <label> [--src=DIR] [--land] [--deko=0|1] [--only=a,b]
-//   node tests/deko-check.mjs perf  <label> [--src=DIR] [--tier=2|1|0|auto] [--throttle=4] [--vsync] [--secs=10.5] [--only=a,b] [--reduced]
+//   node tests/deko-check.mjs perf  <label> [--src=DIR] [--tier=2|1|0|auto] [--throttle=4] [--vsync] [--secs=10.5] [--only=a,b] [--reduced] [--voll]
+// --voll (Umbau 20.4, Gutachten P2-5): Bär zusätzlich mit Hut und Kette (Schleife und 6 Lackkrallen hat er immer)
 // --src: Spiel-Ordner (Standard: Repo). Für "vorher" ein git-archive-Export des alten Stands.
 // Handy-Viewport 412×915 @ DPR 2 (quer 915×412), Touch, GPU-Raster (Metal), Zufall per Seed fest.
 // Ausgabe: tests/shots/deko/<label>/*.png bzw. tests/shots/deko/perf/<label>.json
@@ -68,13 +69,13 @@ const shot = async (name) => { await page.screenshot({ path: path.join(outDir, n
 // ---------------------------------------------------------------- Szenen-Helfer (nur öffentliche Spiel-API, alt + neu gleich)
 const setState = (st) => page.evaluate((st) => { const S = window.BSSalon; S.state = st; S.buildUI(); }, st);
 const tapLabel = (re) => page.evaluate((re) => { const b = window.BSSalon.buttons.find(x => new RegExp(re).test(x.label || '')); if (b) b.onTap(); return !!b; }, re);
-const styleBear = () => page.evaluate(() => {
+const styleBear = () => page.evaluate((voll) => {
   const S = window.BSSalon, A = window.BSArt, b = S.baer;
   b.fellIdx = 0; b.fell = A.MODELS[0].fell; b.frisur = 'lockig'; b.haar = A.HAAR[0];
-  b.acc.schleife = 0; b.acc.hut = null; b.acc.kette = null; b.acc.brille = null;
+  b.acc.schleife = 0; b.acc.hut = voll ? A.HUTE[0] : null; b.acc.kette = voll ? A.KETTEN[0] : null; b.acc.brille = null;
   b.makeup.rouge = '#ff9eb5';
   b.lack = { L0: '#e91e63', L1: '#f39c12', L2: '#9b59b6', R0: '#e91e63', R1: '#f39c12', R2: '#9b59b6' };
-});
+}, flag('voll'));
 // synthetisches Rubbeln (PointerEvents auf dem Canvas, wie ein Finger) über dem Bärenbauch
 const rubStart = () => page.evaluate(() => {
   const cv = document.getElementById('cv'), G = window.BSGame;
