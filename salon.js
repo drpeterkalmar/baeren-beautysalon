@@ -40,7 +40,6 @@ S.STATIONS = [
   {id:'finish',   icon:'✨', name:'Fertig!'}
 ];
 
-var FRISUR_NAMEN = {lockig:'Lockig',kurz:'Kurz',zottig:'Zottig',igel:'Igel',afro:'Afro'};
 var ACC = [
   {key:'hut',icon:'🎩',name:'Hut',colors:Art.HUTE},
   {key:'schleife',icon:'🎀',name:'Schleife',colors:Art.SCHLEIFEN},
@@ -175,7 +174,6 @@ S.buildUI = function(){
   var R = REG[st];
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
-  else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
   else if(st==='zirkus') buildZirkus();
@@ -225,25 +223,6 @@ function buildWaschen(){
     emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
   },{active:function(){return S.baer.schaum>0.2;}});
   btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
-}
-function buildSchneiden(){
-  stationTabs();
-  S.hinweis = 'Wähle Frisur und Farbe! ✂️';
-  Art.FRISEURE.forEach(function(f,i){
-    btn(30+(i%2)*130, 100+Math.floor(i/2)*62, 122, 56, '✂️ '+FRISUR_NAMEN[f], function(){
-      S.baer.frisur=f; S.save(); S.buildUI();
-      sfx('snip'); react('snip');
-      var hp=headPos(); emit('hair',hp[0],hp[1]-70,{n:16,speed:180,dir:-Math.PI/2,spread:2.6,grav:520,drag:1.8,size:9,life:1.4,colors:[S.baer.haar],jx:60});
-    },{active:function(){return S.baer.frisur===f;},small:1,row:0});
-  });
-  Art.HAAR.forEach(function(c,i){
-    btn(30+(i%4)*62, 310+Math.floor(i/4)*62, 56, 56, '', function(){
-      S.baer.haar=c; S.save(); S.buildUI();
-      sfx('sparkle'); react('happy',0.7);
-      var hp=headPos(); emit('puff',hp[0],hp[1]-80,{n:8,speed:90,size:26,life:0.6,grav:-40,colors:[c],jx:50});
-      emit('star',hp[0],hp[1]-80,{n:8,speed:260,size:10,life:0.8,grav:300,colors:['#ffe7a8',c]});
-    },{fill:c,active:function(){return S.baer.haar===c;},row:1});
-  });
 }
 function buildPfoten(){
   stationTabs();
