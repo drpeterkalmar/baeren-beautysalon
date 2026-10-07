@@ -171,7 +171,6 @@ S.buildUI = function(){
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
   else if(st==='zirkus') buildZirkus();
-  else if(st==='makeup') buildMakeup();
   else if(st==='eis') buildEis();
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
@@ -248,29 +247,6 @@ function buildZirkus(){
     },{fill:c});
   });
   btn(30, 170, 190, 52, '🧽 Neue Bälle', function(){ S.zirkus.bälle=[{c:'#e74c3c'}]; S.buildUI(); });
-}
-function buildMakeup(){
-  stationTabs();
-  S.hinweis = 'Farbe wählen, dann Glitzer auf Wange oder Stirn tupfen! ✨';
-  var mk = S.baer.makeup;
-  // Rouge-Farben
-  Art.ROUGE.forEach(function(c,i){
-    btn(30+i*52, 100, 46, 46, '', function(){
-      mk.rouge=c; S.save(); S.buildUI(); sfx('kiss'); react('kiss');
-    },{fill:c,active:function(){return mk.rouge===c;},row:0,rowLabel:i===0?'Rouge':null});
-  });
-  // Lidschatten
-  Art.LIDSCHATTEN.forEach(function(c,i){
-    btn(30+i*52, 156, 46, 46, '', function(){
-      mk.lid=c; S.save(); S.buildUI(); sfx('sparkle'); react('blink');
-    },{fill:c,active:function(){return mk.lid===c;},row:1,rowLabel:i===0?'Lidschatten':null});
-  });
-  btn(30, 216, 200, 50, '✨ Glitzer-Modus', function(){
-    S.glitzMode = !S.glitzMode; S.buildUI();
-  },{active:function(){return !!S.glitzMode;}});
-  btn(30, 276, 150, 50, '🧽 Neu', function(){
-    S.baer.makeup={rouge:null,lid:null,gp:[]}; S.save(); S.buildUI();
-  });
 }
 function buildEis(){
   stationTabs();
@@ -1017,17 +993,6 @@ S.tapBear = function(x,y){
         emit('star',p[0],p[1],{n:7,speed:170,size:8,life:0.6,grav:200,colors:['#ffe7a8',S.lackColor||'#e91e63']});
       }
     });
-    return true;
-  }
-  if(S.state==='makeup' && S.glitzMode){
-    // Glitzer-Tupfer auf Wange/Stirn (Kopfbereich), max 14
-    var s2=Math.min(S.VW,S.VH)/420;
-    var cx2=S.VW*0.5, hy2=S.VH*0.58-90*s2;
-    var ddx=x-cx2, ddy=y-hy2;
-    if(ddx*ddx/(90*s2*90*s2)+ddy*ddy/(90*s2*90*s2)<1.2){
-      var mk=S.baer.makeup; if(!mk.gp) mk.gp=[];
-      if(mk.gp.length<14){ mk.gp.push({dx:ddx,dy:ddy}); S.save(); }
-    }
     return true;
   }
   if(S.state==='massage'){ S.dragBear(x,y); return true; }
