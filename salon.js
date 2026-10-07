@@ -49,6 +49,8 @@ var ACC = [
   {key:'kette',icon:'📿',name:'Kette',colors:Art.KETTEN}
 ];
 
+// Tiefe Kopie (alles im Bären-Zustand ist JSON): Album-Fotos teilen nie Objekte mit dem Bären
+function kopie(x){ return x===undefined ? undefined : JSON.parse(JSON.stringify(x)); }
 function neuerBaer(fellIdx){
   return { fellIdx: fellIdx, fell: Art.MODELS[fellIdx].fell,
     haar: Art.HAAR[0], frisur: 'lockig', lack:{}, schaum:0, fluff:0,
@@ -73,6 +75,7 @@ S.baer = neuerBaer(0);
 S.saved = null;
 try{ S.saved = JSON.parse(localStorage.getItem('bs_baer')||'null'); }catch(e){}
 try{ S.album = JSON.parse(localStorage.getItem('bs_album')||'[]'); }catch(e){ S.album=[]; }
+if(!Array.isArray(S.album)) S.album=[]; // kaputter Speicher (z. B. '{}') darf „Klick!“ nicht werfen lassen
 if(S.saved && Art.MODELS[S.saved.fellIdx||0]){
   var idx = S.saved.fellIdx||0;
   S.saved.fell = Art.MODELS[idx].fell; // Modell-Farbe hat Vorrang vor altem Save
@@ -481,8 +484,8 @@ function buildFoto(){
     S.album.push({modell: Art.MODELS[S.baer.fellIdx||0].name, datum: tag,
       fellIdx: S.baer.fellIdx||0, haar: S.baer.haar, frisur: S.baer.frisur,
       rahmen: S.fotoRahmen||0,
-      lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker,
-      makeup:S.baer.makeup, gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft});
+      lack:kopie(S.baer.lack), acc:kopie(S.baer.acc), sticker:kopie(S.baer.sticker),
+      makeup:kopie(S.baer.makeup), gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft});
     while(S.album.length>4) S.album.shift();
     try{ localStorage.setItem('bs_album', JSON.stringify(S.album)); }catch(e){}
   },{big:1});
@@ -1220,8 +1223,8 @@ S.tapBear = function(x,y){
         var m=Art.MODELS[snap.fellIdx]||Art.MODELS[0];
         S.baer=Object.assign(neuerBaer(snap.fellIdx||0), {
           haar:snap.haar||Art.HAAR[0], frisur:snap.frisur||'lockig',
-          lack:snap.lack||{}, acc:snap.acc||{hut:null,schleife:null,brille:null,kette:null},
-          sticker:snap.sticker||[], makeup:snap.makeup||{rouge:null,lid:null,gp:[]},
+          lack:kopie(snap.lack||{}), acc:kopie(snap.acc||{hut:null,schleife:null,brille:null,kette:null}),
+          sticker:kopie(snap.sticker||[]), makeup:kopie(snap.makeup||{rouge:null,lid:null,gp:[]}),
           gurkeL:!!snap.gurkeL, gurkeR:!!snap.gurkeR, duft:(snap.duft===undefined?null:snap.duft)
         });
         S.baer.fellIdx=snap.fellIdx||0; S.baer.fell=m.fell;
