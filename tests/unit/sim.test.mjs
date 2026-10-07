@@ -98,3 +98,15 @@ test('Karussell: gleich viele neue Noten pro Sekunde bei 60 und 120 Hz (Mittel Ã
   const a = neu(60), b = neu(120);
   assert.ok(Math.abs(a - 18) < 2.7 && Math.abs(b - 18) < 2.7, `${a}/s vs ${b}/s (erwartet 18/s)`);
 });
+
+test('Tanz: Noten steigen bei 60 und 120 Hz gleich schnell, eine neue alle 0,4 s', () => {
+  const st = (hz) => { const out = []; lauf('tanz', hz, 2, { random: () => 0.3, tick: (H, t) => { if (Math.abs(t * 2 - Math.round(t * 2)) < 1e-9) out.push(H.S.tanz.noten.map((n) => [n.x, n.y])); } }); return out; };
+  const a = st(60), b = st(120);
+  assert.equal(a.length, 4);
+  for (let i = 0; i < a.length; i++) {
+    assert.equal(a[i].length, b[i].length, `t=${(i + 1) / 2}s: ${a[i].length} vs ${b[i].length} Noten`);
+    // Toleranz = Weg eines 60-Hz-Bildes: neue Noten entstehen auf der ersten Bildgrenze nach je 0,4 s
+    a[i].forEach((p, j) => assert.ok(Math.abs(p[1] - b[i][j][1]) <= 2 && Math.abs(p[0] - b[i][j][0]) <= 2, `Note ${j}: ${p} vs ${b[i][j]}`));
+  }
+  assert.equal(a[3].length, 5);                                // 2 s / 0,4 s
+});

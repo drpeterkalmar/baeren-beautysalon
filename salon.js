@@ -548,6 +548,7 @@ S.update = function(dt){
   if(st==='aquarium' && S.aqua) updAquarium(fr);
   if(st==='zauber' && S.zauber) updZauber(fr);
   if(st==='karussell' && S.karo) updKarussell(fr);
+  if(st==='tanz' && S.tanz) updNoten(fr);
 };
 
 // ---- Zeichnen ----------------------------------------------
@@ -921,28 +922,37 @@ function drawDeko(g){
 // ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
 var NICONS=['🎵','🎶','♪','♫'];
 function drawNoten(g){
-  var t=performance.now()/1000;
-  if(!S._noteT) S._noteT=0;
   if(!S.tanz) return;
-  // neue Noten nachführen
-  if(t>S._noteT){
-    S._noteT=t+0.4;
-    var cols=['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
-    S.tanz.noten.push({x:S.VW*0.5+(Math.random()-0.5)*320, y:S.VH*0.72,
-      w:(Math.random()-0.5)*30, c:cols[Math.floor(Math.random()*5)],
-      ic:NICONS[Math.floor(Math.random()*4)], t:0});
-    if(S.tanz.noten.length>14) S.tanz.noten.shift();
-  }
-  for(var i=S.tanz.noten.length-1;i>=0;i--){
-    var n=S.tanz.noten[i]; n.t++;
-    n.y-=1.9; n.x+=Math.sin(n.t*0.1)*1.4+n.w*0.006;
+  var nb=S.tanz._notenBild||S.tanz.noten; // Bewegung in updNoten
+  for(var i=nb.length-1;i>=0;i--){
+    var n=nb[i];
     var a=Math.min(1,(S.VH*0.72-n.y)/80)-Math.max(0, (S.VH*0.16-n.y)/90);
     g.globalAlpha=Math.max(0,Math.min(1,a));
     g.font=(20+Math.sin(n.t*0.12)*4)+'px sans-serif'; g.textAlign='center';
     g.fillStyle=n.c; g.fillText(n.ic, n.x, n.y);
-    if(n.y<S.VH*0.1) S.tanz.noten.splice(i,1);
   }
   g.globalAlpha=1;
+}
+// Tanz-Noten (aus S.update): alle 0,4 s eine neue Note (Uhrzeit wie bisher), Schritte pro 60-Hz-Bild × fr.
+// Zeichenliste _notenBild: Noten, die oben ankommen, sind wie früher in ihrem letzten Bild noch zu sehen.
+function updNoten(fr){
+  var t=performance.now()/1000, T=S.tanz;
+  if(!S._noteT) S._noteT=0;
+  // neue Noten nachführen
+  if(t>S._noteT){
+    S._noteT=t+0.4;
+    var cols=['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
+    T.noten.push({x:S.VW*0.5+(Math.random()-0.5)*320, y:S.VH*0.72,
+      w:(Math.random()-0.5)*30, c:cols[Math.floor(Math.random()*5)],
+      ic:NICONS[Math.floor(Math.random()*4)], t:0});
+    if(T.noten.length>14) T.noten.shift();
+  }
+  for(var i=T.noten.length-1;i>=0;i--){
+    var n=T.noten[i]; n.t+=fr;
+    n.y-=1.9*fr; n.x+=(Math.sin(n.t*0.1)*1.4+n.w*0.006)*fr;
+  }
+  T._notenBild=T.noten.slice();
+  for(i=T.noten.length-1;i>=0;i--) if(T.noten[i].y<S.VH*0.1) T.noten.splice(i,1);
 }
 // Geburtstag: Kuchen mit 3 Kerzen + Flamme/Rauch/Konfetti
 function drawKuchen(g){
