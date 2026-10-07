@@ -59,9 +59,9 @@ export const SZENEN = {
 };
 
 // Szene abspielen. mode: 'alt' (nur draw) | 'neu' (S.update(dt) vor draw). hz: Bildrate.
-export function spiele(name, { mode = 'neu', hz = 60, sources, every = 10, random } = {}) {
+export function spiele(name, { mode = 'neu', hz = 60, sources, files, every = 10, random } = {}) {
   const sz = SZENEN[name];
-  const H = load({ seed: sz.seed, record: true, sources, globals: { BSUI: { L: { port: true } } } });
+  const H = load({ files, seed: sz.seed, record: true, sources, globals: { BSUI: { L: { port: true } } } });
   if (random) H.ctx.Math.random = random;
   sz.start(H);
   const dt = 1 / hz, k = hz / 60;                // k Bilder pro 60-Hz-Bild

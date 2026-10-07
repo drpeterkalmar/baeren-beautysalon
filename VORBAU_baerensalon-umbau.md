@@ -193,14 +193,14 @@ Zuckerwatte-Stab ziehen, Teig ausrollen, Schaum rubbeln + Dusche (Duschstrahl an
 
 ## Annahmen und Risiken
 - `node --test tests/unit` setzt Node ≥ 22 voraus (Ordner-Einstieg über `tests/unit/index.js`; getestet mit 24.14).
-- Die Zeichen-Protokolle prüfen Aufrufe und Parameter, keine Pixel. Unterschiede, die nur im Rastern entstehen
-  (z. B. Reihenfolge innerhalb eines Bildes ist gleich, aber Canvas-Zustand wie `lineCap` wird nicht mitgeschrieben),
+- Die Zeichen-Protokolle prüfen jeden Canvas-Aufruf, jede gesetzte Eigenschaft (strokeStyle, lineWidth, font …) und
+  das wirksame Alpha – aber keine Pixel. Was nur beim Rastern entsteht (Inhalt gebackener Sprites, Verläufe, Text),
   fängt erst der Pixel-Vergleich.
 - Kleiner Verhaltensunterschied durch `hit()`: Album-Kacheln, Zauberstab, Paket, Malbuch-Flächen, Watte-Stab/-Wolle,
   Teig und Ballon sind jetzt auch antippbar, bevor die Station einmal gezeichnet wurde (früher erst ab dem ersten
   Bild); zeitabhängige Boxen (Zauberstab, Schwebe-Ballon) nutzen die Uhr im Moment des Tipps statt des letzten Bildes
   (Versatz < 0,2 Einheiten). Direkt nach dem letzten „Pusten“ (bis zum nächsten Bild) gibt es keine Ballon-Box
-  (früher die des Mund-Ballons; der Tipp konnte da ohnehin nur ins Leere gehen, weil der Ballon gerade umspringt).
+  (früher galt in diesem einen Bild noch die Box des Mund-Ballons).
 - Die Teig-Box wächst jetzt schon zwischen zwei Bildern mit dem Ausrollen (früher Stand des letzten Bildes).
 - Schritt 6: Rundungsfrei gleich nur bei exakt 60 Hz; bei 59,9 Hz o. ä. minimal anders – gewollt (bildraten-unabhängig).
 - Nicht im Auftrag, beim Lesen gefunden (P3-4-Rest): `bs_baer` mit einem Nicht-Objekt (`'42'`, `'"x"'`) lässt salon.js

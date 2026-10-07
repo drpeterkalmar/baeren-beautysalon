@@ -176,7 +176,8 @@ export function stations(H) { return H.S.STATIONS.map((s) => s.id); }
 // JSON-Tiefkopie (für Vergleiche „vorher/nachher“)
 export const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// Zeichen-Protokoll aus H.rec: jeder Canvas-Aufruf; Zeichen-Operationen mit der wirksamen globalAlpha/fillStyle
+// Zeichen-Protokoll aus H.rec: jeder Canvas-Aufruf und jede gesetzte Eigenschaft; Zeichen-Operationen zusätzlich mit
+// der wirksamen globalAlpha/fillStyle
 // (save/restore werden nachgespielt). Zahlen auf 6 Stellen gerundet → alt/neu direkt vergleichbar.
 const DRAW = new Set(['drawImage', 'fill', 'stroke', 'fillRect', 'strokeRect', 'fillText', 'strokeText', 'clearRect']);
 export function drawLog(rec, { withStyle = true } = {}) {
@@ -187,7 +188,9 @@ export function drawLog(rec, { withStyle = true } = {}) {
     if (k === 'save') stack.push({ ...st });
     else if (k === 'restore') st = stack.pop() || st;
     else if (k[0] === '=') { const p = k.slice(1); if (p in st) st[p] = a[0]; }
-    if (k[0] === '=') continue;
+    // gesetzte Eigenschaften (strokeStyle, lineWidth, font …) zählen mit; globalAlpha steckt als wirksamer Wert in
+    // jeder Zeichen-Operation (so ist „Alpha per globalAlpha statt im Farbstring“ gleich, wenn das Bild gleich ist)
+    if (k[0] === '=') { if (k !== '=globalAlpha') out.push([k, typeof a[0] === 'string' || typeof a[0] === 'number' ? r(a[0]) : '[obj]']); continue; }
     const e = [k, ...a.map(r)];                // jeder Aufruf (auch translate/rotate/arc …) zählt
     if (DRAW.has(k)) {
       e.push('α' + r(st.globalAlpha));

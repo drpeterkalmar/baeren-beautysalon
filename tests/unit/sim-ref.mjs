@@ -10,7 +10,8 @@ const rev = (process.argv.find((a) => a.startsWith('--rev=')) || '--rev=79d3ca7'
 const salon = execSync('git show ' + rev + ':salon.js', { cwd: ROOT }).toString();
 const out = { rev, hinweis: '60 Hz, alter Code: nur S.draw je Bild. Prüfsumme = sha1 des Zeichen-Protokolls (gerundet 1e-4).', szenen: {} };
 for (const name of Object.keys(SZENEN)) {
-  const r = spiele(name, { mode: 'alt', sources: { 'salon.js': salon } });
+  // alter Stand: nur fx/art/salon (Stations-Dateien gab es noch nicht)
+  const r = spiele(name, { mode: 'alt', files: ['fx.js', 'art.js', 'salon.js'], sources: { 'salon.js': salon } });
   out.szenen[name] = { hashes: r.hashes, snaps: r.snaps };
   console.log(name, r.hashes.length, 'Bilder,', r.snaps.length, 'Stichproben');
 }
