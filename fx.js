@@ -32,7 +32,8 @@ Fx.ease = {
 Fx.rand = function(seed){ var s=seed>>>0||1; return function(){ s^=s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%100000)/100000; }; };
 
 // ---------------------------------------------------------------- Farben
-var cache = {};
+// Farb-Cache, gedeckelt: bei Überlauf komplett leeren (pro Bild neu gebaute Farbstrings ließen ihn sonst endlos wachsen)
+var cache = {}, cacheN = 0, CACHE_MAX = 1000;
 function parse(c){
   if(typeof c!=='string' || !c) return [196,160,128,1];
   var hit = cache[c]; if(hit) return hit;
@@ -45,9 +46,12 @@ function parse(c){
     var p=m[1].split(',').map(parseFloat); r=p[0]; g=p[1]; b=p[2]; a=p.length>3?p[3]:1;
   }
   if(!(r>=0)) r=196; if(!(g>=0)) g=160; if(!(b>=0)) b=128; if(!(a>=0)) a=1;
+  if(cacheN>=CACHE_MAX){ cache={}; cacheN=0; }
+  cacheN++;
   return (cache[c]=[r,g,b,a]);
 }
 Fx.parse = parse;
+Fx.parseCacheSize = function(){ return cacheN; }; // für Unit-Tests
 function str(r,g,b,a){
   r=Math.round(Fx.clamp(r,0,255)); g=Math.round(Fx.clamp(g,0,255)); b=Math.round(Fx.clamp(b,0,255));
   return (a===undefined||a>=1) ? 'rgb('+r+','+g+','+b+')' : 'rgba('+r+','+g+','+b+','+(+a).toFixed(3)+')';

@@ -1783,28 +1783,32 @@ function drawZauberStation(g){
   S._stabHitZ={x:stx-30*s,y:sty-130*s,w:60*s,h:150*s};
   // Zauberspruch-Effekte (Partikel je Zauber)
   if(zb.fx){
-    var f=zb.fx, q=f.t/f.d;
+    var f=zb.fx, q=f.t/f.d, oaZ=g.globalAlpha;
     if(q>=1){ zb.fx=null; }
     else if(f.art===0){ // Sternenschweif: goldene Sterne kreisen aufwärts
       for(var i2=0;i2<14;i2++){
         var a2=f.seed+i2*0.45+q*5;
         var rr2=(60+q*180)*s;
+        g.globalAlpha=oaZ*(1-q); // Alpha über globalAlpha statt pro Bild neuer Farbstring (Farb-Cache)
         Art.drawSticker(g,'stern',cx+Math.cos(a2)*rr2,cy-40*s+Math.sin(a2)*rr2*0.5-q*90*s,
-          (9+3*Math.sin(q*9+i2))*s,'rgba(255,210,77,'+(1-q)+')');
+          (9+3*Math.sin(q*9+i2))*s,'#ffd24d');
       }
     } else if(f.art===1){ // Blütenregen: Rosa Blumen fallen von oben
       for(var b2=0;b2<16;b2++){
         var bx2=(b2*67 + f.seed*40)%S.VW;
         var by2=-20+q*S.VH*0.8+((b2*29)%40);
-        Art.drawSticker(g,'blume',bx2+Math.sin(t*2+b2)*16,by2,9*s,'rgba(255,158,181,'+(1-q*0.6)+')');
+        g.globalAlpha=oaZ*(1-q*0.6);
+        Art.drawSticker(g,'blume',bx2+Math.sin(t*2+b2)*16,by2,9*s,'#ff9eb5');
       }
     } else { // Herz-Kreis: Herzen im Kreis um den Bären
       for(var h2=0;h2<12;h2++){
         var ah=h2/12*Math.PI*2+q*3+f.seed;
+        g.globalAlpha=oaZ*(1-q);
         Art.drawSticker(g,'herz',cx+Math.cos(ah)*150*s,cy+Math.sin(ah)*110*s-40*s,
-          (10+4*Math.sin(q*8+h2))*s,'rgba(233,30,99,'+(1-q)+')');
+          (10+4*Math.sin(q*8+h2))*s,'#e91e63');
       }
     }
+    g.globalAlpha=oaZ;
     if(zb.fx) zb.fx.t+=0.016;
   }
 }

@@ -6,7 +6,8 @@
 //
 //   const H = load({ files: ['fx.js','art.js','salon.js'], storage: {bs_baer: '…'}, seed: 1 });
 //   H.S (BSSalon), H.Fx, H.Art, H.storage (Map-artiges Objekt), H.clock.ms (performance.now), H.tick(ms)
-//   H.g = Zeichen-Context (Proxy), H.rec = aufgezeichnete Aufrufe (nur wenn record:true)
+//   H.g = Zeichen-Context (Proxy), H.rec = aufgezeichnete Aufrufe auf H.g (nur wenn record:true)
+//   sources: {'salon.js': '…'} lädt statt der Datei einen anderen Quelltext (z. B. `git show origin/main:salon.js`)
 import vm from 'node:vm';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,7 +67,7 @@ export function load(opt = {}) {
 
   function makeCanvas() {
     const c = { width: 300, height: 150, style: {}, _ctx: null, tagName: 'CANVAS',
-      getContext() { return c._ctx || (c._ctx = makeCtx(c, rec)); },
+      getContext() { return c._ctx || (c._ctx = makeCtx(c, null)); },
       addEventListener(type, fn) { (c._l || (c._l = {}))[type] = fn; },
       setPointerCapture() {}, releasePointerCapture() {}, toDataURL() { return 'data:,'; },
       getBoundingClientRect() { return { left: 0, top: 0, width: c.width, height: c.height }; } };
@@ -120,7 +121,7 @@ export function load(opt = {}) {
   vm.createContext(ctx);
 
   for (const f of files) {
-    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const src = (opt.sources && opt.sources[f]) || fs.readFileSync(path.join(ROOT, f), 'utf8');
     const q = opt.scriptQuery !== undefined ? opt.scriptQuery : '?v=20.3';
     ctx.document.currentScript = { src: 'file:///repo/' + f + q };
     vm.runInContext(src, ctx, { filename: f });
@@ -148,3 +149,23 @@ export function go(H, st) { H.S.state = st; H.S.buildUI(); }
 export function stations(H) { return H.S.STATIONS.map((s) => s.id); }
 // JSON-Tiefkopie (für Vergleiche „vorher/nachher“)
 export const clone = (x) => JSON.parse(JSON.stringify(x));
+
+// Zeichen-Protokoll aus H.rec: jede Zeichen-Operation mit der dabei wirksamen globalAlpha/fillStyle
+// (save/restore werden nachgespielt). Zahlen auf 6 Stellen gerundet → alt/neu direkt vergleichbar.
+const DRAW = new Set(['drawImage', 'fill', 'stroke', 'fillRect', 'strokeRect', 'fillText', 'strokeText', 'clearRect']);
+export function drawLog(rec, { withStyle = true } = {}) {
+  const out = [], stack = [];
+  let st = { globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000' };
+  const r = (v) => (typeof v === 'number' ? Math.round(v * 1e6) / 1e6 : typeof v === 'object' && v ? '[obj]' : v);
+  for (const [k, ...a] of rec) {
+    if (k === 'save') stack.push({ ...st });
+    else if (k === 'restore') st = stack.pop() || st;
+    else if (k[0] === '=') { const p = k.slice(1); if (p in st) st[p] = a[0]; }
+    else if (DRAW.has(k)) {
+      const e = [k, ...a.map(r), 'α' + r(st.globalAlpha)];
+      if (withStyle && k !== 'drawImage') e.push(typeof st.fillStyle === 'string' ? st.fillStyle : '[grad]');
+      out.push(e);
+    }
+  }
+  return out;
+}
