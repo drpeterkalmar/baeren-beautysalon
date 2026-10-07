@@ -1,7 +1,7 @@
 # ARCHITECTURE — R18 Renderer
 
-Ladereihenfolge (index.html): `fx.js → art.js → room.js → salon.js → ui.js → sfx.js → music.js → game.js`.
-salon.js / game.js / music.js / index.html sind unverändert; die neuen Module bedienen deren Verträge.
+Ladereihenfolge (index.html, Stand Umbau 20.4): `fx.js → art.js → room.js → deko.js → salon.js → stations/*.js → ui.js → sfx.js → music.js → game.js`.
+(R18: salon.js / game.js / music.js / index.html blieben damals unverändert; die neuen Module bedienten deren Verträge.)
 
 | Datei | Global | Aufgabe |
 |---|---|---|
@@ -53,5 +53,30 @@ Buttons kommen als Daten aus salon.js; ui.js ordnet sie pro Orientierung neu an 
 Kopfzeile (🏠 / Titel / ➜ / 🔊), Werkzeug-Tablett (Fließlayout, scrollbar), Stations-Leiste (horizontal scrollbar), Hinweis.
 Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Backen). Wahl-Raster: Thumbnails lazy, max. 1 Bake pro Frame.
 
+## Umbau 20.4 (Gutachten 2026-10-05, P1 + P2)
+- **Stations-Registry** (salon.js): `S.registerStation({id, build, back, draw, update, tap, hit, onEnter, onLeave})`.
+  Jede umgezogene Station liegt in `stations/<id>.js` (eigenes `<script>` nach salon.js) und benutzt die Helfer `S.H`
+  (`btn`, `stationTabs`, `sfx`, `react`, `emit`, `headPos`, `accPop`, `circle2`, `ell2`, `kopie`, `neuerBaer`, `clawPos`,
+  `NICONS`, `baer(g)` = Bär am Standardplatz). `S.buildUI` / `S.draw` (+ `drawDeko` → `back`) / `S.update` / `S.tapBear`
+  fragen zuerst die Registry, sonst die alten if/else-Ketten. Hit-Boxen kommen aus `hit()` (aus dem Zustand berechnet),
+  nicht als Nebenwirkung des Zeichnens.
+- **Zustandswechsel**: `S.setState(id)` = `S.state` + `S.buildUI()`. `buildUI` erkennt den Wechsel (`S._prev`) und ruft
+  `onLeave` der alten / `onEnter` der neuen Station — greift auch, wenn Prüfwerkzeuge `S.state` direkt setzen.
+  game.js `prevState` (Überblendung, Bildschirm-Partikel) und deko.js `prevSt` (Funkel-Schwung, Hüpfer) zählen weiter
+  selbst, weil sie bewusst im nächsten Bild reagieren.
+- **Simulation pro Bild**: `S.update(dt)` (von game.js `update()` direkt vor `BSDeko.update`, dt ≤ 0,05 s). Alte
+  Schritte pro Bild × `fr = dt·60` → bei 60 Hz exakt wie vorher, bei 30/90/120 Hz gleich schnell. Zeichenlisten
+  (`_futterBild`, `_blasenBild`, `_notenBild`, `_rauchBild`) halten Dinge, die im selben Schritt verschwinden, wie früher
+  noch ein Bild sichtbar. Noch in game.js `update()`: Waschen/Dusche, Föhnen (Flausch), Spa (Entspannung), Eis
+  (Abschmelzen), Zuckerwatte, Massage, Keks, Ballon, Zauber-Pfote, Pirouetten-Abbau.
+- **Qualitäts-Automatik**: reine Funktion `Fx.Q.step(sample, perf)` (fx.js); erkennt saubere 30-Hz-Displays in der
+  Warmlaufphase (base 33,3 ms), sonst exakt die alten Schwellen.
+- **Speicherbudget**: Sprite-Satz-LRU 5 (`SETS_MAX`), Thumbnails für zwei Größen, Ersatz-Raum nach 3 s Ruhe und
+  Snapshot nach der Überblendung freigegeben; `BSGame.canvasMem()` liefert die Canvas-Pixel.
+- **Version**: `BS_VERSION` aus der `?v=`-Query von fx.js; heben mit `python3 tools/bump-version.py X.Y`.
+
 ## Prüfung
+`node --test tests/unit` (ohne Browser, ~3 s): Harness `tests/unit/harness.mjs` lädt die Module per `node:vm`
+(Proxy-Canvas mit Transformationsmatrix, steuerbare Uhr, fester Zufall). Referenzen des alten Stands:
+`fixtures/sim-ref-alt.json` (Simulation, 79d3ca7) und `fixtures/stationen-ref.json` (alle 24 Stationen hoch/quer, a6e223c).
 `tools/visual-check.mjs` (siehe CHECKS.md) — Screenshots nach `shots/r19/<label>/` (gitignored).
