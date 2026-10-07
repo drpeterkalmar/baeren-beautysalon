@@ -25,14 +25,30 @@ export function seeded(seed) {
   return function () { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-function identity() { return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, is2D: true, isIdentity: true, inverse() { return identity(); }, multiply() { return identity(); } }; }
+function matrix(a, b, c, d, e, f) { return { a, b, c, d, e, f, is2D: true, get isIdentity() { return a === 1 && b === 0 && c === 0 && d === 1 && e === 0 && f === 0; },
+  inverse() { const D = a * d - b * c || 1; return matrix(d / D, -b / D, -c / D, a / D, (c * f - d * e) / D, (b * e - a * f) / D); }, multiply(m) { return mul([a, b, c, d, e, f], m); } }; }
+const mul = (M, m) => matrix(M[0] * m.a + M[2] * m.b, M[1] * m.a + M[3] * m.b, M[0] * m.c + M[2] * m.d, M[1] * m.c + M[3] * m.d, M[0] * m.e + M[2] * m.f + M[4], M[1] * m.e + M[3] * m.f + M[5]);
 
-// Proxy-Context: merkt sich gesetzte Eigenschaften (fillStyle, globalAlpha …), alles andere ist eine leere Methode
+// Proxy-Context: merkt sich gesetzte Eigenschaften (fillStyle, globalAlpha …) und die Transformationsmatrix
+// (save/restore/translate/scale/rotate/transform/setTransform → getTransform liefert echte Werte, wichtig für die
+// Auflösungsstufe k im Bären-Renderer); alles andere ist eine leere Methode
 function makeCtx(canvas, rec) {
+  let M = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const apply = (m) => { const r = mul(M, m); M = [r.a, r.b, r.c, r.d, r.e, r.f]; };
+  const tf = {
+    save() { stack.push(M.slice()); }, restore() { if (stack.length) M = stack.pop(); },
+    translate(x, y) { apply(matrix(1, 0, 0, 1, +x || 0, +y || 0)); },
+    scale(x, y) { apply(matrix(+x, 0, 0, y === undefined ? +x : +y, 0, 0)); },
+    rotate(r) { const c = Math.cos(r), s = Math.sin(r); apply(matrix(c, s, -s, c, 0, 0)); },
+    transform(a, b, c, d, e, f) { apply(matrix(a, b, c, d, e, f)); },
+    setTransform(a, b, c, d, e, f) { M = (a && typeof a === 'object') ? [a.a, a.b, a.c, a.d, a.e, a.f] : a === undefined ? [1, 0, 0, 1, 0, 0] : [a, b, c, d, e, f]; },
+    resetTransform() { M = [1, 0, 0, 1, 0, 0]; },
+  };
   const props = { canvas, globalAlpha: 1, globalCompositeOperation: 'source-over', fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, font: '10px sans-serif', textAlign: 'start', shadowBlur: 0, shadowColor: 'rgba(0,0,0,0)', filter: 'none', lineDashOffset: 0, imageSmoothingEnabled: true };
   const special = {
     measureText: (t) => ({ width: 40, actualBoundingBoxAscent: 8, actualBoundingBoxDescent: 2 }),
-    getTransform: () => identity(),
+    getTransform: () => matrix(...M),
     createLinearGradient: () => ({ addColorStop() {} }),
     createRadialGradient: () => ({ addColorStop() {} }),
     createConicGradient: () => ({ addColorStop() {} }),
@@ -46,6 +62,7 @@ function makeCtx(canvas, rec) {
   return new Proxy(props, {
     get(o, k) {
       if (k in special) return special[k];
+      if (k in tf) return function () { if (rec) rec.push([k, ...arguments]); tf[k].apply(null, arguments); };
       if (k in o) return o[k];
       if (typeof k === 'symbol') return undefined;
       return fns[k] || (fns[k] = function () { if (rec) rec.push([k, ...arguments]); });

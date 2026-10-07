@@ -456,7 +456,7 @@ MU.frage={
 Art.MUSTER = MU;
 
 // ================================================================ Sprite-Sätze (pro Modell × Auflösung, LRU)
-var sets=[];
+var sets=[], SETS_MAX=5; // Speicherbudget: bis ~18 MB je Satz bei k=3,4 (Gutachten P2-6), früher 10 Sätze
 // Hysterese: vorhandenen Satz wiederverwenden, wenn er höchstens ~20 % hoch- oder 2,2× herunterskaliert würde
 // (Kamera-Zoom im Finale backt so nicht jede Stufe neu)
 function getSet(idx,k,sc){
@@ -464,8 +464,9 @@ function getSet(idx,k,sc){
   for(var i=0;i<sets.length;i++){ var st=sets[i]; if(st.idx!==idx) continue;
     if(st.k===k || (sc && st.k>=sc*0.82 && st.k<=sc*2.2 && (best<0 || st.k<sets[best].k))) { best=i; if(st.k===k) break; } }
   if(best>=0){ var hit=sets[best]; if(best>0){ sets.splice(best,1); sets.unshift(hit); } return hit; }
-  var ns=buildSet(idx,k); sets.unshift(ns); if(sets.length>10) sets.pop(); Art.bakes=(Art.bakes||0)+1; return ns;
+  var ns=buildSet(idx,k); sets.unshift(ns); if(sets.length>SETS_MAX) sets.pop(); Art.bakes=(Art.bakes||0)+1; return ns;
 }
+Art.setCount=function(){ return sets.length; };
 function buildSet(idx,k){
   var m=Art.MODELS[idx]||Art.MODELS[0], P=pal(idx), M=MU[m.muster]||{};
   var S={idx:idx,k:k};
@@ -910,9 +911,19 @@ Art.drawSticker = function(g,typ,x,y,r,col){
 };
 
 // ================================================================ Thumbnails (Wahl, Album) — einmal komponiert, gecacht
-var thumbs={};
+// Speicherbudget: nur die zwei zuletzt benutzten Größen bleiben (Wahl-Raster + Album-Bild an der Wand);
+// nach einem Größenwechsel (Drehung, anderes Raster) fallen die Kacheln der ältesten Größe weg.
+var thumbs={}, thumbSizes=[];
+function thumbSize(size){
+  var i=thumbSizes.indexOf(size); if(i===0) return;
+  if(i>0) thumbSizes.splice(i,1);
+  thumbSizes.unshift(size);
+  while(thumbSizes.length>2){ var alt='|'+thumbSizes.pop(); for(var key in thumbs) if(key.slice(-alt.length)===alt) delete thumbs[key]; }
+}
+Art.thumbCount=function(){ return Object.keys(thumbs).length; };
 Art.thumb = function(idx,size){
   size=Math.max(16,Math.round(size||128)); idx=Art.MODELS[idx]?idx:0;
+  thumbSize(size);
   var key=idx+'|'+size; if(thumbs[key]) return thumbs[key];
   var c=Fx.canvas(size,size), g=c.getContext('2d'), U=size/500;
   g.translate(size/2,size*0.56); g.scale(U,U); g.translate(-210,-243.6);

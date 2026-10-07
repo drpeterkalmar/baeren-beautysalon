@@ -111,10 +111,16 @@ function ensureRoom(){
 }
 // r20 (Deko): während der Kamerafahrt den neuen Raum in Portionen in einen zweiten Canvas backen (je Bild ~2,5 ms,
 // danach erzwungenes Rastern über eine 1-px-Kopie) und erst am Ende der Fahrt austauschen → kein großer Ruckler.
-var bake=null, spareCv=null, flushCv=null;
+var bake=null, spareCv=null, flushCv=null, restT=0;
 function flushRoom(cv){
   if(!flushCv){ flushCv=document.createElement('canvas'); flushCv.width=flushCv.height=256; }
   var fg=flushCv.getContext('2d'); fg.drawImage(cv,0,0,1,1,0,0,1,1); fg.clearRect(0,0,256,256);
+}
+// Speicherbudget: den Ersatz-Raum (bis 16 MB) nach ~3 s Kamera-Ruhe freigeben; beim nächsten Wechsel wird er neu angelegt
+function releaseSpare(dt){
+  if(tw || bake){ restT=0; return; }
+  restT+=dt;
+  if(restT>3 && spareCv && spareCv.width>1){ spareCv.width=spareCv.height=1; }
 }
 function stepRoom(){
   var P=roomPlan(); if(!P) return;
@@ -161,6 +167,11 @@ G.starBurst=function(i){
   Fx.P.emit('twinkle',p[0],p[1],{n:2,speed:40,size:26,life:0.6,grav:0,layer:'screen'});
 };
 G.tier=function(){ return Fx.Q.tier; };
+// Canvas-Speicher in Gerätepixeln (für Prüfwerkzeuge/Unit-Tests; ×4 = Bytes)
+G.canvasMem=function(){
+  var px=function(c){ return c ? c.width*c.height : 0; };
+  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
+};
 
 // ---- Eingabe (Touch zuerst; Maus bewegt nur den Blick) ----
 var down=false, worldDown=false, activeId=null, lastW=[0,0], rubT=0;
@@ -366,6 +377,7 @@ function render(t){
   Fx.P.draw(g,'screen');
   // Crossfade vom alten Bild (kein harter Schnitt)
   var q=(t-snapT)/0.38;
+  if(snap && q>=1 && snap.width>1){ snap.width=snap.height=1; } // Überblendung vorbei → Schnappschuss-Speicher freigeben
   if(snap && q<1){
     g.save(); g.setTransform(1,0,0,1,0,0);
     g.globalAlpha=1-Fx.ease.inOutCubic(q);
@@ -399,6 +411,7 @@ function frame(ts){
   update(dt);
   updateCamera(dt);
   if(Fx.DEKO && Room.steps) stepRoom(); else if(!tw) ensureRoom();
+  releaseSpare(dt);
   var w0=performance.now();
   render(t);
   tiers(dtRaw*1000,performance.now()-w0,dt);

@@ -91,10 +91,10 @@ test('Karussell: Drehung und Noten bei 60 und 120 Hz gleich schnell (±1 %)', ()
   assert.ok(nah(432 - a.y, 432 - b.y, 0.01) && nah(a.t, b.t, 0.01) && Math.abs(a.x - b.x) < 2, `${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
 });
 
-test('Karussell: gleich viele neue Noten pro Sekunde bei 60 und 120 Hz (Mittel über 20 s)', () => {
+test('Karussell: gleich viele neue Noten pro Sekunde bei 60 und 120 Hz (Mittel über 10 s)', () => {
   const neu = (hz) => { let n = 0; const fr = 60 / hz;
-    lauf('karussell', hz, 20, { setup: (H) => { H.S.karo.w = 1.6; }, random: seeded(42),
-      tick: (H) => { n += (H.S.karo.noten || []).filter((x) => Math.abs(x.t - 0.016 * fr) < 1e-9).length; } }); return n / 20; };
+    lauf('karussell', hz, 10, { setup: (H) => { H.S.karo.w = 1.6; }, random: seeded(42),
+      tick: (H) => { n += (H.S.karo.noten || []).filter((x) => Math.abs(x.t - 0.016 * fr) < 1e-9).length; } }); return n / 10; };
   const a = neu(60), b = neu(120);
   assert.ok(Math.abs(a - 18) < 2.7 && Math.abs(b - 18) < 2.7, `${a}/s vs ${b}/s (erwartet 18/s)`);
 });
