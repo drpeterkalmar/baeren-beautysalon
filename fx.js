@@ -5,7 +5,13 @@
 var Fx = window.BSFx = {};
 var TAU = Math.PI*2;
 Fx.TAU = TAU;
-window.BS_VERSION = '20.3';
+// Version kommt aus der ?v=-Query dieses Skript-Tags in index.html (eine Quelle, kein Build-Schritt);
+// die Konstante ist nur der Rückfall (z. B. Datei ohne Query geladen). Heben: python3 tools/bump-version.py X.Y
+window.BS_VERSION = (function(){
+  var v='20.3';
+  try{ var cs=document.currentScript, m=cs && cs.src && /[?&]v=([^&#]+)/.exec(cs.src); if(m) v=decodeURIComponent(m[1]); }catch(e){}
+  return v;
+})();
 // r20 Deko-Runde: neue Optik (Licht, Einrichtung, Glitzer) — ?deko=0 zeigt das alte Aussehen (A/B-Vergleich)
 Fx.DEKO = !/[?&]deko=0(&|$)/.test(location.search||'');
 // "Bewegung reduzieren" (Betriebssystem): weniger Wackeln, kein Bildschirm-Schütteln, weniger Partikelregen

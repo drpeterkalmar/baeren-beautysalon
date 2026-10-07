@@ -10,12 +10,23 @@ Vanilla JavaScript + Canvas, kein Build-Step, keine externen Assets (prozedural 
 
 Einfach `index.html` öffnen oder statisch hosten (GitHub Pages).
 
+## Version heben = ein Befehl
+
+```sh
+python3 tools/bump-version.py 20.4          # setzt alle ?v= in index.html (+ Rückfallwert in fx.js)
+python3 tools/bump-version.py 20.4 --check  # prüft nur, ob überall 20.4 steht
+```
+
+Das Spiel liest seine Version (`BS_VERSION`, unten links im Menü) aus der `?v=`-Query von `fx.js` — es gibt nur noch
+eine Quelle, die gleichzeitig das Cache-Busting für GitHub Pages ist.
+
 ## Prüfen
 
 **Ohne Browser (Sekunden, vor jedem Commit):**
 
 ```sh
 node --test tests/unit
+python3 -m unittest discover -s tests/unit -p "test_*.py"   # bump-Werkzeug (läuft auch im Node-Test mit)
 ```
 
 Lädt die Spiel-Module per `node:vm` in eine Sandbox (`tests/unit/harness.mjs`, keine npm-Pakete) und prüft u. a.
