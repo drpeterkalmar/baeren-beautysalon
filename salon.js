@@ -545,6 +545,7 @@ function buildAquarium(){
 S.update = function(dt){
   if(!(dt>0)) return;
   var fr=dt*60, st=S.state;
+  if(st==='aquarium' && S.aqua) updAquarium(fr);
 };
 
 // ---- Zeichnen ----------------------------------------------
@@ -2060,6 +2061,63 @@ function aquaInit(aq,fr){
     });
   }
 }
+// Simulation (aus S.update): Futter sinkt und wabert, Fische schwimmen/schnappen, Blasen steigen, Dose kippt zurück.
+// Reihenfolge und Zufallsaufrufe wie früher im Zeichenpfad; Schritte pro Bild × fr (bei 60 Hz identisch).
+// Wie früher sind Körner, die in diesem Schritt am Boden ankommen oder gefressen werden, in diesem Bild noch zu
+// sehen (Zeichenlisten aq._futterBild/_blasenBild); ebenso Blasen, die in diesem Schritt oben ankommen.
+function updAquarium(fr){
+  var aq=S.aqua, A=aquaLayout(), fr0=A.fr, by0=A.by0, bh=A.bh;
+  aquaInit(aq,fr0);
+  var t=performance.now()/1000;
+  // Futter-Körner: sinken, wabern
+  for(var fi=aq.futter.length-1;fi>=0;fi--){
+    var fd=aq.futter[fi];
+    if(fd.y<by0+6) fd.y=by0+6; // r19: Körner starten an der Dose über dem freien Wasser
+    fd.y+=fd.vy*0.016*fr; fd.vy=Math.min(fd.vy+8*0.016*fr, 46);
+    fd.x+=Math.sin(t*3+fd.ph)*0.6*fr;
+  }
+  aq._futterBild=aq.futter.slice();
+  for(fi=aq.futter.length-1;fi>=0;fi--) if(aq.futter[fi].y>by0+bh-30) aq.futter.splice(fi,1);
+  // Fische: idle schwimmen; Futter = schwimmen heran und schnappen
+  aq.fisch.forEach(function(f){
+    var naechstes=null, nd=1e9;
+    for(var fx=0;fx<aq.futter.length;fx++){
+      var fk=aq.futter[fx];
+      var d2=(fk.x-f.x)*(fk.x-f.x)+(fk.y-f.y)*(fk.y-f.y);
+      if(d2<nd){ nd=d2; naechstes=fk; }
+    }
+    if(naechstes){
+      var dx=naechstes.x-f.x, dy=naechstes.y-f.y, dd=Math.sqrt(nd)||1;
+      f.vx+=(dx/dd)*90*0.016*fr; f.vy+=(dy/dd)*90*0.016*fr;
+      if(dd<16*f.s/FISCH_K+4){ // schnappen!
+        var idx=aq.futter.indexOf(naechstes); aq.futter.splice(idx,1);
+        for(var bp=0;bp<5;bp++) aq.blasen.push({x:f.x+(Math.random()-0.5)*10,y:f.y-8,t:0,v:-60-Math.random()*30});
+        window.BSGame && window.BSGame.spaTupfer && window.BSGame.spaTupfer(f.x,f.y);
+        if(t-(aq._freuT||0)>0.9){ aq._freuT=t; react('happy',0.5); } // r19: Bär freut sich mit
+      }
+    } else {
+      // sanfte Idle-Wanderung
+      f.vx+=(Math.random()-0.5)*18*0.016*fr;
+      f.vy+=(Math.random()-0.5)*12*0.016*fr;
+    }
+    var vmax=70, vmag=Math.hypot(f.vx,f.vy)||1;
+    if(vmag>vmax){ f.vx*=vmax/vmag; f.vy*=vmax/vmag; }
+    f.x+=f.vx*0.016*3.4*fr; f.y+=f.vy*0.016*3.4*fr;
+    if(f.x<fr0.x0){ f.x=fr0.x0; f.vx=Math.abs(f.vx); }
+    if(f.x>fr0.x1){ f.x=fr0.x1; f.vx=-Math.abs(f.vx); }
+    if(f.y<fr0.y0){ f.y=fr0.y0; f.vy=Math.abs(f.vy)*0.6; }
+    if(f.y>fr0.y1){ f.y=fr0.y1; f.vy=-Math.abs(f.vy)*0.6; }
+    if(Math.random()<0.006*fr) aq.blasen.push({x:f.x,y:f.y-8,t:0,v:-40-Math.random()*25});
+  });
+  // Blasen: steigen auf
+  for(var bi=aq.blasen.length-1;bi>=0;bi--){
+    var bl=aq.blasen[bi];
+    bl.t+=0.016*fr; bl.y+=bl.v*0.016*fr; bl.x+=Math.sin(bl.t*7)*0.8*fr;
+  }
+  aq._blasenBild=aq.blasen.slice();
+  for(bi=aq.blasen.length-1;bi>=0;bi--){ var b0=aq.blasen[bi]; if(b0.y<by0+6 || b0.t>2.2) aq.blasen.splice(bi,1); }
+  if(aq.fuetter>0) aq.fuetter=Math.max(0,aq.fuetter-0.016*fr);
+}
 function drawAquarium(g){
   var aq=S.aqua; if(!aq) return;
   var A=aquaLayout(), fr=A.fr;
@@ -2088,60 +2146,25 @@ function drawAquarium(g){
   if(aq.deko===1){ drawSchiff(g, dx, by0+bh-64, 1); aq._dekoBox=[dx-50,by0+bh-64-54,100,78]; }
   else if(aq.deko===2){ drawSchatz(g, dx, by0+bh-58, 1, t); aq._dekoBox=[dx-34,by0+bh-58-42,68,60]; }
   else aq._dekoBox=null;
-  // Futter-Körner: sinken, wabern
-  for(var fi=aq.futter.length-1;fi>=0;fi--){
-    var fd=aq.futter[fi];
-    if(fd.y<by0+6) fd.y=by0+6; // r19: Körner starten an der Dose über dem freien Wasser
-    fd.y+=fd.vy*0.016; fd.vy=Math.min(fd.vy+8*0.016, 46);
-    fd.x+=Math.sin(t*3+fd.ph)*0.6;
+  // Futter-Körner (Bewegung in updAquarium; Zeichenliste enthält auch die eben gefressenen/gelandeten)
+  var fb=aq._futterBild||aq.futter;
+  for(var fi=fb.length-1;fi>=0;fi--){
+    var fd=fb[fi];
     circle2(g,fd.x,fd.y,FUTTER_R,'#8a5a2a');
     circle2(g,fd.x-1.2,fd.y-1.2,FUTTER_R*0.45,'#c99a4f');
-    if(fd.y>by0+bh-30) aq.futter.splice(fi,1);
   }
-  // Fische: idle schwimmen; Futter = schwimmen heran und schnappen
-  aq.fisch.forEach(function(f){
-    var naechstes=null, nd=1e9;
-    for(var fx=0;fx<aq.futter.length;fx++){
-      var fk=aq.futter[fx];
-      var d2=(fk.x-f.x)*(fk.x-f.x)+(fk.y-f.y)*(fk.y-f.y);
-      if(d2<nd){ nd=d2; naechstes=fk; }
-    }
-    if(naechstes){
-      var dx=naechstes.x-f.x, dy=naechstes.y-f.y, dd=Math.sqrt(nd)||1;
-      f.vx+=(dx/dd)*90*0.016; f.vy+=(dy/dd)*90*0.016;
-      if(dd<16*f.s/FISCH_K+4){ // schnappen!
-        var idx=aq.futter.indexOf(naechstes); aq.futter.splice(idx,1);
-        for(var bp=0;bp<5;bp++) aq.blasen.push({x:f.x+(Math.random()-0.5)*10,y:f.y-8,t:0,v:-60-Math.random()*30});
-        window.BSGame && window.BSGame.spaTupfer && window.BSGame.spaTupfer(f.x,f.y);
-        if(t-(aq._freuT||0)>0.9){ aq._freuT=t; react('happy',0.5); } // r19: Bär freut sich mit
-      }
-    } else {
-      // sanfte Idle-Wanderung
-      f.vx+=(Math.random()-0.5)*18*0.016;
-      f.vy+=(Math.random()-0.5)*12*0.016;
-    }
-    var vmax=70, vmag=Math.hypot(f.vx,f.vy)||1;
-    if(vmag>vmax){ f.vx*=vmax/vmag; f.vy*=vmax/vmag; }
-    f.x+=f.vx*0.016*3.4; f.y+=f.vy*0.016*3.4;
-    if(f.x<fr.x0){ f.x=fr.x0; f.vx=Math.abs(f.vx); }
-    if(f.x>fr.x1){ f.x=fr.x1; f.vx=-Math.abs(f.vx); }
-    if(f.y<fr.y0){ f.y=fr.y0; f.vy=Math.abs(f.vy)*0.6; }
-    if(f.y>fr.y1){ f.y=fr.y1; f.vy=-Math.abs(f.vy)*0.6; }
-    drawFisch(g, f.x, f.y, f.s, f.c, f.vx<0, t+f.ph);
-    if(Math.random()<0.006) aq.blasen.push({x:f.x,y:f.y-8,t:0,v:-40-Math.random()*25});
-  });
-  // Blasen: steigen auf
-  for(var bi=aq.blasen.length-1;bi>=0;bi--){
-    var bl=aq.blasen[bi];
-    bl.t+=0.016; bl.y+=bl.v*0.016; bl.x+=Math.sin(bl.t*7)*0.8;
+  // Fische
+  aq.fisch.forEach(function(f){ drawFisch(g, f.x, f.y, f.s, f.c, f.vx<0, t+f.ph); });
+  // Blasen
+  var bb=aq._blasenBild||aq.blasen;
+  for(var bi=bb.length-1;bi>=0;bi--){
+    var bl=bb[bi];
     g.globalAlpha=Math.max(0,0.8-bl.t*0.4);
     g.strokeStyle='rgba(255,255,255,0.9)'; g.lineWidth=1.6;
     g.beginPath(); g.arc(bl.x,bl.y,3+bl.t*2,0,Math.PI*2); g.stroke();
-    if(bl.y<by0+6 || bl.t>2.2) aq.blasen.splice(bi,1);
   }
   g.globalAlpha=1;
   // Futter-Dose über dem freien Wasser, kippt beim Füttern
-  if(aq.fuetter>0) aq.fuetter=Math.max(0,aq.fuetter-0.016);
   var cx=A.canX, tilt=Math.sin(Math.min(1,aq.fuetter/1.2)*Math.PI)*0.5;
   g.save(); g.translate(cx,by0-26); g.rotate(tilt);
   g.fillStyle='#c0392b'; g.fillRect(-26,-20,52,40);

@@ -31,3 +31,40 @@ export function lauf(st, hz, secs, { setup, random = () => 0.5, tick } = {}) {
   for (let i = 0; i < n; i++) { H.tick(dt * 1000); H.S.update(dt); H.S.draw(H.g); if (tick) tick(H, (i + 1) * dt); }
   return H;
 }
+
+// Aquarium: feste Fische/Körner, Zufall neutral (0,5 → keine Idle-Wanderung, keine Zufallsblasen)
+function aquaSetup(futter) {
+  return (H) => {
+    const aq = H.S.aqua;
+    aq.fisch = [[200, 120, 41, 8], [420, 200, -35, -6], [560, 300, 28, 12], [300, 260, -50, 3], [480, 90, 20, -9], [650, 180, -22, 5]]
+      .map(([x, y, vx, vy], i) => ({ x, y, vx, vy, c: '#ff8a5c', ph: i, s: 1.35, ziel: null }));
+    if (futter) for (let i = 0; i < 8; i++) aq.futter.push({ x: 260 + i * 40, y: 40, vy: 25 + i * 3, ph: i });
+  };
+}
+const fische = (H) => H.S.aqua.fisch.map((f) => [f.x, f.y]);
+
+test('Aquarium: Fische schwimmen bei 60 und 120 Hz gleich weit (±1 %)', () => {
+  const a = lauf('aquarium', 60, 2, { setup: aquaSetup(false) }), b = lauf('aquarium', 120, 2, { setup: aquaSetup(false) });
+  const pa = fische(a), pb = fische(b);
+  pa.forEach((p, i) => { assert.ok(nah(p[0], pb[i][0], 0.01) && nah(p[1], pb[i][1], 0.01), `Fisch ${i}: ${p} vs ${pb[i]}`); });
+});
+
+test('Aquarium: Füttern – Körner, Schnappen und Dose zeitgleich bei 60 und 120 Hz', () => {
+  const stand = (H) => ({ futter: H.S.aqua.futter.length, fuetter: H.S.aqua.fuetter, fisch: fische(H) });
+  const mit = (hz) => { const out = []; lauf('aquarium', hz, 2, { setup: (H) => { aquaSetup(true)(H); H.S.aqua.fuetter = 1.2; },
+    tick: (H, t) => { if (Math.abs(t * 4 - Math.round(t * 4)) < 1e-9) out.push(stand(H)); } }); return out; };
+  const a = mit(60), b = mit(120);
+  assert.equal(a.length, 8);
+  for (let i = 0; i < a.length; i++) {
+    assert.equal(a[i].futter, b[i].futter, `t=${(i + 1) / 4}s Körner ${a[i].futter} vs ${b[i].futter}`);
+    assert.ok(nah(a[i].fuetter, b[i].fuetter, 0.01, 1e-6), `Dose ${a[i].fuetter} vs ${b[i].fuetter}`);
+  }
+  // nach 1 s (Jagd aufs Futter, Schnappen): Fischpositionen auf ±1 % der Beckenbreite (620) gleich.
+  // (Euler-Schritte: die Abweichung halbiert sich mit halber Schrittweite; 120 vs. 240 Hz ≈ 0,6 Einheiten)
+  a[3].fisch.forEach((p, i) => assert.ok(Math.hypot(p[0] - b[3].fisch[i][0], p[1] - b[3].fisch[i][1]) <= 6.2, `Fisch ${i} ${p} vs ${b[3].fisch[i]}`));
+});
+
+test('Aquarium: Futterkorn sinkt in 1 s gleich tief (60/120 Hz, ±1 %)', () => {
+  const y = (hz) => lauf('aquarium', hz, 1, { setup: (H) => { H.S.aqua.fisch = []; H.S.aqua.futter.push({ x: 300, y: 50, vy: 22, ph: 0 }); } }).S.aqua.futter[0].y;
+  assert.ok(nah(y(60) - 50, y(120) - 50, 0.01), `${y(60)} vs ${y(120)}`);
+});
