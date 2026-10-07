@@ -110,3 +110,12 @@ test('Tanz: Noten steigen bei 60 und 120 Hz gleich schnell, eine neue alle 0,4 s
   }
   assert.equal(a[3].length, 5);                                // 2 s / 0,4 s
 });
+
+test('Geburtstag: Rauchwölkchen leben bei 60 und 120 Hz gleich lange (1 s)', () => {
+  const st = (hz) => { const out = []; lauf('geburtstag', hz, 1.5, { setup: (H) => { H.S.kuchen.rauch = [{ x: 600, y: 380, t: 0 }, { x: 606, y: 380, t: -8 }]; },
+    tick: (H, t) => { if (Math.abs(t * 4 - Math.round(t * 4)) < 1e-9) out.push(H.S.kuchen.rauch.map((r) => r.t)); } }); return out; };
+  const a = st(60), b = st(120);
+  assert.deepEqual(a.map((x) => x.length), [2, 2, 2, 2, 0, 0]);   // bei 1,0 s steht t genau auf 60 (weg erst bei t > 60)
+  assert.deepEqual(b.map((x) => x.length), a.map((x) => x.length));
+  a.forEach((x, i) => x.forEach((v, j) => assert.ok(nah(v, b[i][j], 0.01), `${v} vs ${b[i][j]}`)));
+});

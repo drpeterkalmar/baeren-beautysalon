@@ -549,6 +549,7 @@ S.update = function(dt){
   if(st==='zauber' && S.zauber) updZauber(fr);
   if(st==='karussell' && S.karo) updKarussell(fr);
   if(st==='tanz' && S.tanz) updNoten(fr);
+  if(st==='geburtstag' && S.kuchen) updRauch(fr);
 };
 
 // ---- Zeichnen ----------------------------------------------
@@ -998,16 +999,16 @@ function drawKuchen(g){
       g.globalAlpha=0.18; circle2(g,px,fy-6,26,'#ffcf63'); g.globalAlpha=1;
     }
   }
-  // Rauchwölkchen für gelöschte Kerzen
-  for(var r2=S.kuchen.rauch.length-1;r2>=0;r2--){
-    var rp=S.kuchen.rauch[r2]; rp.t++;
+  // Rauchwölkchen für gelöschte Kerzen (Bewegung in updRauch)
+  var rb=S.kuchen._rauchBild||S.kuchen.rauch;
+  for(var r2=rb.length-1;r2>=0;r2--){
+    var rp=rb[r2];
     var ra=Math.max(0, 1-rp.t/60);
     g.globalAlpha=ra*0.6;
     g.fillStyle='#cfd6de';
     var wob2=Math.sin(rp.t*0.13)*12;
     circle2(g,rp.x+wob2*0.2, rp.y-rp.t*1.6, 6+rp.t*0.16, '#cfd6de');
     circle2(g,rp.x+8+wob2*0.3, rp.y-rp.t*1.6-8, 4+rp.t*0.12, '#dfe5ec');
-    if(rp.t>60) S.kuchen.rauch.splice(r2,1);
   }
   g.globalAlpha=1;
   // Feier-Text, wenn alle aus
@@ -1022,6 +1023,14 @@ function drawKuchen(g){
     g.fillStyle='#7a4b8f'; g.fillText('🎉 Alles Gute! 🎂',0,0);
     g.restore();
   }
+}
+// Kuchen-Rauch (aus S.update): rp.t zählt 60-Hz-Bilder (× fr), nach 60 Bildern (1 s) weg;
+// Zeichenliste _rauchBild zeigt das letzte Bild wie früher noch (Alpha dort 0).
+function updRauch(fr){
+  var R=S.kuchen.rauch;
+  for(var i=R.length-1;i>=0;i--) R[i].t+=fr;
+  S.kuchen._rauchBild=R.slice();
+  for(i=R.length-1;i>=0;i--) if(R[i].t>60) R.splice(i,1);
 }
 // Disco: Kugel + Lichtpunkte + Farbschein
 function drawDisco(g){
