@@ -8,8 +8,8 @@ unter „Browser-Abnahme (Heavy-Job)“. Version **nicht** gehoben (steht weiter
 zwei Bild-Zähler in game.js/deko.js fertig: Registry, `S.setState`, **alle 24 Stationen in `stations/<id>.js`**
 (salon.js 2.174 → 464 Zeilen), Hit-Boxen aus `hit()`, stationsgebundene Logik aus game.js `update()` in den Stationen –
 jede Station hoch und quer Bild für Bild gegen den Stand vor dem Umzug geprüft. Schritt 8 (Accessoire-Sprites) ist
-nicht angefangen (braucht Pixel-Vergleich im Browser), Schritt 11 nicht freigegeben. **Neue URL-Regler gibt es keine**: der Auftrag nennt keine; `?deko=0` ist unangetastet. Alles
-Neue ist ab sofort aktiv (Default an).
+nicht angefangen (braucht Pixel-Vergleich im Browser), Schritt 11 nicht freigegeben.
+**Neue URL-Regler gibt es keine**: der Auftrag nennt keine; `?deko=0` ist unangetastet. Alles Neue ist aktiv (Default an).
 
 ## Prüfen
 
@@ -41,8 +41,8 @@ Referenzen des alten Stands (eingecheckt, reproduzierbar per Skript):
 - Geprüft: Smoke 24 Stationen (nur Kern-Module und kompletter Satz mit game.js), bs_baer-Roundtrip, kaputter Speicher,
   Aufräumen beim Stationswechsel, aquaLayout hoch/quer, Finale feuert jedes Ereignis genau einmal, Farb-Mathe gegen
   Unsinn, Partikel-Pool ≤ MAXP.
-- Laufzeit: Auftrag nennt < 2 s; die ganze Suite braucht ~2,5–3 s (der Speicher-Ablauftest allein ~2 s, zwei volle
-  Abläufe durch game.js). Wenn das stört: in `speicher.test.mjs` den Ablauf kürzen.
+- Laufzeit: Auftrag nennt < 2 s; die ganze Suite (97 Tests) braucht ~3–4 s, davon ~2 s der Speicher-Ablauftest
+  (zwei volle Abläufe durch game.js) und ~1 s die Schleifen-Referenz. Wenn das stört: dort die Abläufe kürzen.
 - Browser: nichts.
 
 ### Schritt 1 – Album-Fotos echte Schnappschüsse (P1-1) — fertig
@@ -84,7 +84,8 @@ Referenzen des alten Stands (eingecheckt, reproduzierbar per Skript):
 
 ### Schritt 6 – Simulation in S.update(dt) (P2-3) — fertig
 - salon.js `S.update(dt)`, von game.js `update()` direkt vor `BSDeko.update` aufgerufen. Aquarium (Futter, Fische,
-  Blasen, Dose), Zauber (Spruch-Uhr), Karussell (Winkel, Noten), Tanz-Noten, Kuchen-Rauch; je ein Commit.
+  Blasen, Dose), Zauber (Spruch-Uhr), Karussell (Winkel, Noten), Tanz-Noten, Kuchen-Rauch; je ein Commit. Seit dem
+  Stations-Umzug (Schritt 10) liegen diese Funktionen als `update(dt, fr)` in `stations/<id>.js`.
 - **Abweichung vom Auftragstext (bewusst):** statt `0.016 → dt` gilt `0.016 → 0.016·fr` mit `fr = dt·60`. Grund:
   `0.016` ist nicht 1/60; mit `dt` wären Fische/Zauber bei 60 Hz 4 % schneller als heute. So ist 60 Hz **exakt**
   wie vorher (Zeichen-Protokoll Bild für Bild gleich der Referenz 79d3ca7), 30/90/120 Hz pro Sekunde gleich schnell.
