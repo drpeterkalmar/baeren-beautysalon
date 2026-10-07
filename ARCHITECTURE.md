@@ -54,12 +54,16 @@ Kopfzeile (🏠 / Titel / ➜ / 🔊), Werkzeug-Tablett (Fließlayout, scrollbar
 Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Backen). Wahl-Raster: Thumbnails lazy, max. 1 Bake pro Frame.
 
 ## Umbau 20.4 (Gutachten 2026-10-05, P1 + P2)
-- **Stations-Registry** (salon.js): `S.registerStation({id, build, back, draw, update, tap, hit, onEnter, onLeave})`.
-  Jede umgezogene Station liegt in `stations/<id>.js` (eigenes `<script>` nach salon.js) und benutzt die Helfer `S.H`
+- **Stations-Registry** (salon.js): `S.registerStation({id, build, back, draw, frueh, update, tap, hit, onEnter, onLeave})`.
+  Alle 24 Stationen liegen in `stations/<id>.js` (je ein `<script>` nach salon.js) und benutzen die Helfer `S.H`
   (`btn`, `stationTabs`, `sfx`, `react`, `emit`, `headPos`, `accPop`, `circle2`, `ell2`, `kopie`, `neuerBaer`, `clawPos`,
-  `NICONS`, `baer(g)` = Bär am Standardplatz). `S.buildUI` / `S.draw` (+ `drawDeko` → `back`) / `S.update` / `S.tapBear`
-  fragen zuerst die Registry, sonst die alten if/else-Ketten. Hit-Boxen kommen aus `hit()` (aus dem Zustand berechnet),
-  nicht als Nebenwirkung des Zeichnens.
+  `NICONS`, `baer(g)` = Bär am Standardplatz). `S.buildUI` / `S.draw` (+ `drawDeko` → `back`) / `S.updateFrueh` /
+  `S.update` / `S.tapBear` rufen nur noch die Registry. salon.js (464 Zeilen) behält Zustand, Speichern, Knöpfe,
+  Menü/Wahl, Finale, Duftwolken und die Registry. Hit-Boxen kommen aus `hit()` (aus dem Zustand berechnet), nicht als
+  Nebenwirkung des Zeichnens: foto `album`, zauber `zauberstab`, geschenke `paket`, malbuch `flaechen`/`rahmen`,
+  zuckerwatte `stab`/`wolle`, ballon `ballon`, keks `teig` (liest auch game.js beim Ausrollen), waschen `brause`
+  (Duschstrahl in game.js). Diagnose-Werte fürs r19-Werkzeug entstehen weiter beim Zeichnen: `zirkus._pos/_r`,
+  `aqua._futterR/_dekoBox`.
 - **Zustandswechsel**: `S.setState(id)` = `S.state` + `S.buildUI()`. `buildUI` erkennt den Wechsel (`S._prev`) und ruft
   `onLeave` der alten / `onEnter` der neuen Station — greift auch, wenn Prüfwerkzeuge `S.state` direkt setzen.
   game.js `prevState` (Überblendung, Bildschirm-Partikel) und deko.js `prevSt` (Funkel-Schwung, Hüpfer) zählen weiter
@@ -67,8 +71,10 @@ Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Back
 - **Simulation pro Bild**: `S.update(dt)` (von game.js `update()` direkt vor `BSDeko.update`, dt ≤ 0,05 s). Alte
   Schritte pro Bild × `fr = dt·60` → bei 60 Hz exakt wie vorher, bei 30/90/120 Hz gleich schnell. Zeichenlisten
   (`_futterBild`, `_blasenBild`, `_notenBild`, `_rauchBild`) halten Dinge, die im selben Schritt verschwinden, wie früher
-  noch ein Bild sichtbar. Noch in game.js `update()`: Waschen/Dusche, Föhnen (Flausch), Spa (Entspannung), Eis
-  (Abschmelzen), Zuckerwatte, Massage, Keks, Ballon, Zauber-Pfote, Pirouetten-Abbau.
+  noch ein Bild sichtbar. Stations-Logik, die die Pose im selben Bild beeinflusst (Waschen/Dusche, Föhnen, Spa, Eis,
+  Zuckerwatte, Massage), steckt in `frueh(dt)`; game.js ruft `S.updateFrueh(dt)` am Anfang von `update()` (vor
+  `Art.updateBear`). In game.js bleiben nur Dinge, die auch außerhalb ihrer Station weiterlaufen (Geschenk-Schütteln,
+  Keks backen/naschen, Ballon, Zauber-Pfote, Pirouetten-Abbau, Abklingen der Entspannung, Blitz, Toast).
 - **Qualitäts-Automatik**: reine Funktion `Fx.Q.step(sample, perf)` (fx.js); erkennt saubere 30-Hz-Displays in der
   Warmlaufphase (base 33,3 ms), sonst exakt die alten Schwellen.
 - **Speicherbudget**: Sprite-Satz-LRU 5 (`SETS_MAX`), Thumbnails für zwei Größen, Ersatz-Raum nach 3 s Ruhe und

@@ -4,16 +4,17 @@ Stand: 07.10.2026, Branch `vorbau/baerensalon-umbau` (von `origin/main` = 79d3ca
 Gebaut **ohne Browser**: Lesen, Code, Node-/Python-Unit-Tests. Alles, was einen Browser braucht, steht je Schritt
 unter „Browser-Abnahme (Heavy-Job)“. Version **nicht** gehoben (steht weiter auf 20.3).
 
-**Kurz:** Schritte 0, 1, 2, 3, 4, 5, 6, 7, 9 sind im Code fertig und per Unit-Test belegt. Von Schritt 10 sind die
-Registry, `S.setState` und **17 von 24 Stationen** umgezogen, jede hoch und quer Bild für Bild gegen den Stand vor dem
-Umzug geprüft. Schritt 8 (Accessoire-Sprites) ist nicht angefangen (braucht Pixel-Vergleich im Browser), Schritt 11
-nicht freigegeben. **Neue URL-Regler gibt es keine**: der Auftrag nennt keine; `?deko=0` ist unangetastet. Alles
+**Kurz:** Schritte 0, 1, 2, 3, 4, 5, 6, 7, 9 sind im Code fertig und per Unit-Test belegt. Schritt 10 ist bis auf die
+zwei Bild-Zähler in game.js/deko.js fertig: Registry, `S.setState`, **alle 24 Stationen in `stations/<id>.js`**
+(salon.js 2.174 → 464 Zeilen), Hit-Boxen aus `hit()`, stationsgebundene Logik aus game.js `update()` in den Stationen –
+jede Station hoch und quer Bild für Bild gegen den Stand vor dem Umzug geprüft. Schritt 8 (Accessoire-Sprites) ist
+nicht angefangen (braucht Pixel-Vergleich im Browser), Schritt 11 nicht freigegeben. **Neue URL-Regler gibt es keine**: der Auftrag nennt keine; `?deko=0` ist unangetastet. Alles
 Neue ist ab sofort aktiv (Default an).
 
 ## Prüfen
 
 ```sh
-node --test tests/unit                                       # 88 Tests, ~3 s, ohne Browser
+node --test tests/unit                                       # 97 Tests, ~3–4 s, ohne Browser
 python3 -m unittest discover -s tests/unit -p "test_*.py"    # läuft auch im Node-Test mit
 ```
 
@@ -26,8 +27,10 @@ Referenzen des alten Stands (eingecheckt, reproduzierbar per Skript):
 - `tests/unit/fixtures/sim-ref-alt.json` aus 79d3ca7 (`node tests/unit/sim-ref.mjs`): Simulation von Aquarium,
   Zauber, Karussell, Tanz und Geburtstag Bild für Bild.
 - `tests/unit/fixtures/stationen-ref.json` aus a6e223c (`node tests/unit/stationen-ref.mjs`): alle 24 Stationen hoch
-  und quer, je 24 Bilder (Zeichen-Protokoll, Knöpfe, Tipps, Zustand) plus Tipp-Raster und alte Hit-Boxen.
-  a6e223c = Stand nach Schritt 0–7 + Registry, aber vor dem ersten Stations-Umzug.
+  und quer, je 24 Bilder (Zeichen-Protokoll, Knöpfe, Tipps, Zustand) plus Tipp-Raster und alte Hit-Boxen (nach Bild 3
+  und am Ende). a6e223c = Stand nach Schritt 0–7 + Registry, aber vor dem ersten Stations-Umzug.
+- `tests/unit/fixtures/spiel-ref.json` vom Arbeitsstand 104268f (`node tests/unit/spiel-ref.mjs`): Waschen, Föhnen,
+  Spa, Eis, Zuckerwatte, Massage je 300 Bilder über die echte game.js-Schleife (Zustand inkl. Pose und Partikel).
 
 ## Schritt für Schritt
 
@@ -131,38 +134,50 @@ Referenzen des alten Stands (eingecheckt, reproduzierbar per Skript):
 - **Browser-Abnahme:** `visual-check` Flow hoch + quer 0 Fehler, `bakes`-Zähler vorher/nachher; iPhone-Speicher im
   Safari-Web-Inspector (offener Punkt für Peter).
 
-### Schritt 10 – salon.js entflechten (P2-7/P2-8) — teilweise
+### Schritt 10 – salon.js entflechten (P2-7/P2-8) — fertig bis auf die Bild-Zähler in game.js/deko.js
 **Fertig:**
-- Registry `S.registerStation({id, build, back, draw, update, tap, hit, onEnter, onLeave})`, Helfer `S.H`, Dispatch in
-  `S.buildUI`/`S.draw`/`drawDeko` (`back`)/`S.update`/`S.tapBear`.
-- `S.setState(id)`; alle 12 direkten `S.state='…'; S.buildUI()` laufen darüber. Aufräumen (Waschen, Föhnen) als
-  `onLeave`, erkannt in `buildUI` → wirkt auch bei direkter Zuweisung durch deko-check/hitch-check/live-check.
-- **17 Stationen in `stations/<id>.js`**: foehnen, spa, disco, foto, tanz, schneiden, parfum, schmuecken, finish,
-  makeup, pfoten, zauber, karussell, geburtstag, zirkus, eis, massage. Hit-Boxen aus `hit()`: foto (`album`, ersetzt
-  `S._albumBoxes`), zauber (`zauberstab`, ersetzt `S._stabHitZ`); die übrigen treffen geometrisch aus dem Zustand.
-- Geprüft je Station: `stationen.test.mjs` (hoch + quer Bild für Bild + Tipp-Raster gegen a6e223c; `hit()` gleich den
-  alten Hit-Box-Werten; alte `S._…`-Variable wird nicht mehr gesetzt), `registry.test.mjs`.
+- Registry `S.registerStation({id, build, back, draw, frueh, update, tap, hit, onEnter, onLeave})`, Helfer `S.H`.
+  `S.buildUI` / `S.draw` (+ `drawDeko` → `back`) / `S.updateFrueh` / `S.update` / `S.tapBear` rufen nur noch die
+  Registry; die if/else-Ketten sind weg, ebenso tote Helfer (`drawStickers`, `roundRect`, `S.hitButton`).
+- `S.setState(id)`; alle 12 direkten `S.state='…'; S.buildUI()` laufen darüber. Aufräumen als `onLeave` (Waschen,
+  Föhnen), erkannt in `buildUI` → wirkt auch bei direkter Zuweisung durch deko-check/hitch-check/live-check.
+- **Alle 24 Stationen in `stations/<id>.js`** (je ein Commit, Reihenfolge einfach → komplex). Neue `<script>`-Tags in
+  index.html nach salon.js, vor ui.js (mit `?v=20.3`, `bump-version.py` zieht sie mit).
+- **Hit-Boxen aus `hit()`** statt Zeichen-Nebenwirkung: foto `album` (war `_albumBoxes`), zauber `zauberstab`
+  (`_stabHitZ`), geschenke `paket` (`_pakHit`), malbuch `flaechen`/`rahmen` (`_mbHit`/`_mbFrame`/`_mbHitLocal`),
+  zuckerwatte `stab`/`wolle` (`_stabHit`/`_wolleHit`), ballon `ballon` (`_ballHit`), keks `teig` (`_teigHit`),
+  waschen `brause` (`_brause`). game.js liest `teig` (Ausrollen) und `brause` (Duschstrahl) über die Registry,
+  `tools/visual-check.mjs` liest `paket` – jeweils mit Rückfall auf die alte Variable, damit die Werkzeuge auch auf
+  main (Vorher-Messung) laufen. Der Schwebe-Ballon (`bl.schweb`, Zufalls-Phase) entsteht jetzt in `update` statt im
+  Zeichenpfad; der Pirouetten-Winkel `tanz.spinA` ebenso.
+- **Stationslogik aus game.js `update()`**: Waschen/Dusche, Föhnen, Spa, Eis, Zuckerwatte, Massage als `frueh(dt)`;
+  game.js ruft `S.updateFrueh(dt)` genau dort, wo die Blöcke standen (vor `Art.updateBear`) → Reihenfolge und
+  Zufallsaufrufe unverändert (Abweichung zum Auftragstext: zweiter Haken neben `S.update`, weil `S.update` erst nach
+  der Pose läuft und z. B. die Spa-Entspannung sonst ein Bild später wirkte).
+- Geprüft: `stationen.test.mjs` (je Station hoch + quer Bild für Bild + Tipp-Raster gegen a6e223c; `hit()` gleich den
+  alten Werten nach Bild 3 und am Ende; alte `S._…`-Variable wird nicht mehr gesetzt), `spiel.test.mjs` (300 Bilder
+  game.js-Schleife je Station wie 104268f), `eingabe.test.mjs` (Zuckerwatte-Stab ziehen, Teig ausrollen/ausstechen,
+  Schaum rubbeln/Dusche über echte pointer-Ereignisse), `registry.test.mjs`, Simulations-Referenz 79d3ca7.
 
-**Offen (bewusst nicht gemacht):**
-- 7 komplexe Stationen: waschen (`S._brause` liest game.js `showerFx`), keks (`S._teigHit` liest game.js beim
-  Ausrollen), zuckerwatte (`_stabHit`, `_wolleHit`, Drag in game.js), ballon (`_ballHit`, `bl.schweb` entsteht im
-  Zeichenpfad), geschenke (`_pakHit` liest `tools/visual-check.mjs` Z. 118), malbuch (`_mbHit`, `_mbFrame`,
-  `_mbHitLocal`), aquarium. Die Referenz `stationen-ref.json` deckt sie schon ab; Umzug geht mit demselben Muster,
-  braucht aber Anpassungen in game.js bzw. visual-check und eine Browser-Abnahme der Eingaben (Ziehen/Rubbeln).
-- Stationslogik aus game.js `update()` (Waschen/Dusche, Föhnen-Flausch, Spa-Entspannung, Eis-Abschmelzen,
-  Zuckerwatte, Massage, Keks, Ballon, Zauber-Pfote) ist noch nicht in die Stationen gewandert. Grund: game.js ruft sie
-  heute **vor** `Art.updateBear`, `S.update` läuft danach; ein Umzug verschiebt z. B. die Spa-Entspannung um ein Bild
-  und ändert die Reihenfolge der Zufallsaufrufe → nicht mehr Bild für Bild belegbar, nur per Screenshot.
-  Der Pirouetten-Abbau (`S.tanz.spin`) läuft auch außerhalb der Station und bleibt deshalb in game.js.
+**Offen (bewusst):**
 - game.js `prevState` und deko.js `prevSt` sind nicht durch `S.setState` ersetzt (nur der salon.js-Zähler). Grund:
   beide reagieren absichtlich im **nächsten Bild** (Schnappschuss des letzten Bildes für die Überblendung,
   Bildschirm-Partikel löschen, Funkel-Schwung); als Haken im Tipp ausgelöst würden z. B. Partikel, die derselbe Tipp
-  danach erzeugt, nicht mehr gelöscht. Die Werkzeuge setzen `S.state` außerdem direkt.
-- `S.zirkus._pos/_r` entstehen weiter beim Zeichnen (Ballpositionen dieses Bildes, `visual-check --only=r19` misst daran).
+  danach erzeugt, nicht mehr gelöscht. Die Werkzeuge setzen `S.state` außerdem direkt. Wer das ändern will, braucht
+  einen Browser-Vergleich der Überblendung.
+- In game.js `update()` bleibt, was auch außerhalb der eigenen Station weiterläuft: Geschenk-Schütteln, Keks
+  backen/naschen, Ballon Pusten/Schreck, Zauber-Pfote, Pirouetten-Abbau, Abklingen der Entspannung, Blitz, Toast.
+  In eine Station verschoben würde es dort einfrieren (Verhaltensänderung).
+- Diagnose-Werte fürs r19-Werkzeug entstehen weiter beim Zeichnen: `zirkus._pos/_r`, `aqua._futterR/_dekoBox`.
+- Kleine Unschärfen der Referenz: Die Szenen tippen an festen Punkten und im 20er-Raster; Tanz reagiert überall mit
+  „verbraucht“, dort sieht das Raster keine Geometrie-Änderung (Treffer-Kreis 160·s). Pointer-Ziehen ist nur für
+  Zuckerwatte, Keks, Waschen und Massage (`S.dragBear`) abgedeckt.
 
-**Browser-Abnahme (Heavy-Job):** Screenshots der 17 umgezogenen Stationen hoch + quer vorher (main) / nachher
-(Branch), `python3 tests/pixel-diff.py … --max=1.0`; Flow `visual-check` hoch + quer (0 Fehler, 0 Knöpfe < 48 px);
-Album-Kachel laden, Zauberstab antippen, Pfoten lackieren, Kerzen, Massage-Streicheln per Touch.
+**Browser-Abnahme (Heavy-Job):** Screenshots aller 24 Stationen hoch + quer vorher (main) / nachher (Branch),
+`python3 tests/pixel-diff.py VORHER NACHHER --max=1.0`; Flow `visual-check` hoch + quer (0 Fehler, 0 Knöpfe < 48 px,
+nach jeder 4. Station laut Auftrag – hier reicht ein kompletter Flow, weil alle Stationen schon umgezogen sind);
+per Touch: Album-Kachel laden, Zauberstab, Pfoten lackieren, Kerzen, Paket, Ballon platzen, Malbuch-Flächen/Rahmen,
+Zuckerwatte-Stab ziehen, Teig ausrollen, Schaum rubbeln + Dusche (Duschstrahl an der Brause), Massage-Streicheln.
 
 ### Schritt 11 – `?deko=0` entfernen — nicht freigegeben, nicht angefasst
 
@@ -171,7 +186,7 @@ Album-Kachel laden, Zauberstab antippen, Pfoten lackieren, Kerzen, Massage-Strei
    Stufe 2 + Auto (Software-Raster, 4×), visual-check Flow hoch/quer (bakes), Screenshots aller 24 Stationen.
 2. Branch übernehmen (`git merge --ff-only vorbau/baerensalon-umbau` auf main ist möglich, main ist unverändert), dann
    dieselben Messungen nachher; Browser-Abnahmen oben je Schritt.
-3. Optional: Schritt 8 und die 7 offenen Stationen.
+3. Optional: Schritt 8 (Accessoire-Sprites) und die Bild-Zähler in game.js/deko.js.
 4. `python3 tools/bump-version.py 20.4`, Push, `node tests/live-check.mjs --expect=20.4` hoch + quer.
 5. UMBAU_BERICHT.md (Endfassung), CHECKS.md/ARCHITECTURE.md sind schon um den Umbau ergänzt (bitte gegenlesen).
 
@@ -180,9 +195,12 @@ Album-Kachel laden, Zauberstab antippen, Pfoten lackieren, Kerzen, Massage-Strei
 - Die Zeichen-Protokolle prüfen Aufrufe und Parameter, keine Pixel. Unterschiede, die nur im Rastern entstehen
   (z. B. Reihenfolge innerhalb eines Bildes ist gleich, aber Canvas-Zustand wie `lineCap` wird nicht mitgeschrieben),
   fängt erst der Pixel-Vergleich.
-- Kleiner Verhaltensunterschied durch `hit()`: Album-Kachel und Zauberstab sind jetzt auch antippbar, bevor die Station
-  einmal gezeichnet wurde (früher: erst ab dem ersten Bild); der Zauberstab-Treffer nutzt die Uhr im Moment des Tipps
-  statt des letzten Bildes (Versatz < 0,1 Einheiten).
+- Kleiner Verhaltensunterschied durch `hit()`: Album-Kacheln, Zauberstab, Paket, Malbuch-Flächen, Watte-Stab/-Wolle,
+  Teig und Ballon sind jetzt auch antippbar, bevor die Station einmal gezeichnet wurde (früher erst ab dem ersten
+  Bild); zeitabhängige Boxen (Zauberstab, Schwebe-Ballon) nutzen die Uhr im Moment des Tipps statt des letzten Bildes
+  (Versatz < 0,2 Einheiten). Direkt nach dem letzten „Pusten“ (bis zum nächsten Bild) gibt es keine Ballon-Box
+  (früher die des Mund-Ballons; der Tipp konnte da ohnehin nur ins Leere gehen, weil der Ballon gerade umspringt).
+- Die Teig-Box wächst jetzt schon zwischen zwei Bildern mit dem Ausrollen (früher Stand des letzten Bildes).
 - Schritt 6: Rundungsfrei gleich nur bei exakt 60 Hz; bei 59,9 Hz o. ä. minimal anders – gewollt (bildraten-unabhängig).
 - Nicht im Auftrag, beim Lesen gefunden (P3-4-Rest): `bs_baer` mit einem Nicht-Objekt (`'42'`, `'"x"'`) lässt salon.js
   beim Laden werfen (strict mode, `S.saved.fell = …` auf einer Zahl). Nicht behoben (P3, Verhalten unverändert gelassen).

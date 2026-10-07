@@ -375,10 +375,8 @@ function drawFinaleWelt(g){
 
 // Stations-Deko: kleine prozedurale Details, zurückhaltend
 function drawDeko(g){
-  var W=S.VW,H=S.VH;
-  if(S.state==='wahl'||S.state==='menu'||S.state==='finish-done') return;
   var R=REG[S.state];
-  if(R){ if(R.back) R.back(g); return; }
+  if(R && R.back) R.back(g);
 }
 // ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
 var NICONS=['🎵','🎶','♪','♫'];
