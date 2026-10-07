@@ -51,3 +51,19 @@ test('Registry: eine angemeldete Station übernimmt build/back/draw/update/tap; 
   assert.deepEqual(log, ['enter:waschen', 'build', 'back', 'draw', 'update:1', 'tap', 'tap', 'leave:foto']);
   assert.ok(H.S.buttons.some((b) => b.nav === 'home'), 'Rück-Knöpfe fehlen');
 });
+
+test('Massage: Kreis-Streicheln über S.dragBear (Aufruf aus game.js pointermove) füllt den Fortschritt', () => {
+  const H = load({ seed: 3 });
+  go(H, 'massage');
+  const s = Math.min(H.S.VW, H.S.VH) / 420, cx = H.S.VW * 0.5, cy = H.S.VH * 0.58 + 70 * s;
+  let last = null;
+  for (let i = 0; i <= 120; i++) {
+    const a = i * 0.12, x = cx + Math.cos(a) * 90 * s, y = cy + Math.sin(a) * 80 * s;
+    if (last) H.S.dragBear(x, y, last[0], last[1]); else H.S.dragBear(x, y);
+    last = [x, y];
+  }
+  assert.ok(H.S.mass.prog > 25, 'Fortschritt ' + H.S.mass.prog);
+  assert.ok(H.S.mass.herzen.length > 0 && H.S.mass.herzen.length <= 18);
+  H.S.dragBear(10, 10, 12, 12);                 // weit weg vom Bären: Kreis bricht ab
+  assert.equal(H.S.mass.ang, null);
+});
