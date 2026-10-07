@@ -171,7 +171,6 @@ S.buildUI = function(){
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
   else if(st==='keks') buildKeks();
-  else if(st==='malbuch') buildMalbuch();
   else if(st==='aquarium') buildAquarium();
 };
 
@@ -253,27 +252,6 @@ function buildKeks(){
   });
 }
 
-// ---- Neu Runde 9: Malbuch -------------------------------------------------
-Art.MAL_FARBEN = ['#e91e63','#e74c3c','#f4c20d','#8fd48a','#3498db','#9b59b6','#e0892f','#ff9eb5'];
-function buildMalbuch(){
-  stationTabs();
-  S.hinweis = 'Farbe wählen, dann eine Fläche des Bären antippen! 🎨';
-  Art.MAL_FARBEN.forEach(function(c,i){
-    btn(30+(i%4)*56, 100+Math.floor(i/4)*56, 50, 50, '', function(){
-      S.mbColor=c; S.buildUI();
-    },{fill:c, active:function(){return S.mbColor===c;}});
-  });
-  btn(30, 226, 150, 52, '🖼️ Rahmen', function(){
-    if(!S.mb) S.mb={parts:{},rahmen:0};
-    S.mb.rahmen=(S.mb.rahmen+1)%4;
-    S.toast={txt:'🎨 Meisterwerk!', t:2.2};
-    window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S.VW*0.5, S.VH*0.4);
-    S.buildUI();
-  }, {active:function(){return S.mb && S.mb.rahmen>0;}});
-  btn(30, 288, 150, 52, '🧽 Neues Bild', function(){
-    S.mb={parts:{},rahmen:0}; S.buildUI();
-  });
-}
 // ---- Neu Runde 9: Aquarium ------------------------------------------------
 var AQUA_FARBEN = ['#ff8a5c','#ffd24d','#7ab8f5','#9b59b6','#ff6b9d','#2ecc71'];
 function buildAquarium(){
@@ -321,7 +299,6 @@ S.draw = function(g){
   if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
   var R=REG[S.state];
   if(R){ if(R.draw) R.draw(g); return; }
-  if(S.state==='malbuch'){ drawMalbuch(g); return; }
   if(S.state==='aquarium'){ drawAquarium(g); return; }
   if(S.state==='waschen') drawWanne(g,false);
 
@@ -668,24 +645,6 @@ S.tapBear = function(x,y){
     var dx=(x-cx)/(120*s), dy=(y-cy)/(110*s);
     if(dx*dx+dy*dy < 1.4){ S.baer.schaum=Math.min(1,S.baer.schaum+0.03); return true; }
   }
-  if(S.state==='malbuch'){
-    if(!S.mb) S.mb={parts:{},rahmen:0};
-    if(!S.mbColor) S.mbColor=Art.MAL_FARBEN[0];
-    // Rahmen-Bereich tippen = Rahmenstil wechseln (ohne Papier)
-    var f=S._mbFrame;
-    if(f && x>=f.x&&x<=f.x+f.w&&y>=f.y&&y<=f.y+f.h &&
-       !(x>f.x+26&&x<f.x+f.w-26&&y>f.y+26&&y<f.y+f.h-26)){
-      S.mb.rahmen=(S.mb.rahmen+1)%4; S.buildUI(); return true;
-    }
-    if(S._mbHit) for(var mi=0;mi<S._mbHit.length;mi++){
-      var h=S._mbHit[mi];
-      if(Math.hypot(x-h.x,y-h.y)<h.r){
-        S.mb.parts[h.key]=S.mbColor;
-        return true;
-      }
-    }
-    return true;
-  }
   return false;
 };
 
@@ -939,132 +898,6 @@ function drawBallonStation(g){
     g.font='bold 15px sans-serif'; g.textAlign='center'; g.fillStyle='#7a4b8f';
     g.fillText('Antippen = PLATZ!',sx2,sy2+br*1.5+30);
   }
-}
-// ---- Runde 9: Malbuch (Umriss-Bär, antippbare Flächen, Rahmen) -------------
-var MB_PARTS = ['kopf','koerper','ohrL','ohrR','schnauze','pfoteVL','pfoteVR','pfoteHL','pfoteHR'];
-function drawMalbuch(g){
-  if(!S.mb) S.mb={parts:{},rahmen:0};
-  var rx=230, ry=104, rw=440, rh=320;
-  // Papier + Deko-Raum
-  g.fillStyle='rgba(0,0,0,0.06)'; g.fillRect(rx+8,ry+10,rw,rh); // Schatten
-  g.fillStyle='#fdf9f2'; g.fillRect(rx,ry,rw,rh);
-  g.strokeStyle='#d9c8ac'; g.lineWidth=2; g.strokeRect(rx,ry,rw,rh);
-  S._mbHit=[]; S._mbFrame={x:rx-26,y:ry-26,w:rw+52,h:rh+52};
-  // Bär in der Mitte des Papiers, Scale auf virtuelles 450x330
-  var sc=1.05;
-  g.save();
-  g.translate(rx+rw/2, ry+rh/2-152); // Zentrum: virtuelle 225,40 Ziel = rx+rw/2, ry+~40*sc
-  g.scale(sc,sc);
-  g.translate(-225,-40);
-  drawMalBaer(g);
-  g.restore();
-  // Welt-Hit-Boxes speichern (für tapBear)
-  for(var pi=0;pi<(S._mbHitLocal||[]).length;pi++){
-    var hb=S._mbHitLocal[pi];
-    S._mbHit.push({key:hb.key, x:rx+rw/2+(hb.x-225)*sc, y:ry+rh/2-152+(hb.y-40)*sc, r:hb.r*sc});
-  }
-  // Rahmen-Deko wenn gewählt
-  if(S.mb.rahmen>0) drawMalRahmen(g, rx,ry,rw,rh, S.mb.rahmen);
-  // Farbkleckse am Rand (Effekt)
-  var t9=performance.now()/1000;
-  var kl=["#e91e63","#f4c20d","#3498db","#2ecc71","#9b59b6","#e0892f"];
-  for(var k9=0;k9<8;k9++){
-    var kx9=rx-30+(k9%2)*(rw+60), ky9=ry+22+k9%4*96+((k9*37)%14);
-    circle2(g,kx9,ky9,7+k9%3*4, kl[k9%6]);
-    circle2(g,kx9+((k9%2)?-1:1)*12, ky9+16, 3.5, kl[(k9+2)%6]);
-  }
-  for(var k10=0;k10<4;k10++){ // langsam schwebende Kringel ums Papier
-    var a10=t9*0.7+k10*1.6;
-    circle2(g, rx+rw/2+Math.cos(a10)*(rw/2+44), ry+rh/2+Math.sin(a10)*(rh/2+40), 3.5, kl[k10+1]);
-  }
-  // Toast
-  if(S.toast && S.toast.t>0){
-    var ta=Math.min(1,S.toast.t/0.4);
-    g.globalAlpha=ta;
-    g.fillStyle='rgba(255,255,255,0.96)';
-    g.beginPath(); g.roundRect?g.roundRect(S.VW/2-160,54,320,56,26):g.rect(S.VW/2-160,54,320,56);
-    g.fill(); g.strokeStyle='#7a4b8f'; g.lineWidth=3; g.stroke();
-    g.fillStyle='#7a4b8f'; g.font='bold 24px sans-serif'; g.textAlign='center';
-    g.fillText(S.toast.txt, S.VW/2, 90);
-    g.globalAlpha=1;
-  }
-}
-function drawMalBaer(g){
-  // Umriss-Bär auf virtueller 450x330-Fläche (gleiche Anatomie wie drawBear, vereinfacht)
-  var s=1;
-  var cx=225, cy=190; // virtueller Mittelpunkt
-  S._mbHitLocal=[];
-  function fillOr(key, drawFn, hx, hy, hr){
-    var col=S.mb.parts[key];
-    drawFn(col||'#ffffff');
-    g.strokeStyle='#5a4637'; g.lineWidth=3.5;
-    drawFn(null, true); // nur Outline
-    S._mbHitLocal.push({key:key, x:hx||cx, y:hy||cy, r:hr||50});
-  }
-  // Hinterpfoten (Füße)
-  fillOr('pfoteHL', function(c,outline){ g.fillStyle=c; g.strokeStyle='#5a4637';
-    g.beginPath(); g.ellipse(cx-55,cy+165,52,34,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx-55, cy+165, 52);
-  fillOr('pfoteHR', function(c,outline){ g.fillStyle=c; g.strokeStyle='#5a4637';
-    g.beginPath(); g.ellipse(cx+55,cy+165,52,34,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx+55, cy+165, 52);
-  // Vorderpfoten (Arme)
-  fillOr('pfoteVL', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.ellipse(cx-105,cy+40,38,70,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx-105, cy+40, 44);
-  fillOr('pfoteVR', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.ellipse(cx+105,cy+40,38,70,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx+105, cy+40, 44);
-  // Körper
-  fillOr('koerper', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.ellipse(cx,cy+70,120,110,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx, cy+70, 110);
-  // Ohren
-  fillOr('ohrL', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.arc(cx-62,cy-160,26,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx-62, cy-160, 28);
-  fillOr('ohrR', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.arc(cx+62,cy-160,26,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx+62, cy-160, 28);
-  // Innenohren immer zartrosa
-  circle2(g,cx-62,cy-160,13,'#ff9ec4'); circle2(g,cx+62,cy-160,13,'#ff9ec4');
-  // Kopf
-  fillOr('kopf', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.arc(cx,cy-90,88,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx, cy-90, 88);
-  // Schnauze
-  fillOr('schnauze', function(c,outline){ g.fillStyle=c;
-    g.beginPath(); g.ellipse(cx,cy-62,36,26,0,0,Math.PI*2); if(!outline) g.fill(); else g.stroke(); }, cx, cy-62, 34);
-  // Gesichtslinien (Augen, Nase, Mund) immer dunkel
-  g.fillStyle='#26221f';
-  circle2(g,cx-30,cy-105,9,'#26221f'); circle2(g,cx+30,cy-105,9,'#26221f');
-  circle2(g,cx-27,cy-108,3,'#fff'); circle2(g,cx+33,cy-108,3,'#fff');
-  g.fillStyle='#4a3227';
-  g.beginPath(); g.ellipse(cx,cy-72,12,9,0,0,Math.PI*2); g.fill();
-  g.strokeStyle='#4a3227'; g.lineWidth=3; g.lineCap='round';
-  g.beginPath(); g.moveTo(cx,cy-63); g.lineTo(cx,cy-54);
-  g.quadraticCurveTo(cx-12,cy-44,cx-22,cy-50);
-  g.moveTo(cx,cy-54); g.quadraticCurveTo(cx+12,cy-44,cx+22,cy-50); g.stroke();
-}
-function drawMalRahmen(g,rx,ry,rw,rh,style){
-  var t=performance.now()/1000;
-  g.save();
-  if(style===1){ // Sterne
-    g.strokeStyle='#f5c542'; g.lineWidth=10;
-    g.strokeRect(rx-26,ry-26,rw+52,rh+52);
-    for(var i=0;i<12;i++){
-      var px=rx-26+(i%6)*((rw+52)/5)-5, py=(i<6? ry-26 : ry+rh+26);
-      Art.drawSticker(g,'stern',px,py,13+2*Math.sin(t*3+i),'#ffd24d');
-    }
-  } else if(style===2){ // Blumen
-    g.strokeStyle='#e89ab8'; g.lineWidth=8;
-    g.strokeRect(rx-22,ry-22,rw+44,rh+44);
-    for(var j=0;j<16;j++){
-      var fa=j/16*Math.PI*2;
-      var cxm=rx+rw/2+Math.cos(fa)*(rw/2+30), cym=ry+rh/2+Math.sin(fa)*(rh/2+30);
-      Art.drawSticker(g,'blume',cxm,cym,11+2*Math.sin(t*2.4+j), j%2?'#ff9ec4':'#fff');
-    }
-  } else { // Regenbogen
-    var cols=['#ff7a7a','#ffbe60','#ffe86e','#8fd48a','#7ab8f5','#c39bd3'];
-    for(var r2=0;r2<cols.length;r2++){
-      g.strokeStyle=cols[r2]; g.lineWidth=5; g.globalAlpha=0.9;
-      g.strokeRect(rx-12-r2*6, ry-12-r2*6, rw+24+r2*12, rh+24+r2*12);
-    }
-    g.globalAlpha=1;
-  }
-  g.restore();
 }
 // ---- Runde 9: Aquarium ------------------------------------------------------
 // r19: Der Bär steht NEBEN (quer) bzw. UNTER (hoch) dem Becken und schaut hinein — Fische, Futter, Blasen und Deko
