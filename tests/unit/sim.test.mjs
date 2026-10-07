@@ -119,3 +119,20 @@ test('Geburtstag: Rauchwölkchen leben bei 60 und 120 Hz gleich lange (1 s)', ()
   assert.deepEqual(b.map((x) => x.length), a.map((x) => x.length));
   a.forEach((x, i) => x.forEach((v, j) => assert.ok(nah(v, b[i][j], 0.01), `${v} vs ${b[i][j]}`)));
 });
+
+test('game.js ruft S.update(dt) in jedem Bild (kompletter Modulsatz, rAF-Schleife)', () => {
+  const H = load({ files: ['fx.js', 'art.js', 'room.js', 'deko.js', 'salon.js', 'ui.js', 'game.js'], seed: 4 });
+  let n = 0, last = 0;
+  const orig = H.S.update;
+  H.S.update = function (dt) { n++; last = dt; return orig.call(this, dt); };
+  go(H, 'karussell');
+  const a0 = H.S.karo.ang;
+  for (let i = 0; i < 30; i++) H.frame(1000 / 60);
+  assert.equal(n, 30);
+  assert.ok(Math.abs(last - 1 / 60) < 1e-9);
+  assert.ok(H.S.karo.ang > a0);
+  // dt ist in game.js auf 0,05 s gedeckelt (Tab im Hintergrund o. Ä.)
+  H.frame(2000);
+  assert.ok(Math.abs(last - 0.05) < 1e-9);
+  assert.deepEqual([...H.ctx.__errors], []);
+});
