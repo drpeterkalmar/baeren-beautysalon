@@ -182,7 +182,6 @@ S.buildUI = function(){
   else if(st==='geburtstag') buildGeburtstag();
   else if(st==='malbuch') buildMalbuch();
   else if(st==='aquarium') buildAquarium();
-  else if(st==='finish') buildFinish();
 };
 
 function backButtons(){
@@ -272,11 +271,6 @@ function buildMakeup(){
   btn(30, 276, 150, 50, '🧽 Neu', function(){
     S.baer.makeup={rouge:null,lid:null,gp:[]}; S.save(); S.buildUI();
   });
-}
-function buildFinish(){
-  S.hinweis = 'Perfekt! ✨';
-  S.hinweis = 'Bereit für den großen Auftritt? ✨';
-  btn(330,470,240,70,'🎉 Fertig!',function(){ S.startFinale(); },{big:1,cta:1,primary:1,hero:1});
 }
 function buildEis(){
   stationTabs();
