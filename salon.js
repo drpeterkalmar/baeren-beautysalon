@@ -120,12 +120,11 @@ S.registerStation = function(def){
   if(!def || !def.id) throw new Error('registerStation: id fehlt');
   REG[def.id] = def; return def;
 };
-// Helfer für Stations-Dateien (dieselben Funktionen wie hier im Modul)
+// Helfer für Stations-Dateien (dieselben Funktionen wie hier im Modul; befüllt am Dateiende)
 S.H = {};
 // Aufräumen beim Verlassen für Stationen, die noch nicht in der Registry stehen
 var LEAVE = {
-  waschen: function(){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; },
-  foehnen: function(){ S.foehn=false; }
+  waschen: function(){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
 };
 // Zustandswechsel an einer Stelle: Zustand setzen + Knöpfe neu bauen. Die Haken (onLeave/onEnter) laufen in
 // S.buildUI beim Erkennen des Wechsels — so greifen sie auch, wenn Prüfwerkzeuge S.state direkt setzen.
@@ -177,7 +176,6 @@ S.buildUI = function(){
   var R = REG[st];
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
-  else if(st==='foehnen') buildFoehnen();
   else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
@@ -232,12 +230,6 @@ function buildWaschen(){
     emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
   },{active:function(){return S.baer.schaum>0.2;}});
   btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
-}
-function buildFoehnen(){
-  stationTabs();
-  S.hinweis = 'Halte den Föhn gedrückt! 💨';
-  btn(30,110,170,80,'🌬️ Föhn',function(){},{hold:true, active:function(){return S.foehn;}});
-  if(S.baer.schaum>0.1) btn(30,206,170,56,'🚿 Erst duschen!',function(){ S.setState('waschen'); });
 }
 function buildSchneiden(){
   stationTabs();
@@ -682,7 +674,6 @@ S.draw = function(g){
   }
   if(S.state==='foto') Art.drawFotoRahmen(g, S.fotoRahmen||0, S.flash||0, !!S.fotoBadge, S.VW, S.VH);
   if(S.state==='waschen') drawWanne(g,true);
-  if(S.state==='foehnen') drawFoehn(g);
 };
 
 // ================= HELD-MOMENT: Vorher/Nachher-Enthüllung =================
@@ -878,38 +869,6 @@ function drawWanne(g,front){
     Fx.ball(g,bx,y-4*s-Math.sin(q*Math.PI)*6*s+Math.sin(t*2+i)*1.5*s,br,br*0.85,'#fffaf3');
   }
   if(DK) window.BSDeko.duck(g,t,!!S.dusche || (S.baer.schaum||0)>0.3); // r20: Badeente schaukelt auf dem Wannenrand
-}
-// Föhn (hängt links oben, zielt auf den Kopf) + warme Luftwellen
-function drawFoehn(g){
-  var s=Math.min(S.VW,S.VH)/420, t=performance.now()/1000;
-  var fx=S.VW*0.5-175*s, fy=S.VH*0.58-190*s, on=!!S.foehn;
-  var wob=on?Math.sin(t*40)*1.2*s:0;
-  g.save(); g.translate(fx+wob,fy); g.rotate(0.35);
-  Fx.contactShadow(g,6*s,40*s,50*s,14*s,0.25);
-  // Griff
-  var hg=g.createLinearGradient(-12*s,0,12*s,0); hg.addColorStop(0,'#f6c29f'); hg.addColorStop(1,'#d88a63');
-  g.fillStyle=hg; g.beginPath(); g.moveTo(-26*s,6*s); g.lineTo(-6*s,6*s); g.lineTo(-14*s,70*s); g.lineTo(-34*s,66*s); g.closePath(); g.fill();
-  // Körper
-  Fx.ball(g,-10*s,0,40*s,30*s,'#f2a57e');
-  var ng=g.createLinearGradient(0,-18*s,0,18*s); ng.addColorStop(0,'#f0d3a0'); ng.addColorStop(1,'#b98c55');
-  g.fillStyle=ng; g.beginPath(); g.moveTo(20*s,-18*s); g.lineTo(58*s,-13*s); g.lineTo(58*s,13*s); g.lineTo(20*s,18*s); g.closePath(); g.fill();
-  Fx.ball(g,58*s,0,6*s,13*s,'#8f6a4a');
-  g.fillStyle='rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(-22*s,-14*s,14*s,6*s,-0.3,0,Math.PI*2); g.fill();
-  g.restore();
-  if(on && S.baer.schaum<0.1){
-    g.save(); g.lineCap='round';
-    for(var i=0;i<5;i++){
-      var ph=((t*1.6+i/5)%1);
-      g.globalAlpha=Math.sin(ph*Math.PI)*0.55;
-      g.strokeStyle=i%2?'#ffe6c4':'#fff4e4'; g.lineWidth=(5-ph*3)*s;
-      var sx=fx+60*s, sy=fy+22*s, ex=S.VW*0.5+10*s, ey=S.VH*0.58-100*s+(i-2)*22*s;
-      var mx=sx+(ex-sx)*ph, my=sy+(ey-sy)*ph;
-      g.beginPath(); g.moveTo(mx-30*s,my-8*s);
-      g.quadraticCurveTo(mx-15*s,my-8*s+Math.sin(t*14+i)*9*s,mx,my); g.quadraticCurveTo(mx+15*s,my+Math.sin(t*14+i+1)*9*s,mx+30*s,my+6*s);
-      g.stroke();
-    }
-    g.restore();
-  }
 }
 
 // Stations-Deko: kleine prozedurale Details, zurückhaltend
@@ -2289,4 +2248,11 @@ function drawSchatz(g,x,y,sc,t){
   for(var i=0;i<3;i++) Art.drawSticker(g,'stern',-22+i*22,-20-((i*13)%8),5+2*Math.sin(t*4+i),'#ffd24d');
   g.restore();
 }
+// ---- Helfer für stations/<id>.js ----------------------------
+S.H.btn=btn; S.H.stationTabs=stationTabs; S.H.sfx=sfx; S.H.react=react; S.H.emit=emit; S.H.headPos=headPos;
+S.H.accPop=accPop; S.H.circle2=circle2; S.H.ell2=ell2; S.H.kopie=kopie; S.H.neuerBaer=neuerBaer; S.H.clawPos=clawPos;
+S.H.NICONS=NICONS;
+// Bär an seinem Standardplatz (wie im Zeichenpfad der meisten Stationen)
+S.H.baer=function(g){ Art.drawBear(g,S.baer,{w:S.VW,h:S.VH, spaTarget:S.spaTarget}); };
+
 })();

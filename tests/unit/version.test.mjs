@@ -17,7 +17,8 @@ test('ohne Query: Rückfall auf die Konstante in fx.js (= Version in index.html)
   assert.equal(load({ files: ['fx.js'], scriptQuery: '' }).ctx.BS_VERSION, v);
   // alle Skript-Tags tragen dieselbe Version
   const all = [...html.matchAll(/\.js\?v=([^"&]+)"/g)].map((m) => m[1]);
-  assert.equal(all.length, 9);
+  assert.equal(all.length, [...html.matchAll(/<script src=/g)].length);
+  assert.ok(all.length >= 9);
   assert.deepEqual([...new Set(all)], [v]);
 });
 
