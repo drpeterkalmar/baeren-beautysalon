@@ -40,12 +40,6 @@ S.STATIONS = [
   {id:'finish',   icon:'✨', name:'Fertig!'}
 ];
 
-var ACC = [
-  {key:'hut',icon:'🎩',name:'Hut',colors:Art.HUTE},
-  {key:'schleife',icon:'🎀',name:'Schleife',colors:Art.SCHLEIFEN},
-  {key:'brille',icon:'🕶️',name:'Brille',colors:Art.BRILLEN},
-  {key:'kette',icon:'📿',name:'Kette',colors:Art.KETTEN}
-];
 
 // Tiefe Kopie (alles im Bären-Zustand ist JSON): Album-Fotos teilen nie Objekte mit dem Bären
 function kopie(x){ return x===undefined ? undefined : JSON.parse(JSON.stringify(x)); }
@@ -178,7 +172,6 @@ S.buildUI = function(){
   else if(st==='massage') buildMassage();
   else if(st==='zirkus') buildZirkus();
   else if(st==='makeup') buildMakeup();
-  else if(st==='schmuecken') buildSchmuecken();
   else if(st==='eis') buildEis();
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
@@ -278,27 +271,6 @@ function buildMakeup(){
   },{active:function(){return !!S.glitzMode;}});
   btn(30, 276, 150, 50, '🧽 Neu', function(){
     S.baer.makeup={rouge:null,lid:null,gp:[]}; S.save(); S.buildUI();
-  });
-}
-function buildSchmuecken(){
-  stationTabs();
-  S.hinweis = 'Antippen = an/aus, Farben wechseln! 🎀';
-  ACC.forEach(function(a,i){
-    var on = S.baer.acc[a.key]!==null && S.baer.acc[a.key]!==undefined;
-    btn(30+(i%2)*150, 100+Math.floor(i/2)*130, 142, 60, a.icon+' '+a.name, function(){
-      var cur = S.baer.acc[a.key];
-      if(cur===null||cur===undefined){ S.baer.acc[a.key]=0; accPop(a.key); sfx('pop'); react('happy');
-        var hp=headPos(); emit('star',hp[0],hp[1]-40,{n:10,speed:240,size:10,life:0.8,grav:260}); }
-      else { S.baer.acc[a.key]=null; sfx('pop',{pitch:0.7}); }
-      S.save(); S.buildUI();
-    },{active:function(){return on;},row:i});
-    if(on){
-      a.colors.forEach(function(c,k){
-        btn(30+(i%2)*150+k*46, 166+Math.floor(i/2)*130, 40, 40, '', function(){
-          S.baer.acc[a.key]=k; accPop(a.key); S.save(); S.buildUI(); sfx('sparkle');
-        },{fill:c,active:function(){return S.baer.acc[a.key]===k;},tiny:1,row:i});
-      });
-    }
   });
 }
 function buildFinish(){
