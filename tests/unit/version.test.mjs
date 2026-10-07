@@ -21,7 +21,7 @@ test('ohne Query: Rückfall auf die Konstante in fx.js (= Version in index.html)
   assert.deepEqual([...new Set(all)], [v]);
 });
 
-test('bump-version.py: Python-Unit-Tests grün', () => {
-  const out = execFileSync('python3', ['-m', 'unittest', '-q', 'test_bump_version'], { cwd: path.join(ROOT, 'tests', 'unit'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  assert.ok(out !== undefined);
+test('Python-Werkzeuge (bump-version.py, pixel-diff.py): unittest grün', () => {
+  // wirft bei Exit ≠ 0 (fehlgeschlagener Test)
+  execFileSync('python3', ['-B', '-m', 'unittest', 'discover', '-s', path.join(ROOT, 'tests', 'unit'), '-p', 'test_*.py'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 });
