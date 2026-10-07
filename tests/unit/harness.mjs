@@ -15,9 +15,12 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-// Standard-Ladereihenfolge wie index.html (sfx/music bleiben weg: Audio braucht echte WebAudio-Objekte)
-export const ALL = ['fx.js', 'art.js', 'room.js', 'deko.js', 'salon.js', 'ui.js', 'game.js'];
-export const CORE = ['fx.js', 'art.js', 'salon.js'];
+// Ladereihenfolge direkt aus index.html (sfx/music bleiben weg: Audio braucht echte WebAudio-Objekte).
+// ALL = alle Spiel-Module, CORE = fx/art/salon + Stations-Dateien (stations/<id>.js)
+export const SCRIPTS = [...fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').matchAll(/<script src="([^"?]+)/g)].map((m) => m[1]);
+export const ALL = SCRIPTS.filter((f) => f !== 'sfx.js' && f !== 'music.js');
+export const CORE = SCRIPTS.filter((f) => ['fx.js', 'art.js', 'salon.js'].includes(f) || f.startsWith('stations/'));
+export const STATION_FILES = SCRIPTS.filter((f) => f.startsWith('stations/'));
 
 // deterministischer Zufall (gleiche Formel wie tests/deko-check.mjs)
 export function seeded(seed) {
@@ -72,6 +75,12 @@ function makeCtx(canvas, rec) {
   });
 }
 
+// Date mit fester „Jetzt“-Zeit (Album-Datum in Prüfsummen soll nicht vom Kalender abhängen)
+function fixedDate(iso) {
+  const T = +new Date(iso);
+  return class extends Date { constructor(...a) { if (a.length) super(...a); else super(T); } static now() { return T; } };
+}
+
 export function load(opt = {}) {
   const files = opt.files || CORE;
   const store = Object.assign({}, opt.storage || {});
@@ -95,7 +104,7 @@ export function load(opt = {}) {
   const ctx = {
     console,
     Math: Object.create(Math),   // eigenes Math-Objekt, damit Math.random pro Sandbox steuerbar ist
-    JSON, Date, Object, Array, String, Number, Boolean, RegExp, Error, TypeError, Map, Set, WeakMap, Symbol, Promise, Proxy, Reflect,
+    JSON, Date: opt.date ? fixedDate(opt.date) : Date, Object, Array, String, Number, Boolean, RegExp, Error, TypeError, Map, Set, WeakMap, Symbol, Promise, Proxy, Reflect,
     Uint8ClampedArray, Float32Array, Float64Array, Int32Array, Uint32Array, Uint8Array,
     parseFloat, parseInt, isNaN, isFinite, encodeURIComponent, decodeURIComponent,
     devicePixelRatio: opt.dpr || 2, innerWidth: wrap.clientWidth, innerHeight: wrap.clientHeight,
