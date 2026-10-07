@@ -24,6 +24,17 @@ function knoepfe(S) {
   return S.buttons.map((b) => [b.label, b.x, b.y, b.w, b.h, b.active ? !!b.active() : null, b.fill || '', b.nav || '', b.tab || ''].map(r4));
 }
 
+// Vorbereitung je Station (nach dem Betreten), damit auch seltene Zustände im Bild sind
+const VORBEREITUNG = {
+  ballon(H) { for (let i = 0; i < 5; i++) H.S.buttons.find((b) => /Pusten/.test(b.label)).onTap(); },   // fertig → Schwebe-Ballon
+};
+
+function hitVars(S) {
+  const o = {};
+  for (const k of HITS) if (S[k] !== undefined && S[k] !== null) o[k] = JSON.parse(JSON.stringify(S[k], (kk, v) => (typeof v === 'number' ? r4(v) : v)));
+  return o;
+}
+
 export function spieleStation(st, { port = true, files = CORE, sources, frames = 24, onFrame } = {}) {
   const H = load({ files, sources, seed: 21, record: true, date: '2026-10-07T10:00:00', globals: { BSUI: { L: { port } } } });
   const S = H.S;
@@ -34,7 +45,9 @@ export function spieleStation(st, { port = true, files = CORE, sources, frames =
   S.baer.frisur = 'afro'; S.buttons.find((b) => /Klick!/.test(b.label)).onTap();
   S.flash = 0;
   go(H, st);
+  if (VORBEREITUNG[st]) VORBEREITUNG[st](H);
   const hashes = [];
+  let hitsFrueh = {};
   let pi = (st.length * 7) % PUNKTE.length, bi = 0;
   for (let i = 0; i < frames; i++) {
     const notiz = [];
@@ -53,12 +66,16 @@ export function spieleStation(st, { port = true, files = CORE, sources, frames =
     const dig = JSON.stringify([log, knoepfe(S), notiz, zustand(S)]);
     hashes.push(crypto.createHash('sha1').update(dig).digest('hex').slice(0, 12));
     if (onFrame) onFrame(H, i, { log, notiz });
+    if (i === 3) hitsFrueh = hitVars(S);
+    if (i === 4 && st === 'ballon') {                         // Schwebe-Ballon mittig antippen → PLATZ (Weg über die Hit-Box)
+      const R = S.REG.ballon, b = R && R.hit ? R.hit().ballon : S._ballHit;
+      if (b) S.tapBear(b.x + b.w / 2, b.y + b.h / 2);
+    }
   }
-  const hits = {};
-  for (const k of HITS) if (S[k] !== undefined && S[k] !== null) hits[k] = JSON.parse(JSON.stringify(S[k], (kk, v) => (typeof v === 'number' ? r4(v) : v)));
+  const hits = hitVars(S);
   // Tipp-Raster über die ganze Bühne (alle 20 Einheiten): Treffer-Folge + Endzustand → feine Prüfung der Hit-Geometrie
   let raster = '';
   for (let y = -40; y <= 660; y += 20) for (let x = -20; x <= 920; x += 20) raster += S.tapBear(x, y) ? '1' : '0';
   const rasterHash = crypto.createHash('sha1').update(raster + zustand(S)).digest('hex').slice(0, 12);
-  return { hashes, hits, raster: rasterHash, H };
+  return { hashes, hits, hitsFrueh, raster: rasterHash, H };
 }

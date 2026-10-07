@@ -15,7 +15,7 @@ for (const st of ids) {
   out.stationen[st] = {};
   for (const port of [true, false]) {
     const r = spieleStation(st, { port, files, sources: { 'salon.js': salon } });
-    out.stationen[st][port ? 'hoch' : 'quer'] = { hashes: r.hashes, hits: r.hits, raster: r.raster };
+    out.stationen[st][port ? 'hoch' : 'quer'] = { hashes: r.hashes, hits: r.hits, hitsFrueh: r.hitsFrueh, raster: r.raster };
   }
 }
 const file = path.join(ROOT, 'tests', 'unit', 'fixtures', 'stationen-ref.json');

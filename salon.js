@@ -168,7 +168,6 @@ S.buildUI = function(){
   var R = REG[st];
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
-  else if(st==='ballon') buildBallon();
   else if(st==='keks') buildKeks();
   else if(st==='aquarium') buildAquarium();
 };
@@ -203,26 +202,6 @@ function buildWaschen(){
     emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
   },{active:function(){return S.baer.schaum>0.2;}});
   btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
-}
-Art.BALLON_FARBEN = ['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
-function buildBallon(){
-  stationTabs();
-  S.hinweis = 'Farbe wählen, Pusten-Knopf drücken — fertigen Ballon antippen = PLATZ! 🎈';
-  if(!S.ballon) S.ballon = {farb:0, gr:0, pust:0, fertig:false, schweb:null, schreck:0};
-  Art.BALLON_FARBEN.forEach(function(c,i){
-    btn(30+i*66, 100, 58, 58, '', function(){
-      S.ballon.farb=i; S.ballon.gr=0; S.ballon.fertig=false; S.ballon.schreck=0; S.ballon.schweb=null; S.buildUI();
-    },{fill:c, active:function(){return S.ballon.farb===i && !S.ballon.fertig && S.ballon.gr===0;}});
-  });
-  btn(30,170,190,64,'💨 Pusten!',function(){
-    if(S.ballon.fertig) return;
-    S.ballon.pust=1.4; S.ballon.gr=Math.min(1,S.ballon.gr+0.2);
-    if(S.ballon.gr>=1) S.ballon.fertig=true;
-    S.buildUI();
-  },{active:function(){return S.ballon.pust>0;}, big:1});
-  btn(30,246,190,52,'🧽 Neuer Ballon',function(){
-    S.ballon={farb:S.ballon.farb,gr:0,pust:0,fertig:false,schweb:null,schreck:0}; S.buildUI();
-  });
 }
 // ---- Neu Runde 8: Keks-Backen-Station -----------------------------------
 Art.KEKS_FOERMCHEN = ['stern','herz','baer'];
@@ -294,17 +273,7 @@ S.draw = function(g){
   if(S.state==='aquarium'){ drawAquarium(g); return; }
   if(S.state==='waschen') drawWanne(g,false);
 
-  if(S.state==='ballon'){
-    // Erschreck-Zucken: Bär springt kurz hoch, dann lacht er (jubel hoch)
-    var bl=S.ballon||{schreck:0};
-    var shk=Math.max(0,bl.schreck||0);
-    g.save();
-    g.translate(0,-Math.sin(Math.min(1,shk)*Math.PI)*26);
-    Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
-    drawStickers(g);
-    g.restore();
-    drawBallonStation(g);
-  } else if(S.state==='keks'){
+  if(S.state==='keks'){
     drawKeks(g);
   } else {
   Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
@@ -595,28 +564,6 @@ S.tapBear = function(x,y){
     }
     return true;
   }
-  if(S.state==='ballon' && S.ballon){
-    // Fertigen Ballon antippen = PLATZ!
-    if(S._ballHit && S.ballon.fertig &&
-      x>=S._ballHit.x&&x<=S._ballHit.x+S._ballHit.w&&y>=S._ballHit.y&&y<=S._ballHit.y+S._ballHit.h){
-      var bl2=S.ballon;
-      var mpx=S._ballHit.x+S._ballHit.w/2, mpy=S._ballHit.y+S._ballHit.h/2;
-      window.BSGame && window.BSGame.konfettiBurst(mpx, mpy);
-      window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(mpx,mpy);
-      var cAlt=bl2.farb;
-      bl2.schweb=null; bl2.fertig=false; bl2.gr=0; bl2.schreck=1; // Bär zuckt
-      // danach schwebt automatisch ein neuer Ballon in anderer Farbe neben den Bären
-      setTimeout(function(){
-        if(S.state==='ballon' && S.ballon && !S.ballon.fertig && S.ballon.gr===0){
-          S.ballon.farb=(cAlt+1)%Art.BALLON_FARBEN.length;
-          S.ballon.gr=1; S.ballon.fertig=true; S.ballon.schweb=null; S.buildUI();
-        }
-      },2600);
-      S.buildUI();
-      return true;
-    }
-    return true;
-  }
   if(S.state==='waschen'){
     var s=Math.min(S.VW,S.VH)/420;
     var cx=S.VW*0.5, cy=S.VH*0.58+70*s;
@@ -745,67 +692,6 @@ S.hitButton = function(x,y){
   }
   return null;
 };
-// ---- Ballon-Station: Farbe + Pusten + PLATZ + schwebender Ballon + Mini-Herzen ----
-function drawBallonStation(g){
-  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
-  var bl=S.ballon; if(!bl) return;
-  var cx=S.VW*0.5, cy=S.VH*0.58;
-  // schwebende Mini-Herzchen als Deko
-  for(var h=0;h<8;h++){
-    var hx=(h*113+Math.sin(t*0.6+h)*40)%S.VW, hy2=90+((h*89)%260)+Math.sin(t*1.4+h*2.2)*14;
-    g.globalAlpha=0.4+0.3*Math.sin(t*2+h*1.3);
-    Art.drawSticker(g,'herz',hx,hy2,7+2*Math.sin(t*3+h),'#ff8fb3');
-  }
-  g.globalAlpha=1;
-  // Pust-Wangen (rund) während der Pust-Animation
-  if(bl.pust>0){
-    g.globalAlpha=Math.min(1,bl.pust);
-    circle2(g,cx-56*s,cy-52*s,20*s,'rgba(255,160,180,0.75)');
-    circle2(g,cx+56*s,cy-52*s,20*s,'rgba(255,160,180,0.75)');
-    g.globalAlpha=1;
-  }
-  // Luft-Strahl vom Mund zum Ballon beim Pusten
-  var bx=cx+210*s, by=cy-150*s, br=(14+bl.gr*54)*s;
-  if(bl.fertig && bl.schweb===null){ // frisch fertig: hängt noch am Schnürchen
-    bl.schweb={x:bx,y:by,c:bl.farb,ph:Math.random()*6};
-  }
-  if(bl.pust>0 && !bl.fertig){
-    g.strokeStyle='rgba(160,220,255,0.6)'; g.lineWidth=4; g.lineCap='round';
-    for(var l=-1;l<=1;l++){
-      g.beginPath(); g.moveTo(cx+30*s,cy-14*s+l*5);
-      g.quadraticCurveTo(cx+120*s,cy-60*s+l*20, bx-br*0.6, by+l*10); g.stroke();
-    }
-  }
-  // Ballon am Mund wächst (noch nicht fertig), sonst schwebt er neben dem Bären
-  if(!bl.fertig && bl.gr>0){
-    g.fillStyle=Art.BALLON_FARBEN[bl.farb];
-    g.beginPath(); g.ellipse(bx-br*0.3,by,br*0.8,br,0,0,Math.PI*2); g.fill();
-    g.fillStyle='rgba(255,255,255,0.5)';
-    g.beginPath(); g.ellipse(bx-br*0.3-br*0.25,by-br*0.3,br*0.22,br*0.3,0,0,Math.PI*2); g.fill();
-    // Hit-Box auf wachsenden Ballon (erst bei fertig relevant)
-    S._ballHit={x:bx-br*0.3-br,y:by-br,w:br*2,h:br*2};
-  } else S._ballHit=null;
-  if(bl.fertig && bl.schweb){
-    var sw=bl.schweb;
-    var sx2=sw.x+Math.sin(t*1.1+sw.ph)*10, sy2=sw.y+Math.sin(t*1.7+sw.ph)*16;
-    // Schnur
-    g.strokeStyle='rgba(120,120,140,0.7)'; g.lineWidth=2;
-    g.beginPath(); g.moveTo(cx+86*s,cy-40*s); g.quadraticCurveTo(sx2-20,sy2+80,sx2,sy2+br+4); g.stroke();
-    g.fillStyle=Art.BALLON_FARBEN[sw.c];
-    g.beginPath(); g.ellipse(sx2,sy2,br*0.85,br*1.05,0,0,Math.PI*2); g.fill();
-    g.fillStyle='rgba(255,255,255,0.5)';
-    g.beginPath(); g.ellipse(sx2-br*0.28,sy2-br*0.35,br*0.2,br*0.28,0,0,Math.PI*2); g.fill();
-    // Zipfel
-    g.fillStyle=Art.shade(Art.BALLON_FARBEN[sw.c],-40);
-    g.beginPath(); g.moveTo(sx2-6,sy2+br*1.05); g.lineTo(sx2+6,sy2+br*1.05); g.lineTo(sx2,sy2+br*1.05+10); g.closePath(); g.fill();
-    // großzügige Hit-Zone (QA-Fix): deutlich größer als der Ballon
-    S._ballHit={x:sx2-br-26,y:sy2-br*1.05-26,w:br*2+52,h:br*2.2+52};
-    // Hinweis-Platzer-Stern pulsierend groß
-    Art.drawSticker(g,'stern',sx2+br*0.9,sy2-br*1.1,12+4*Math.sin(t*5),'rgba(255,230,120,0.95)');
-    g.font='bold 15px sans-serif'; g.textAlign='center'; g.fillStyle='#7a4b8f';
-    g.fillText('Antippen = PLATZ!',sx2,sy2+br*1.5+30);
-  }
-}
 // ---- Runde 9: Aquarium ------------------------------------------------------
 // r19: Der Bär steht NEBEN (quer) bzw. UNTER (hoch) dem Becken und schaut hinein — Fische, Futter, Blasen und Deko
 // bleiben sichtbar. Fische schwimmen nur im freien Teil des Beckens (fr). Kamera-Ausschnitt: S.aquaFocus (game.js).

@@ -17,17 +17,22 @@ const r4 = (o) => JSON.parse(JSON.stringify(o, (k, v) => (typeof v === 'number' 
 for (const st of Object.keys(REF.stationen)) {
   test(`${st}: hoch und quer Bild für Bild wie vor dem Umzug`, () => {
     for (const lage of ['hoch', 'quer']) {
-      const ref = REF.stationen[st][lage], r = spieleStation(st, { port: lage === 'hoch' });
+      const ref = REF.stationen[st][lage];
+      let hitFrueh = null;
+      const r = spieleStation(st, { port: lage === 'hoch', onFrame: (H, i) => { if (i === 3 && H.S.REG[st] && H.S.REG[st].hit) hitFrueh = H.S.REG[st].hit(); } });
+      r.hitFrueh = hitFrueh;
       const i = r.hashes.findIndex((h, k) => h !== ref.hashes[k]);
       assert.equal(i, -1, `${lage}: erstes abweichendes Bild ${i}`);
       assert.equal(r.raster, ref.raster, `${lage}: Tipp-Raster (Hit-Geometrie) weicht ab`);
       const R = r.H.S.REG[st];
-      if (R && R.hit) {                       // umgezogen: Hit-Boxen aus dem Zustand berechnet
-        const h = R.hit();
-        for (const [alt, neu] of Object.entries(HIT_NAME)) if (ref.hits[alt] !== undefined) assert.deepEqual(r4(h[neu]), ref.hits[alt], `${lage}: ${alt} ↔ hit().${neu}`);
+      if (R && R.hit) {                       // umgezogen: Hit-Boxen aus dem Zustand berechnet (nach Bild 3 und am Ende)
+        for (const [h, refHits, wann] of [[r.hitFrueh, ref.hitsFrueh, 'Bild 3'], [R.hit(), ref.hits, 'Ende']]) {
+          for (const [alt, neu] of Object.entries(HIT_NAME)) if (refHits[alt] !== undefined) assert.deepEqual(r4(h[neu]), refHits[alt], `${lage}, ${wann}: ${alt} ↔ hit().${neu}`);
+        }
         for (const alt of Object.keys(HIT_NAME)) if (alt !== '_brause') assert.equal(r.H.S[alt], undefined, `${lage}: ${alt} wird noch beim Zeichnen gesetzt`);
       } else {
         assert.deepEqual(r.hits, ref.hits, `${lage}: Hit-Boxen`);
+        assert.deepEqual(r.hitsFrueh, ref.hitsFrueh, `${lage}: Hit-Boxen nach Bild 3`);
       }
     }
   });
