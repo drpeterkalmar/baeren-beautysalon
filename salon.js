@@ -168,7 +168,6 @@ S.buildUI = function(){
   var R = REG[st];
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
-  else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
   else if(st==='zirkus') buildZirkus();
   else if(st==='eis') buildEis();
@@ -213,22 +212,6 @@ function buildWaschen(){
     emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
   },{active:function(){return S.baer.schaum>0.2;}});
   btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
-}
-function buildPfoten(){
-  stationTabs();
-  S.hinweis = 'Farbe wählen, dann auf die Krallen tippen! 💅';
-  Art.LACK.slice(0,6).forEach(function(c,i){
-    btn(30+(i%3)*62, 100+Math.floor(i/3)*62, 56, 56, '', function(){
-      S.lackColor=c; S.stickerTyp=null; S.buildUI();
-    },{fill:c,active:function(){return S.lackColor===c && !S.stickerTyp;}});
-  });
-  var sticker=[['herz','❤️'],['stern','⭐'],['blume','🌸']];
-  sticker.forEach(function(t,i){
-    btn(30+i*86, 250, 78, 56, t[1], function(){
-      S.stickerTyp=t[0]; S.buildUI();
-    },{active:function(){return S.stickerTyp===t[0];},big:1});
-  });
-  btn(30,326,150,56,'🧽 Neu',function(){ S.baer.lack={}; S.baer.sticker=[]; S.save(); S.buildUI(); });
 }
 function buildMassage(){
   stationTabs();
@@ -977,23 +960,6 @@ S.tapBear = function(x,y){
     var cx=S.VW*0.5, cy=S.VH*0.58+70*s;
     var dx=(x-cx)/(120*s), dy=(y-cy)/(110*s);
     if(dx*dx+dy*dy < 1.4){ S.baer.schaum=Math.min(1,S.baer.schaum+0.03); return true; }
-  }
-  if(S.state==='pfoten'){
-    ['L0','L1','L2','R0','R1','R2'].forEach(function(k){
-      var p=clawPos(k);
-      if(Math.hypot(x-p[0],y-p[1])<p[2]+8){
-        if(S.stickerTyp){
-          S.baer.sticker=S.baer.sticker.filter(function(t){return t.ziel!==k;});
-          S.baer.sticker.push({ziel:k,typ:S.stickerTyp,farbe:S.lackColor||'#e91e63'});
-        } else {
-          S.baer.lack[k]=S.lackColor||'#e91e63';
-        }
-        S.save();
-        sfx('pop',{pitch:1.4}); react('happy',0.6);
-        emit('star',p[0],p[1],{n:7,speed:170,size:8,life:0.6,grav:200,colors:['#ffe7a8',S.lackColor||'#e91e63']});
-      }
-    });
-    return true;
   }
   if(S.state==='massage'){ S.dragBear(x,y); return true; }
   if(S.state==='malbuch'){
