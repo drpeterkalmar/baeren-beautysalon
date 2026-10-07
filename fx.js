@@ -275,6 +275,38 @@ Fx.Q = { tier:2,
   dpr: function(){ return [1.25,1.6,2][Fx.Q.tier]; },
   pmul: function(){ var m=[0.45,0.75,1][Fx.Q.tier]; return (Fx.DEKO && Fx.RM) ? m*0.6 : m; } };
 
+// Qualitäts-Automatik als reine Funktion (game.js ruft sie je Bild). Bildabstand > 20 ms → weniger Auflösung/Partikel.
+// Neu: Grundperiode des Displays. In der Warmlaufphase (2,5 s) wird gemessen, ob das Gerät sauber mit 30 Hz läuft
+// (iPhone-Stromsparmodus, Akkusparer): kleinster Abstand > 22 ms, ≥ 60 % der Abstände im 30-Hz-Band (27–40 ms) und
+// JS-Arbeit im Mittel < 8 ms. Dann gilt base = 33,3 ms und herabgestuft wird nur, wenn der Abstand deutlich darüber
+// liegt (> 1,23·base ≈ 41 ms) oder die JS-Arbeit dauerhaft > 0,75·base ≈ 25 ms ist. Sonst (60/90/120 Hz oder
+// unklar) base = 16,7 ms und alle Schwellen wie bisher (20,5 / 17,4 / 6 ms) → Verhalten bei 60 Hz unverändert.
+// Läuft ein 30-Hz-Gerät später ≥ 20 Bilder lang deutlich schneller (Stromsparmodus aus), gilt wieder base = 16,7.
+Fx.Q.newPerf = function(){ return {ema:16.7, work:6, slow:0, fast:0, flips:0, warm:0, base:0, wn:0, wsum:0, wmin:0, w30:0, lo:0}; };
+// sample = {ms: Bildabstand, work: JS-Arbeit (ms), dt: gedeckeltes dt (s), tier: aktuelle Stufe}; P = newPerf()-Zustand.
+// Rückgabe: neue Stufe oder null.
+Fx.Q.step = function(sm, P){
+  var tier=sm.tier===undefined?Fx.Q.tier:sm.tier, ms=+sm.ms||0, work=+sm.work||0, dt=+sm.dt||0;
+  P.warm+=dt;
+  if(P.warm<2.5){
+    if(ms>=4){ P.wn++; P.wsum+=work; if(!P.wmin || ms<P.wmin) P.wmin=ms; if(ms>=27 && ms<=40) P.w30++; }
+    return null;
+  }
+  if(!P.base) P.base=(P.wn>=10 && P.wmin>22 && P.w30>=0.6*P.wn && P.wsum/P.wn<8) ? 33.3 : 16.7;
+  if(P.base>22){ // 30-Hz-Gerät wird schneller → zurück zu den normalen Schwellen
+    if(ms>=4 && ms<P.base*0.7) P.lo++; else P.lo=Math.max(0,P.lo-1);
+    if(P.lo>=20){ P.base=16.7; P.lo=0; }
+  }
+  P.ema+=(Math.min(ms,60)-P.ema)*0.05;
+  P.work+=(work-P.work)*0.05;
+  var lowHz=P.base>22, slowIv=lowHz?P.base*1.23:20.5, fastIv=lowHz?P.base*1.05:17.4, workMax=lowHz?P.base*0.75:Infinity;
+  if(P.ema>slowIv || P.work>workMax) P.slow+=dt; else P.slow=Math.max(0,P.slow-dt*0.5);
+  if(P.slow>1.3 && tier>0){ P.slow=0; P.fast=0; P.flips++; return tier-1; }
+  if(P.ema<fastIv && P.work<6) P.fast+=dt; else P.fast=0;
+  if(P.fast>8 && tier<2 && P.flips<2){ P.fast=0; return tier+1; }
+  return null;
+};
+
 // ---------------------------------------------------------------- Partikel
 var DEF = {
   puff:['#fff6ea','#fbe7d2'], spark:['#fff1c8','#ffd9a0'], twinkle:['#fff'], drop:['#bfe6f6'],

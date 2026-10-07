@@ -372,17 +372,12 @@ function render(t){
   }
 }
 
-// ---- Qualitätsstufen: Frame-Zeit > 20 ms → weniger Auflösung/Partikel statt FPS-Einbruch ----
-var perf={ema:16.7,work:6,slow:0,fast:0,flips:0,warm:0};
+// ---- Qualitätsstufen: Frame-Zeit > 20 ms → weniger Auflösung/Partikel statt FPS-Einbruch (Logik: Fx.Q.step) ----
+var perf=Fx.Q.newPerf();
 G.perf=perf;
 function tiers(dtMs,work,dt){
-  perf.warm+=dt; if(perf.warm<2.5) return;
-  perf.ema+=(Math.min(dtMs,60)-perf.ema)*0.05;
-  perf.work+=(work-perf.work)*0.05;
-  if(perf.ema>20.5) perf.slow+=dt; else perf.slow=Math.max(0,perf.slow-dt*0.5);
-  if(perf.slow>1.3 && Fx.Q.tier>0){ Fx.Q.tier--; perf.slow=0; perf.fast=0; perf.flips++; resize(); return; }
-  if(perf.ema<17.4 && perf.work<6) perf.fast+=dt; else perf.fast=0;
-  if(perf.fast>8 && Fx.Q.tier<2 && perf.flips<2){ Fx.Q.tier++; perf.fast=0; resize(); }
+  var nt=Fx.Q.step({ms:dtMs,work:work,dt:dt,tier:Fx.Q.tier},perf);
+  if(nt!==null){ Fx.Q.tier=nt; resize(); }
 }
 
 var last=performance.now();
