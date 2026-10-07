@@ -173,7 +173,6 @@ S.buildUI = function(){
   else if(st==='eis') buildEis();
   else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
-  else if(st==='zauber') buildZauber();
   else if(st==='geschenke') buildGeschenke();
   else if(st==='keks') buildKeks();
   else if(st==='karussell') buildKarussell();
@@ -301,16 +300,6 @@ function buildKeks(){
     S.keks={teig:0,form:null,stich:null,glow:0,biss:0,roll:[]}; S.buildUI();
   });
 }
-function buildZauber(){
-  stationTabs();
-  S.hinweis = 'Zauber wählen, dann den Zauberstab antippen! 🌈✨';
-  if(!S.zauber) S.zauber = {art:0, fx:null, pfote:0};
-  [['⭐ Sternenschweif'],['🌸 Blütenregen'],['❤️ Herz-Kreis']].forEach(function(d,i){
-    btn(30+i*200, 100, 190, 60, d[0], function(){
-      S.zauber.art=i; S.buildUI();
-    },{active:function(){return S.zauber.art===i;}, small:1});
-  });
-}
 function buildKarussell(){
   stationTabs();
   S.hinweis = 'Pferd-Farbe wählen — das Karussell dreht sich! 🎠';
@@ -395,7 +384,6 @@ S.update = function(dt){
   var fr=dt*60, st=S.state, R=REG[st];
   if(R && R.update) R.update(dt, fr);
   if(st==='aquarium' && S.aqua) updAquarium(fr);
-  if(st==='zauber' && S.zauber) updZauber(fr);
   if(st==='karussell' && S.karo) updKarussell(fr);
   if(st==='geburtstag' && S.kuchen) updRauch(fr);
 };
@@ -429,15 +417,6 @@ S.draw = function(g){
     drawStickers(g);
     g.restore();
     drawBallonStation(g);
-  } else if(S.state==='zauber'){
-    // Pfoten heben beim Zaubern: kurz jubel-Anteil
-    var zb=S.zauber||{pfote:0};
-    if(S.baer._j===undefined) S.baer._j=0;
-    var jAlt=S.baer.jubel; S.baer.jubel=Math.max(jAlt,Math.min(1,zb.pfote||0)*0.7);
-    Art.drawBear(g,S.baer,{w:W,h:H, spaTarget:S.spaTarget});
-    S.baer.jubel=jAlt;
-    drawStickers(g);
-    drawZauberStation(g);
   } else if(S.state==='geschenke'){
     drawGeschenke(g);
   } else if(S.state==='keks'){
@@ -916,24 +895,6 @@ S.tapBear = function(x,y){
     }
     return true;
   }
-  if(S.state==='zauber' && S.zauber){
-    // Zauberstab antippen = Zauberspruch
-    if(S._stabHitZ && x>=S._stabHitZ.x&&x<=S._stabHitZ.x+S._stabHitZ.w&&y>=S._stabHitZ.y&&y<=S._stabHitZ.y+S._stabHitZ.h){
-      S.zauber.fx={art:S.zauber.art, t:0.001, d:1.6, seed:Math.random()*6};
-      S.zauber.pfote=1;
-      window.BSGame && window.BSGame.sternExplosion && window.BSGame.sternExplosion(S.VW*0.5+128*Math.min(S.VW,S.VH)/420, S.VH*0.58-140);
-      S.buildUI();
-      return true;
-    }
-    // Auch Tap aufs obere Drittel neben dem Bären zaubert (Kinder-tolerant)
-    var s6=Math.min(S.VW,S.VH)/420;
-    if(Math.hypot(x-(S.VW*0.5+128*s6), y-(S.VH*0.58-60*s6))<120*s6){
-      S.zauber.fx={art:S.zauber.art, t:0.001, d:1.6, seed:Math.random()*6};
-      S.zauber.pfote=1; S.buildUI();
-      return true;
-    }
-    return true;
-  }
   if(S.state==='geburtstag' && S.kuchen){
     // Kerzen antippen
     var kp=kerzenPos();
@@ -1349,72 +1310,6 @@ function drawBallonStation(g){
     g.font='bold 15px sans-serif'; g.textAlign='center'; g.fillStyle='#7a4b8f';
     g.fillText('Antippen = PLATZ!',sx2,sy2+br*1.5+30);
   }
-}
-// ---- Zauber-Station: Stab + 3 Zauber + mystischer Boden-Nebel ----
-function drawZauberStation(g){
-  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
-  var zb=S.zauber; if(!zb) return;
-  var cx=S.VW*0.5, cy=S.VH*0.58;
-  // Mystischer Nebel: langsam wandernde halbtransparente Wölkchen am Boden
-  for(var n=0;n<7;n++){
-    var nx=((t*14+n*173)%(S.VW+220))-110, ny=S.VH*0.72+((n*53)%110)+Math.sin(t*0.8+n)*10;
-    g.globalAlpha=0.16+0.08*Math.sin(t*0.7+n*1.9);
-    var nc=n%2?'#c39bd3':'#9fb8d8';
-    circle2(g,nx,ny,34+n*4,nc);
-    circle2(g,nx+26,ny+5,24+n*3,nc);
-    circle2(g,nx-26,ny+6,22+n*2,nc);
-  }
-  g.globalAlpha=1;
-  // Zauberstab in der rechten Pfote, leicht schwebend, funkelt idle
-  var stx=cx+128*s, sty=cy-30*s+Math.sin(t*1.5)*4;
-  g.save();
-  g.translate(stx,sty); g.rotate(-0.5);
-  g.strokeStyle='#8a5a2a'; g.lineWidth=6*s; g.lineCap='round';
-  g.beginPath(); g.moveTo(0,0); g.lineTo(0,-86*s); g.stroke();
-  var tw=0.6+0.4*Math.sin(t*4.5);
-  Art.drawSticker(g,'stern',0,-98*s,(14+5*tw)*s,'#ffd24d');
-  g.globalAlpha=tw*0.6;
-  circle2(g,0,-98*s,(26+6*Math.sin(t*4.5))*s,'rgba(255,220,120,0.5)');
-  g.globalAlpha=1;
-  g.restore();
-  S._stabHitZ={x:stx-30*s,y:sty-130*s,w:60*s,h:150*s};
-  // Zauberspruch-Effekte (Partikel je Zauber)
-  if(zb.fx){
-    var f=zb.fx, q=f.t/f.d, oaZ=g.globalAlpha;
-    if(q>=1){ /* vorbei – updZauber räumt ab */ }
-    else if(f.art===0){ // Sternenschweif: goldene Sterne kreisen aufwärts
-      for(var i2=0;i2<14;i2++){
-        var a2=f.seed+i2*0.45+q*5;
-        var rr2=(60+q*180)*s;
-        g.globalAlpha=oaZ*(1-q); // Alpha über globalAlpha statt pro Bild neuer Farbstring (Farb-Cache)
-        Art.drawSticker(g,'stern',cx+Math.cos(a2)*rr2,cy-40*s+Math.sin(a2)*rr2*0.5-q*90*s,
-          (9+3*Math.sin(q*9+i2))*s,'#ffd24d');
-      }
-    } else if(f.art===1){ // Blütenregen: Rosa Blumen fallen von oben
-      for(var b2=0;b2<16;b2++){
-        var bx2=(b2*67 + f.seed*40)%S.VW;
-        var by2=-20+q*S.VH*0.8+((b2*29)%40);
-        g.globalAlpha=oaZ*(1-q*0.6);
-        Art.drawSticker(g,'blume',bx2+Math.sin(t*2+b2)*16,by2,9*s,'#ff9eb5');
-      }
-    } else { // Herz-Kreis: Herzen im Kreis um den Bären
-      for(var h2=0;h2<12;h2++){
-        var ah=h2/12*Math.PI*2+q*3+f.seed;
-        g.globalAlpha=oaZ*(1-q);
-        Art.drawSticker(g,'herz',cx+Math.cos(ah)*150*s,cy+Math.sin(ah)*110*s-40*s,
-          (10+4*Math.sin(q*8+h2))*s,'#e91e63');
-      }
-    }
-    g.globalAlpha=oaZ;
-  }
-}
-// Zauberspruch-Uhr (aus S.update): das erste Bild zeigt den Startwert, danach +0,016 pro 60-Hz-Bild
-// (wie früher: erst zeichnen, dann weiterzählen) → Dauer 1,6/0,016 Bilder ≈ 1,67 s, jetzt bei jeder Bildrate.
-function updZauber(fr){
-  var f=S.zauber.fx; if(!f) return;
-  if(f.lauf) f.t+=0.016*fr;
-  f.lauf=1;
-  if(f.t/f.d>=1) S.zauber.fx=null;
 }
 // ---- Karussell: Zelt, Lichterketten, drehendes Pferd mit Bär ----
 function drawKarussell(g){
