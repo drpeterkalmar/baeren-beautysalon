@@ -106,6 +106,7 @@ function muteButton(){
 //   build()      Knöpfe/Hinweis (nach stationTabs-freien Rück-/Weiter-Knöpfen)    back(g)  Hintergrund-Deko (vor Duftwolken)
 //   draw(g)      Welt der Station (Bär, Requisiten)                                update(dt,fr)  Simulation pro Bild
 //   tap(x,y)     Antippen in Welt-Koordinaten → true, wenn verbraucht             hit()    Hit-Boxen aus dem Zustand
+//   frueh(dt)    Stations-Logik pro Bild VOR der Pose des Bären (game.js update() ruft S.updateFrueh am Anfang)
 //   onLeave(neu)/onEnter(alt)  Aufräumen beim Zustandswechsel
 var REG = S.REG = {};
 S.registerStation = function(def){
@@ -192,6 +193,12 @@ function stationTabs(){
 // Von game.js update(dt) aufgerufen (dt ≤ 0,05 s), direkt vor BSDeko.update. Die Zeichenfunktionen lesen danach
 // nur noch Zustand. fr = dt*60 („Bilder à 60 Hz“): die alten Schritte pro Bild (0.016, t++, …) werden mit fr
 // skaliert → bei 60 Hz exakt wie vorher, bei 30/90/120 Hz gleich schnell pro Sekunde.
+// Stations-Logik, die die Pose des Bären im selben Bild beeinflusst (Entspannung, Schütteln, Flausch …):
+// game.js ruft sie am Anfang von update(), also vor Art.updateBear — Reihenfolge wie früher in game.js.
+S.updateFrueh = function(dt){
+  var R=REG[S.state];
+  if(R && R.frueh) R.frueh(dt);
+};
 S.update = function(dt){
   if(!(dt>0)) return;
   var fr=dt*60, st=S.state, R=REG[st];

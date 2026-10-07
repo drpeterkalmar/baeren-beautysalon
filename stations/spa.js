@@ -18,6 +18,12 @@ S.registerStation({
     },{active:function(){return S.baer.gurkeL||S.baer.gurkeR;}});
   },
   draw:function(g){ H.baer(g); },
+  // Entspannung mit beiden Gurken (aus game.js update(); Abklingen außerhalb der Station bleibt in game.js)
+  frueh:function(dt){
+    var b=S.baer;
+    b._spa=(b._spa||0)+(((S.spaTarget)?1:0)-(b._spa||0))*Math.min(1,dt*1.4);
+    b.relax=Math.max(b.relax,b._spa);
+  },
   tap:function(x,y){
     var s2=Math.min(S.VW,S.VH)/420;
     var cx2=S.VW*0.5, ey=S.VH*0.58-105*s2;

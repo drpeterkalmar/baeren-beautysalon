@@ -8,6 +8,22 @@ var S=window.BSSalon, H=S.H, Art=window.BSArt, Fx=window.BSFx;
 S.registerStation({
   id:'waschen',
   onLeave:function(){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; },
+  // Dusche spült Schaum ab, Tropfen, Abschütteln (aus game.js update(), läuft vor der Pose)
+  frueh:function(dt){
+    var b=S.baer;
+    if(S.dusche && b.schaum>0){
+      b.schaum=Math.max(0,b.schaum-dt*0.55);
+      b.tropfen.length=0;
+      var s=Math.min(S.VW,S.VH)/420;
+      for(var i=0;i<5;i++) b.tropfen.push({x:S.VW*0.5+(Math.random()-0.5)*200*s,y:S.VH*0.35+Math.random()*260*s});
+      if(Math.random()<dt*20) Fx.P.emit('drop',400+Math.random()*120,190+Math.random()*30,{n:2,speed:220,dir:-Math.PI/2,spread:2.4,size:6,life:0.8,grav:900,drag:0.5});
+      if(b.schaum===0){ // fertig abgeduscht: Schütteln wie ein nasser Hund
+        Art.react(b,'shake'); if(window.BSSfx) window.BSSfx.play('splash');
+        Fx.P.emit('drop',S.VW*0.5,S.VH*0.58,{n:40,speed:620,size:7,life:0.9,grav:900,drag:0.8,jx:120,jy:100});
+        S.dusche=false;
+      }
+    } else { b.tropfen.length=0; if(b.schaum<=0) S.dusche=false; }
+  },
   build:function(){
     H.stationTabs();
     S.hinweis = 'Seife antippen, dann Schaum rubbeln! 🧼';

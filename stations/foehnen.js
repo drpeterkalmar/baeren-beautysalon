@@ -13,6 +13,14 @@ S.registerStation({
     if(S.baer.schaum>0.1) H.btn(30,206,170,56,'🚿 Erst duschen!',function(){ S.setState('waschen'); });
   },
   draw:function(g){ H.baer(g); drawFoehn(g); },
+  // Flausch beim Föhnen + warme Funken (aus game.js update())
+  frueh:function(dt){
+    var b=S.baer;
+    var tgt=(S.foehn && b.schaum<0.1)?1:0;
+    b.fluff+=(tgt-b.fluff)*Math.min(1,dt*3);
+    if(S.foehn && b.schaum<0.1 && Math.random()<dt*14)
+      Fx.P.emit('spark',S.VW*0.5-110,S.VH*0.58-150,{n:1,speed:380,dir:0.35,spread:0.5,size:9,life:0.7,grav:-40,drag:1,colors:['#ffe8c8','#fff6e8']});
+  },
   onLeave:function(){ S.foehn=false; }
 });
 

@@ -233,58 +233,13 @@ document.addEventListener('touchmove',function(e){ e.preventDefault(); },{passiv
 var prevSchaum=0;
 function update(dt){
   var b=S.baer, t=now(), st=S.state;
-  if(st==='waschen'){
-    if(S.dusche && b.schaum>0){
-      b.schaum=Math.max(0,b.schaum-dt*0.55);
-      b.tropfen.length=0;
-      var s=Math.min(S.VW,S.VH)/420;
-      for(var i=0;i<5;i++) b.tropfen.push({x:S.VW*0.5+(Math.random()-0.5)*200*s,y:S.VH*0.35+Math.random()*260*s});
-      if(Math.random()<dt*20) Fx.P.emit('drop',400+Math.random()*120,190+Math.random()*30,{n:2,speed:220,dir:-Math.PI/2,spread:2.4,size:6,life:0.8,grav:900,drag:0.5});
-      if(b.schaum===0){ // fertig abgeduscht: Schütteln wie ein nasser Hund
-        Art.react(b,'shake'); if(window.BSSfx) window.BSSfx.play('splash');
-        Fx.P.emit('drop',S.VW*0.5,S.VH*0.58,{n:40,speed:620,size:7,life:0.9,grav:900,drag:0.8,jx:120,jy:100});
-        S.dusche=false;
-      }
-    } else { b.tropfen.length=0; if(b.schaum<=0) S.dusche=false; }
-  }
-  if(st==='foehnen'){
-    var tgt=(S.foehn && b.schaum<0.1)?1:0;
-    b.fluff+=(tgt-b.fluff)*Math.min(1,dt*3);
-    if(S.foehn && b.schaum<0.1 && Math.random()<dt*14)
-      Fx.P.emit('spark',S.VW*0.5-110,S.VH*0.58-150,{n:1,speed:380,dir:0.35,spread:0.5,size:9,life:0.7,grav:-40,drag:1,colors:['#ffe8c8','#fff6e8']});
-  }
-  if(st==='spa'){
-    b._spa=(b._spa||0)+(((S.spaTarget)?1:0)-(b._spa||0))*Math.min(1,dt*1.4);
-    b.relax=Math.max(b.relax,b._spa);
-  }
-  if(st==='eis' && S.eis && S.eis.leck && S.eis.kugeln.length){
-    var top=S.eis.kugeln[S.eis.kugeln.length-1];
-    top.scale=(top.scale===undefined?1:top.scale)-dt*0.06;
-    if(top.scale<0.3) S.eis.kugeln.pop();
-  }
+  // Stations-Logik vor der Pose (Waschen/Dusche, Föhnen, Spa, Eis, Zuckerwatte, Massage): stations/<id>.js frueh(dt)
+  if(S.updateFrueh) S.updateFrueh(dt);
   if(S.flash>0) S.flash=Math.max(0,S.flash-dt*5);
   if(st!=='spa' && S.spaTarget===0 && b._spa!==undefined) b._spa=Math.max(0,b._spa-dt*0.6);
   b.breathe=(b.breathe||0)+dt;
   if(S.tanz && S.tanz.spin>0) S.tanz.spin=Math.max(0,S.tanz.spin-dt*1.2);
-  if(st==='zuckerwatte' && S.watte){
-    var wt=S.watte;
-    wt.spin=Math.max(0,(wt.spin||0)-dt*0.25);
-    if(wt.spin>0) wt.lvl=Math.min(1,(wt.lvl||0)+dt*wt.spin*0.30);
-    if(wt._bissT===undefined) wt._bissT=4+Math.random()*3;
-    wt._bissT-=dt;
-    if(wt._bissT<0 && wt.lvl>0.15){ wt.lvl=Math.max(0.05,wt.lvl-0.22); wt.kau=1.4; wt._bissT=4+Math.random()*3.5; Art.react(b,'happy'); }
-    if(wt.kau>0) wt.kau=Math.max(0,wt.kau-dt);
-  }
-  if(st==='massage' && S.mass){
-    var rt=Math.min(1,S.mass.prog/100);
-    b.relax+=(rt-b.relax)*Math.min(1,dt*2.5);
-    for(var hi=S.mass.herzen.length-1;hi>=0;hi--){
-      var h=S.mass.herzen[hi]; h.t=(h.t||0)+dt; h.a-=dt*0.7;
-      var r=h.r0+h.t*70;
-      h.x=h.ox+Math.cos(h.a0+h.t*3.2)*r; h.y=h.oy+Math.sin(h.a0+h.t*3.2)*r-h.t*30;
-      if(h.a<=0) S.mass.herzen.splice(hi,1);
-    }
-  } else if(b.relax>0 && st!=='spa') b.relax=Math.max(0,b.relax-dt*0.8);
+  if(!(st==='massage' && S.mass) && b.relax>0 && st!=='spa') b.relax=Math.max(0,b.relax-dt*0.8); // Entspannung klingt ab
   if(S.geschenk && S.geschenk.schuettel>0) S.geschenk.schuettel=Math.max(0,S.geschenk.schuettel-dt);
   if(S.keks && S.keks.glow>0){ S.keks.glow=Math.max(0,S.keks.glow-dt); if(S.keks.glow===0 && S.keks.stich) S.keks.biss=1.4; }
   if(S.keks && S.keks.biss>0){ S.keks.biss=Math.max(0,S.keks.biss-dt); b.jubel=Math.min(1,Math.max(b.jubel||0,S.keks.biss*0.8)); }

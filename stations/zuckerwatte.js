@@ -14,6 +14,18 @@ S.registerStation({
     H.btn(30,100,190,58,'🍬 Wirbeln!',function(){ S.watte.spin=Math.min(1,(S.watte.spin||0)+0.45); },{active:function(){return S.watte.spin>0;}});
     H.btn(30,168,190,52,'🧽 Neue Watte',function(){ S.watte={lvl:0,kau:0,sx:S.VW*0.5+150,sy:S.VH*0.58+120,spin:0}; S.buildUI(); });
   },
+  // Spinnen, Watte wächst, der Bär beißt ab (aus game.js update())
+  frueh:function(dt){
+    if(!S.watte) return;
+    var b=S.baer;
+    var wt=S.watte;
+    wt.spin=Math.max(0,(wt.spin||0)-dt*0.25);
+    if(wt.spin>0) wt.lvl=Math.min(1,(wt.lvl||0)+dt*wt.spin*0.30);
+    if(wt._bissT===undefined) wt._bissT=4+Math.random()*3;
+    wt._bissT-=dt;
+    if(wt._bissT<0 && wt.lvl>0.15){ wt.lvl=Math.max(0.05,wt.lvl-0.22); wt.kau=1.4; wt._bissT=4+Math.random()*3.5; Art.react(b,'happy'); }
+    if(wt.kau>0) wt.kau=Math.max(0,wt.kau-dt);
+  },
   draw:function(g){ drawZuckerwatte(g); },
   hit:function(){ return watteHit(); },
   tap:function(x,y){

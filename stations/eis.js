@@ -31,6 +31,13 @@ S.registerStation({
     g.fillStyle='#d9a94f';
     g.beginPath(); g.moveTo(800,296); g.lineTo(830,296); g.lineTo(815,340); g.closePath(); g.fill();
   },
+  // oberste Kugel schmilzt, solange der Bär schleckt (aus game.js update())
+  frueh:function(dt){
+    if(!(S.eis && S.eis.leck && S.eis.kugeln.length)) return;
+    var top=S.eis.kugeln[S.eis.kugeln.length-1];
+    top.scale=(top.scale===undefined?1:top.scale)-dt*0.06;
+    if(top.scale<0.3) S.eis.kugeln.pop();
+  },
   draw:function(g){
     H.baer(g);
     if(S.eis){

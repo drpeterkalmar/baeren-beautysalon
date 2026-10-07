@@ -11,6 +11,19 @@ S.registerStation({
     S.hinweis = 'Streiche mit dem Finger in Kreisen über den Bären! 💆';
     if(!S.mass) S.mass = {prog:0, ang:null, herzen:[]};
   },
+  // Entspannung folgt dem Fortschritt, Herzchen kreisen nach oben (aus game.js update())
+  frueh:function(dt){
+    if(!S.mass) return;
+    var b=S.baer;
+    var rt=Math.min(1,S.mass.prog/100);
+    b.relax+=(rt-b.relax)*Math.min(1,dt*2.5);
+    for(var hi=S.mass.herzen.length-1;hi>=0;hi--){
+      var h=S.mass.herzen[hi]; h.t=(h.t||0)+dt; h.a-=dt*0.7;
+      var r=h.r0+h.t*70;
+      h.x=h.ox+Math.cos(h.a0+h.t*3.2)*r; h.y=h.oy+Math.sin(h.a0+h.t*3.2)*r-h.t*30;
+      if(h.a<=0) S.mass.herzen.splice(hi,1);
+    }
+  },
   draw:function(g){ drawHerzen(g); H.baer(g); },
   tap:function(x,y){ S.dragBear(x,y); return true; }
 });
