@@ -107,6 +107,35 @@ function muteButton(){
   return b;
 }
 
+// ---- Stations-Registry (Umbau Schritt 10) ------------------
+// Eine Station meldet sich aus stations/<id>.js (nach salon.js geladen) mit
+// S.registerStation({id, build, back, draw, update, tap, hit, onEnter, onLeave}) an. buildUI/draw/update/tapBear
+// fragen zuerst die Registry; Stationen ohne Eintrag laufen noch über die if/else-Ketten unten.
+//   build()      Knöpfe/Hinweis (nach stationTabs-freien Rück-/Weiter-Knöpfen)    back(g)  Hintergrund-Deko (vor Duftwolken)
+//   draw(g)      Welt der Station (Bär, Requisiten)                                update(dt,fr)  Simulation pro Bild
+//   tap(x,y)     Antippen in Welt-Koordinaten → true, wenn verbraucht             hit()    Hit-Boxen aus dem Zustand
+//   onLeave(neu)/onEnter(alt)  Aufräumen beim Zustandswechsel
+var REG = S.REG = {};
+S.registerStation = function(def){
+  if(!def || !def.id) throw new Error('registerStation: id fehlt');
+  REG[def.id] = def; return def;
+};
+// Helfer für Stations-Dateien (dieselben Funktionen wie hier im Modul)
+S.H = {};
+// Aufräumen beim Verlassen für Stationen, die noch nicht in der Registry stehen
+var LEAVE = {
+  waschen: function(){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; },
+  foehnen: function(){ S.foehn=false; }
+};
+// Zustandswechsel an einer Stelle: Zustand setzen + Knöpfe neu bauen. Die Haken (onLeave/onEnter) laufen in
+// S.buildUI beim Erkennen des Wechsels — so greifen sie auch, wenn Prüfwerkzeuge S.state direkt setzen.
+S.setState = function(id){ S.state = id; S.buildUI(); };
+function wechsel(alt, neu){
+  var A = REG[alt], N = REG[neu];
+  if(A && A.onLeave) A.onLeave(neu); else if(LEAVE[alt]) LEAVE[alt](neu);
+  if(N && N.onEnter) N.onEnter(alt);
+}
+
 S.buildUI = function(){
   buttons.length = 0;
   if(typeof S.toggleMute==='function') muteButton();
@@ -124,30 +153,30 @@ S.buildUI = function(){
     else if(accWahl===3) mb.acc.kette=Art.KETTEN[Math.floor(Math.random()*Art.KETTEN.length)];
     S.menuBaer = Object.assign(mb, {breath:0});
   } else if(st!=='wahl'){ S.flash=0; }
-  if(S._prev==='waschen' && st!=='waschen'){ S.baer.schaum=0; S.baer.tropfen=[]; S.dusche=false; }
-  if(S._prev==='foehnen' && st!=='foehnen'){ S.foehn=false; }
-  S._prev = st;
+  if(S._prev!==st){ var alt=S._prev; S._prev = st; if(alt!==undefined) wechsel(alt, st); }
   if(st==='menu'){
     if(S.saved && S.saved.fell){
-      btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.state='waschen'; S.buildUI(); },{big:1,cta:1,primary:1});
-      btn(230,534,440,64,'🌟 Neuen Bären wählen',function(){ S.state='wahl'; S.buildUI(); },{big:1,cta:1});
+      btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.setState('waschen'); },{big:1,cta:1,primary:1});
+      btn(230,534,440,64,'🌟 Neuen Bären wählen',function(){ S.setState('wahl'); },{big:1,cta:1});
     } else {
-      btn(230,500,440,70,'▶️ Los geht’s!',function(){ S.state='wahl'; S.buildUI(); },{big:1,cta:1,primary:1});
+      btn(230,500,440,70,'▶️ Los geht’s!',function(){ S.setState('wahl'); },{big:1,cta:1,primary:1});
     }
     return;
   }
   if(st==='wahl'){
-    btn(16,16,120,56,'🏠',function(){ S.state='menu'; S.buildUI(); },{nav:'home'});
+    btn(16,16,120,56,'🏠',function(){ S.setState('menu'); },{nav:'home'});
     return;
   }
   if(st==='finish-done'){
-    btn(16,16,120,56,'🏠',function(){ S.fin=null; S.state='menu'; S.buildUI(); },{nav:'home'});
-    btn(150,518,280,62,'🐻 Neuer Bär',function(){ S.fin=null; S.state='wahl'; S.buildUI(); },{big:1,cta:1,finCta:1});
-    btn(470,518,280,62,'🔄 Nochmal',function(){ S.fin=null; S.baer=neuerBaer(S.baer.fellIdx); S.state='waschen'; S.buildUI(); },{big:1,cta:1,finCta:1,primary:1});
+    btn(16,16,120,56,'🏠',function(){ S.fin=null; S.setState('menu'); },{nav:'home'});
+    btn(150,518,280,62,'🐻 Neuer Bär',function(){ S.fin=null; S.setState('wahl'); },{big:1,cta:1,finCta:1});
+    btn(470,518,280,62,'🔄 Nochmal',function(){ S.fin=null; S.baer=neuerBaer(S.baer.fellIdx); S.setState('waschen'); },{big:1,cta:1,finCta:1,primary:1});
     return;
   }
   backButtons();
-  if(st==='waschen') buildWaschen();
+  var R = REG[st];
+  if(R){ if(R.build) R.build(); }
+  else if(st==='waschen') buildWaschen();
   else if(st==='foehnen') buildFoehnen();
   else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
@@ -174,11 +203,11 @@ S.buildUI = function(){
 };
 
 function backButtons(){
-  btn(16,16,120,56,'🏠',function(){ S.state='menu'; S.buildUI(); },{nav:'home'});
+  btn(16,16,120,56,'🏠',function(){ S.setState('menu'); },{nav:'home'});
   var i = S.STATIONS.map(function(s){return s.id;}).indexOf(S.state);
   if(i>=0 && i < S.STATIONS.length-1){
     btn(S.VW-150,16,134,56,'➜',function(){
-      S.state = S.STATIONS[i+1].id; S.buildUI(); S.save();
+      S.setState(S.STATIONS[i+1].id); S.save();
     },{nav:'next'});
   }
 }
@@ -188,7 +217,7 @@ function stationTabs(){
   for(var j=0;j<S.STATIONS.length;j++){
     (function(st,j){
       btn(6+(j%12)*74, S.VH-118+Math.floor(j/12)*56, 70, 52, st.icon+' '+st.name, function(){
-        S.state = st.id; S.buildUI();
+        S.setState(st.id);
       }, {active:function(){ return S.state===st.id; }, small:1, tiny:1, tab:st.id, icon:st.icon, name:st.name});
     })(S.STATIONS[j],j);
   }
@@ -208,7 +237,7 @@ function buildFoehnen(){
   stationTabs();
   S.hinweis = 'Halte den Föhn gedrückt! 💨';
   btn(30,110,170,80,'🌬️ Föhn',function(){},{hold:true, active:function(){return S.foehn;}});
-  if(S.baer.schaum>0.1) btn(30,206,170,56,'🚿 Erst duschen!',function(){ S.state='waschen'; S.buildUI(); });
+  if(S.baer.schaum>0.1) btn(30,206,170,56,'🚿 Erst duschen!',function(){ S.setState('waschen'); });
 }
 function buildSchneiden(){
   stationTabs();
@@ -544,7 +573,8 @@ function buildAquarium(){
 // skaliert → bei 60 Hz exakt wie vorher, bei 30/90/120 Hz gleich schnell pro Sekunde.
 S.update = function(dt){
   if(!(dt>0)) return;
-  var fr=dt*60, st=S.state;
+  var fr=dt*60, st=S.state, R=REG[st];
+  if(R && R.update) R.update(dt, fr);
   if(st==='aquarium' && S.aqua) updAquarium(fr);
   if(st==='zauber' && S.zauber) updZauber(fr);
   if(st==='karussell' && S.karo) updKarussell(fr);
@@ -562,6 +592,8 @@ S.draw = function(g){
   if(S.state==='finish-done'){ drawFinaleWelt(g); return; }
   // Duft-Wolken im Stations-Screen
   if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);
+  var R=REG[S.state];
+  if(R){ if(R.draw) R.draw(g); return; }
   if(S.state==='malbuch'){ drawMalbuch(g); return; }
   if(S.state==='aquarium'){ drawAquarium(g); return; }
   if(S.state==='massage') drawHerzen(g);
@@ -884,6 +916,8 @@ function drawFoehn(g){
 function drawDeko(g){
   var W=S.VW,H=S.VH;
   if(S.state==='wahl'||S.state==='menu'||S.state==='finish-done') return;
+  var R=REG[S.state];
+  if(R){ if(R.back) R.back(g); return; }
   if(S.state==='waschen' && S.album && S.album.length){
     // Bilderrahmen mit dem letzten Album-Foto an der Wand
     var last=S.album[S.album.length-1];
@@ -1194,7 +1228,7 @@ S.chooseBear = function(i){
   var surprise = i===Art.MODELS.length-1;
   var idx = surprise ? Math.floor(Math.random()*(Art.MODELS.length-1)) : i;
   S.baer = neuerBaer(idx); S.save();
-  S.state='waschen'; S.buildUI();
+  S.setState('waschen');
   sfx(surprise?'tada':'chime');
   if(surprise){ window.BSGame && window.BSGame.konfettiBurst(S.VW/2, S.VH*0.4);
     window.BSGame && window.BSGame.sternExplosion(S.VW/2, S.VH*0.5); }
@@ -1202,6 +1236,8 @@ S.chooseBear = function(i){
 };
 S.tapBear = function(x,y){
   if(S.state==='finish-done'){ S.finaleSkip(); return true; }
+  var R=REG[S.state];
+  if(R) return R.tap ? !!R.tap(x,y) : false;
   if(S.state==='geschenke' && S.geschenk){
     // Paket antippen: schütteln → Deckel fliegt mit Überraschungs-Puff; danach neues Paket
     var gpak=S._pakHit;
