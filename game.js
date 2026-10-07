@@ -24,7 +24,9 @@ function resize(){
   cv.style.width=view.W+'px'; cv.style.height=view.H+'px';
   var cs=getComputedStyle(probe);
   view.safe={t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0};
-  UI.dirty=true; room.key=''; tw=null; firstCam=true;
+  // camKey leeren: das nächste Bild erkennt einen „neuen“ Schlüssel, schnappt (unsichtbar) aufs aktuelle Ziel und
+  // verbraucht firstCam → der nächste Stationswechsel fährt wieder weich und backt den Raum in Portionen
+  UI.dirty=true; room.key=''; tw=null; firstCam=true; camKey='';
 }
 window.addEventListener('resize',resize);
 if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
