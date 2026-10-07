@@ -168,7 +168,6 @@ S.buildUI = function(){
   var R = REG[st];
   if(R){ if(R.build) R.build(); }
   else if(st==='waschen') buildWaschen();
-  else if(st==='zuckerwatte') buildZuckerwatte();
   else if(st==='ballon') buildBallon();
   else if(st==='keks') buildKeks();
   else if(st==='aquarium') buildAquarium();
@@ -204,13 +203,6 @@ function buildWaschen(){
     emit('bubble',S.VW*0.5,S.VH*0.58+40,{n:14,speed:160,dir:-Math.PI/2,spread:2.2,grav:-60,drag:1.4,size:14,life:1.8,jx:90,jy:50});
   },{active:function(){return S.baer.schaum>0.2;}});
   btn(30,186,150,64,'🚿 Dusche',function(){ S.dusche=true; S._duschT=0; },{active:function(){return !!S.dusche;}});
-}
-function buildZuckerwatte(){
-  stationTabs();
-  S.hinweis = 'Tippe die Wolle an zum Spinnen — halte den Watte-Stab fest und zieh ihn! 🍬';
-  if(!S.watte) S.watte = {lvl:0, kau:0, sx:S.VW*0.5+150, sy:S.VH*0.58+120, spin:0};
-  btn(30,100,190,58,'🍬 Wirbeln!',function(){ S.watte.spin=Math.min(1,(S.watte.spin||0)+0.45); },{active:function(){return S.watte.spin>0;}});
-  btn(30,168,190,52,'🧽 Neue Watte',function(){ S.watte={lvl:0,kau:0,sx:S.VW*0.5+150,sy:S.VH*0.58+120,spin:0}; S.buildUI(); });
 }
 Art.BALLON_FARBEN = ['#e91e63','#f4c20d','#3498db','#2ecc71','#9b59b6'];
 function buildBallon(){
@@ -302,9 +294,7 @@ S.draw = function(g){
   if(S.state==='aquarium'){ drawAquarium(g); return; }
   if(S.state==='waschen') drawWanne(g,false);
 
-  if(S.state==='zuckerwatte'){
-    drawZuckerwatte(g);
-  } else if(S.state==='ballon'){
+  if(S.state==='ballon'){
     // Erschreck-Zucken: Bär springt kurz hoch, dann lacht er (jubel hoch)
     var bl=S.ballon||{schreck:0};
     var shk=Math.max(0,bl.schreck||0);
@@ -605,18 +595,6 @@ S.tapBear = function(x,y){
     }
     return true;
   }
-  if(S.state==='zuckerwatte' && S.watte){
-    var wt2=S.watte;
-    // Watte-Stab antippen = Drag aktiv
-    if(S._stabHit && x>=S._stabHit.x&&x<=S._stabHit.x+S._stabHit.w&&y>=S._stabHit.y&&y<=S._stabHit.y+S._stabHit.h){
-      S._stabDrag=true; return true;
-    }
-    // Zuckerwolle antippen = Spinnen starten
-    if(S._wolleHit && x>=S._wolleHit.x&&x<=S._wolleHit.x+S._wolleHit.w&&y>=S._wolleHit.y&&y<=S._wolleHit.y+S._wolleHit.h){
-      wt2.spin=Math.min(1,(wt2.spin||0)+0.45); return true;
-    }
-    return true;
-  }
   if(S.state==='ballon' && S.ballon){
     // Fertigen Ballon antippen = PLATZ!
     if(S._ballHit && S.ballon.fertig &&
@@ -767,77 +745,6 @@ S.hitButton = function(x,y){
   }
   return null;
 };
-// ---- Zuckerwatte: Wolle-Tap spinnt, Stab per Drag, Bär beißt ab ----
-function drawZuckerwatte(g){
-  var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
-  var wt=S.watte;
-  // Hintergrund: Jahrmarkt-Bude
-  g.fillStyle='#ffe9f0'; g.fillRect(0,0,S.VW,S.VH*0.66);
-  g.fillStyle='#ffd1e0'; for(var st2=0;st2<9;st2++) g.fillRect(st2*112,0,56,S.VH*0.66);
-  // schwebende Zuckerkrümel-Partikel
-  for(var p=0;p<16;p++){
-    var px=(p*167+Math.sin(t*0.7+p)*30)%S.VW, py=80+((p*131)%300)+Math.sin(t*1.3+p*2)*20;
-    g.fillStyle=['#ff9eb5','#ffd24d','#c39bd3','#fff'][p%4];
-    g.beginPath(); g.arc(px,py,2.5+Math.sin(t*3+p)*1.2,0,Math.PI*2); g.fill();
-  }
-  // Spinn-Maschine (Wolle im Topf)
-  var mx=S.VW*0.5-170, my=S.VH*0.55+40;
-  g.fillStyle='#8a97a5'; g.strokeStyle='#5a646e'; g.lineWidth=3;
-  g.beginPath(); g.roundRect ? g.roundRect(mx-70,my,140,90,14) : g.rect(mx-70,my,140,90);
-  g.fill(); g.stroke();
-  g.fillStyle='#ff9ec4';
-  g.beginPath(); g.ellipse(mx,my,66,26,0,0,Math.PI*2); g.fill();
-  g.fillStyle='#ffb8d6';
-  g.beginPath(); g.ellipse(mx,my-4,50,18,0,0,Math.PI*2); g.fill();
-  if(wt.spin>0){ // Wirbel im Topf
-    for(var w=0;w<5;w++){
-      var wa=t*8*wt.spin+w*1.3;
-      g.beginPath(); g.ellipse(mx+Math.cos(wa)*38,my-3+Math.sin(wa)*8,6,4,0,0,Math.PI*2); g.fill();
-    }
-  }
-  // Zuckerwolle antippen
-  if(!S._wolleHit) S._wolleHit={x:mx-70,y:my-10,w:140,h:110};
-  g.fillStyle='#7a4b8f'; g.font='15px sans-serif'; g.textAlign='center';
-  g.fillText('👆 Zuckerwolle',mx,my+108);
-  // Bär groß
-  Art.drawBear(g,S.baer,{w:S.VW,h:S.VH, spaTarget:S.spaTarget});
-  drawStickers(g);
-  // Watte-Stab (Bär hält ihn, Position vom User-Drag)
-  var wx2=wt.sx, wy2=wt.sy;
-  g.save();
-  g.strokeStyle='#e8d5b0'; g.lineWidth=7*s; g.lineCap='round';
-  g.beginPath(); g.moveTo(wx2,wy2+90*s); g.lineTo(wx2,wy2-40*s); g.stroke();
-  // Watte: rosa Wolke wächst mit lvl
-  var wr=(30+wt.lvl*60)*s*(wt.kau>0?1:1);
-  if(wr>4){
-    var wob=1+0.06*Math.sin(t*6);
-    g.globalAlpha=0.96;
-    ell2(g,wx2,wy2-60*s,wr*0.9*wob,wr*0.75,'#ffb8d6');
-    ell2(g,wx2-wr*0.35,wy2-58*s,wr*0.55,wr*0.5,'#ffc9e0');
-    ell2(g,wx2+wr*0.35,wy2-66*s,wr*0.6,wr*0.52,'#ffc9e0');
-    ell2(g,wx2,wy2-80*s,wr*0.5,wr*0.42,'#ff9ec4');
-    g.globalAlpha=1;
-    // glitzernde Zuckerpunkte in der Watte
-    for(var zp=0;zp<8;zp++){
-      var za=t*2+zp*0.8;
-      var zx=wx2+Math.cos(za)*wr*0.5, zy=wy2-62*s+Math.sin(za*1.3)*wr*0.35;
-      g.globalAlpha=0.5+0.5*Math.sin(t*5+zp);
-      circle2(g,zx,zy,2.5*s,'#fff');
-    }
-    g.globalAlpha=1;
-  }
-  // Hit-Box des Stabs für Drag
-  S._stabHit={x:wx2-40*s, y:wy2-40*s-wr, w:80*s+wr*2*0, h:130*s+wr};
-  // glückliches Kaugesicht: Bär mit hochgezogenen Wangen, wenn kau>0
-  if(wt.kau>0){
-    var kc=S.VW*0.5, kcy2=S.VH*0.58-15*s;
-    g.globalAlpha=Math.min(1,wt.kau);
-    Art.drawSticker(g,'herz',kc-55*s,kcy2,14*s,'rgba(255,120,160,0.9)');
-    Art.drawSticker(g,'herz',kc+55*s,kcy2,14*s,'rgba(255,120,160,0.9)');
-    g.globalAlpha=1;
-  }
-  g.restore();
-}
 // ---- Ballon-Station: Farbe + Pusten + PLATZ + schwebender Ballon + Mini-Herzen ----
 function drawBallonStation(g){
   var t=performance.now()/1000, s=Math.min(S.VW,S.VH)/420;
