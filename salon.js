@@ -191,7 +191,6 @@ S.buildUI = function(){
   else if(st==='keks') buildKeks();
   else if(st==='karussell') buildKarussell();
   else if(st==='geburtstag') buildGeburtstag();
-  else if(st==='foto') buildFoto();
   else if(st==='malbuch') buildMalbuch();
   else if(st==='aquarium') buildAquarium();
   else if(st==='finish') buildFinish();
@@ -468,28 +467,6 @@ function kerzenPos(){
   for(var i=0;i<3;i++) out.push([cx-38+i*38, cy-96]);
   return {kx:cx, ky:cy, kerzen:out};
 }
-function buildFoto(){
-  stationTabs();
-  S.hinweis = 'Rahmen wählen und Klick! 📸';
-  if(S.fotoRahmen===undefined) S.fotoRahmen=0;
-  ['✨ Sternchen','🌸 Blümchen','👑 Gold'].forEach(function(t,i){
-    btn(30+i*140, 100, 132, 54, t, function(){ S.fotoRahmen=i; S.buildUI(); },
-      {active:function(){return S.fotoRahmen===i;}, small:1});
-  });
-  btn(30, 170, 170, 60, '📸 Klick!', function(){
-    S.flash=1; S.fotoBadge=true; S.buildUI();
-    // Schnappschuss ins Album (max 4, älteste verschwinden)
-    var d = new Date();
-    var tag = ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.';
-    S.album.push({modell: Art.MODELS[S.baer.fellIdx||0].name, datum: tag,
-      fellIdx: S.baer.fellIdx||0, haar: S.baer.haar, frisur: S.baer.frisur,
-      rahmen: S.fotoRahmen||0,
-      lack:kopie(S.baer.lack), acc:kopie(S.baer.acc), sticker:kopie(S.baer.sticker),
-      makeup:kopie(S.baer.makeup), gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft});
-    while(S.album.length>4) S.album.shift();
-    try{ localStorage.setItem('bs_album', JSON.stringify(S.album)); }catch(e){}
-  },{big:1});
-}
 
 // ---- Neu Runde 9: Malbuch -------------------------------------------------
 Art.MAL_FARBEN = ['#e91e63','#e74c3c','#f4c20d','#8fd48a','#3498db','#9b59b6','#e0892f','#ff9eb5'];
@@ -632,13 +609,10 @@ S.draw = function(g){
   // Zirkus: jonglierende Bälle auf Parabel-Bahnen zwischen den Pfoten
   if(S.state==='zirkus' && S.zirkus) drawJonglage(g);
   if(S.state==='geburtstag') drawKuchen(g);
-  // Album-Vorschau in der Foto-Station
-  if(S.state==='foto') drawAlbumVorschau(g);
   if(S.state==='eis' && S.eis){
     var s3=Math.min(S.VW,S.VH)/420;
     Art.drawEis(g, S.eis, S.VW*0.5, S.VH*0.58+40*s3, s3);
   }
-  if(S.state==='foto') Art.drawFotoRahmen(g, S.fotoRahmen||0, S.flash||0, !!S.fotoBadge, S.VW, S.VH);
   if(S.state==='waschen') drawWanne(g,true);
 };
 
@@ -866,18 +840,6 @@ function drawDeko(g){
     g.fillStyle='#d9a94f';
     g.beginPath(); g.moveTo(800,296); g.lineTo(830,296); g.lineTo(815,340); g.closePath(); g.fill();
   }
-  if(S.state==='foto'){ // Foto-Studio: warme Scheinwerfer
-    g.save();
-    [[65,58,-0.5],[835,58,0.5]].forEach(function(d){
-      g.fillStyle='#6b5446'; g.fillRect(d[0]-5,d[1],10,90);
-      Fx.ball(g,d[0],d[1],20,20,'#fff0cf');
-      g.globalCompositeOperation='lighter'; g.globalAlpha=0.14; g.fillStyle='#ffe8c0';
-      g.beginPath(); g.moveTo(d[0],d[1]);
-      g.lineTo(d[0]+(d[2]>0?-160:160)+d[2]*200, 400); g.lineTo(d[0]+d[2]*280, 430);
-      g.closePath(); g.fill(); g.globalAlpha=1; g.globalCompositeOperation='source-over';
-    });
-    g.restore();
-  }
 }
 // ---- Neue Stations-Zeichner: Noten, Jonglage, Album, Feuerwerk -------
 var NICONS=['🎵','🎶','♪','♫'];
@@ -1023,36 +985,6 @@ function drawJonglage(g){
     g.beginPath(); g.arc(x-5*k,y-6*k,5*k,0,Math.PI*2); g.fill();
   }
 }
-function drawAlbumVorschau(g){
-  if(!S.album || !S.album.length) return;
-  var ax=S.VW-330, ay=S.VH-230, aw=72, ah=86, gap=14;
-  S._albumBoxes=[];
-  g.save(); g.font='11px sans-serif'; g.textAlign='center';
-  g.fillStyle='#7a4b8f'; g.fillText('Meine Schnappschüsse (antippen = laden)', ax+ (4*(aw+gap)-gap)/2, ay-6);
-  S.album.slice(-4).forEach(function(p,i){
-    var x=ax+i*(aw+gap);
-    S._albumBoxes.push({x:x,y:ay,w:aw,h:ah,idx:S.album.length-Math.min(4,S.album.length)+i});
-    g.fillStyle='#fff'; g.strokeStyle='#c9aede'; g.lineWidth=2;
-    g.beginPath(); g.rect(x,ay,aw,ah); g.fill(); g.stroke();
-    // Mini-Thumbnail des gespeicherten Looks
-    var mod=Art.MODELS[p.fellIdx]||Art.MODELS[0];
-    var mini={
-      fellIdx:p.fellIdx, fell:mod.fell, haar:p.haar||Art.HAAR[0], frisur:p.frisur||'lockig',
-      lack:p.lack||{}, schaum:0, tropfen:[], fluff:0, bow:0, breathe:0, blink:0, relax:0,
-      gurkeL:false, gurkeR:false, duft:null,
-      makeup:(p.makeup && {rouge:p.makeup.rouge||null,lid:p.makeup.lid||null,gp:(p.makeup.gp||[]).slice(0,8)}) || {rouge:null,lid:null,gp:[]},
-      acc:p.acc||{hut:null,schleife:null,brille:null,kette:null},
-      sticker:[]
-    };
-    g.save(); g.beginPath(); g.rect(x+4,ay+4,aw-8,50); g.clip();
-    g.translate(x+aw/2,ay+10); g.scale(0.14,0.14); g.translate(-225,-60);
-    Art.drawBear(g, mini, {w:450,h:330}); g.restore();
-    g.fillStyle='#5d3a75'; g.font='9px sans-serif';
-    g.fillText(p.modell, x+aw/2, ay+64);
-    g.fillText(p.datum, x+aw/2, ay+76);
-  });
-  g.restore();
-}
 function drawDuftWolken(g){
   // kleine Duft-Wolke beim Bären (Finish / Stationen)
   var d = Art.DUFTE[S.baer.duft]; if(!d) return;
@@ -1154,26 +1086,6 @@ S.tapBear = function(x,y){
       wt2.spin=Math.min(1,(wt2.spin||0)+0.45); return true;
     }
     return true;
-  }
-  if(S.state==='foto' && S._albumBoxes){
-    // Album-Kachel tippen: Look zurückladen
-    for(var ai=0; ai<S._albumBoxes.length; ai++){
-      var ab=S._albumBoxes[ai];
-      if(x>=ab.x&&x<=ab.x+ab.w&&y>=ab.y&&y<=ab.y+ab.h){
-        var snap=S.album[ab.idx]; if(!snap) return false;
-        var m=Art.MODELS[snap.fellIdx]||Art.MODELS[0];
-        S.baer=Object.assign(neuerBaer(snap.fellIdx||0), {
-          haar:snap.haar||Art.HAAR[0], frisur:snap.frisur||'lockig',
-          lack:kopie(snap.lack||{}), acc:kopie(snap.acc||{hut:null,schleife:null,brille:null,kette:null}),
-          sticker:kopie(snap.sticker||[]), makeup:kopie(snap.makeup||{rouge:null,lid:null,gp:[]}),
-          gurkeL:!!snap.gurkeL, gurkeR:!!snap.gurkeR, duft:(snap.duft===undefined?null:snap.duft)
-        });
-        S.baer.fellIdx=snap.fellIdx||0; S.baer.fell=m.fell;
-        if(snap.rahmen!==undefined) S.fotoRahmen=snap.rahmen;
-        S.save(); S.buildUI();
-        return true;
-      }
-    }
   }
   if(S.state==='ballon' && S.ballon){
     // Fertigen Ballon antippen = PLATZ!

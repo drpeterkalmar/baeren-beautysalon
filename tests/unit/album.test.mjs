@@ -35,8 +35,7 @@ test('Album-Kachel laden → Hut setzen → zweites Foto: erster Eintrag hat wei
   klick(H);
   assert.equal(gespeichert(H)[0].acc.hut, null);
   go(H, 'foto');
-  H.S.draw(H.g);                                  // Album-Vorschau legt die Kachel-Rechtecke an
-  const box = H.S._albumBoxes[0];
+  const box = H.S.REG.foto.hit().album[0];        // Kachel-Rechtecke aus dem Zustand (stations/foto.js)
   assert.ok(box, 'keine Album-Kachel');
   assert.equal(H.S.tapBear(box.x + box.w / 2, box.y + box.h / 2), true);
   assert.notEqual(H.S.baer.acc, H.S.album[0].acc, 'Bär teilt acc mit dem Album');
