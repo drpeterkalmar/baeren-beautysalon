@@ -214,9 +214,9 @@ cv.addEventListener('pointermove',function(e){
   }
   if(S.state==='massage'){ S.dragBear(p[0],p[1],lastW[0],lastW[1]); if(live) Art.poke(live,p[0],p[1],14); G._massT=now(); }
   if(S.state==='zuckerwatte' && S._stabDrag && S.watte){ S.watte.sx=p[0]; S.watte.sy=p[1]; }
-  if(S.state==='keks' && S.keks && S._teigHit && !S.keks.stich){
-    var th=S._teigHit;
-    if(p[0]>=th.x&&p[0]<=th.x+th.w&&p[1]>=th.y&&p[1]<=th.y+th.h) S.keks.teig=Math.min(1,S.keks.teig+0.03);
+  if(S.state==='keks' && S.keks && !S.keks.stich){
+    var KR=S.REG && S.REG.keks, th=(KR && KR.hit) ? KR.hit().teig : S._teigHit; // Teig-Hit-Box aus dem Zustand (stations/keks.js)
+    if(th && p[0]>=th.x&&p[0]<=th.x+th.w&&p[1]>=th.y&&p[1]<=th.y+th.h) S.keks.teig=Math.min(1,S.keks.teig+0.03);
   }
   lastW=p;
 },{passive:false});
