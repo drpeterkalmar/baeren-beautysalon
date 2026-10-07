@@ -150,7 +150,7 @@ export function stations(H) { return H.S.STATIONS.map((s) => s.id); }
 // JSON-Tiefkopie (für Vergleiche „vorher/nachher“)
 export const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// Zeichen-Protokoll aus H.rec: jede Zeichen-Operation mit der dabei wirksamen globalAlpha/fillStyle
+// Zeichen-Protokoll aus H.rec: jeder Canvas-Aufruf; Zeichen-Operationen mit der wirksamen globalAlpha/fillStyle
 // (save/restore werden nachgespielt). Zahlen auf 6 Stellen gerundet → alt/neu direkt vergleichbar.
 const DRAW = new Set(['drawImage', 'fill', 'stroke', 'fillRect', 'strokeRect', 'fillText', 'strokeText', 'clearRect']);
 export function drawLog(rec, { withStyle = true } = {}) {
@@ -161,11 +161,13 @@ export function drawLog(rec, { withStyle = true } = {}) {
     if (k === 'save') stack.push({ ...st });
     else if (k === 'restore') st = stack.pop() || st;
     else if (k[0] === '=') { const p = k.slice(1); if (p in st) st[p] = a[0]; }
-    else if (DRAW.has(k)) {
-      const e = [k, ...a.map(r), 'α' + r(st.globalAlpha)];
+    if (k[0] === '=') continue;
+    const e = [k, ...a.map(r)];                // jeder Aufruf (auch translate/rotate/arc …) zählt
+    if (DRAW.has(k)) {
+      e.push('α' + r(st.globalAlpha));
       if (withStyle && k !== 'drawImage') e.push(typeof st.fillStyle === 'string' ? st.fillStyle : '[grad]');
-      out.push(e);
     }
+    out.push(e);
   }
   return out;
 }

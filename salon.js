@@ -538,6 +538,15 @@ function buildAquarium(){
   }, {active:function(){return S.aqua && S.aqua.futter.length>0;}, big:1});
 }
 
+// ---- Simulation pro Bild ----------------------------------
+// Von game.js update(dt) aufgerufen (dt ≤ 0,05 s), direkt vor BSDeko.update. Die Zeichenfunktionen lesen danach
+// nur noch Zustand. fr = dt*60 („Bilder à 60 Hz“): die alten Schritte pro Bild (0.016, t++, …) werden mit fr
+// skaliert → bei 60 Hz exakt wie vorher, bei 30/90/120 Hz gleich schnell pro Sekunde.
+S.update = function(dt){
+  if(!(dt>0)) return;
+  var fr=dt*60, st=S.state;
+};
+
 // ---- Zeichnen ----------------------------------------------
 // ---- Zeichnen: nur noch WELT (Kamera, Raum, Licht, HUD/Buttons kommen aus game.js + ui.js) ----------
 S.draw = function(g){

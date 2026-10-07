@@ -305,6 +305,7 @@ function update(dt){
     Art.updateBear(live,dt,env);
   }
   if(st==='finish-done' && S.updateFinale) S.updateFinale(dt);
+  if(S.update) S.update(dt); // Stations-Simulation (Aquarium, Zauber, Karussell, Noten, Rauch) — bildraten-unabhängig
   if(Fx.DEKO && window.BSDeko && window.BSDeko.update) window.BSDeko.update(dt,t,st,S); // r20: kleine Stations-Effekte
   // Dauer-Sounds
   if(window.BSSfx){
