@@ -68,3 +68,15 @@ test('Aquarium: Futterkorn sinkt in 1 s gleich tief (60/120 Hz, ±1 %)', () => {
   const y = (hz) => lauf('aquarium', hz, 1, { setup: (H) => { H.S.aqua.fisch = []; H.S.aqua.futter.push({ x: 300, y: 50, vy: 22, ph: 0 }); } }).S.aqua.futter[0].y;
   assert.ok(nah(y(60) - 50, y(120) - 50, 0.01), `${y(60)} vs ${y(120)}`);
 });
+
+test('Zauber: Spruch dauert bei 60 und 120 Hz gleich lang (≈1,67 s, ±1 %)', () => {
+  const dauer = (hz) => {
+    let ende = null;
+    lauf('zauber', hz, 3, { setup: (H) => { H.S.zauber.fx = { art: 0, t: 0.001, d: 1.6, seed: 1 }; },
+      tick: (H, t) => { if (ende === null && !H.S.zauber.fx) ende = t; } });
+    return ende;
+  };
+  const a = dauer(60), b = dauer(120);
+  assert.ok(nah(a, 100 / 60, 0.011), `60 Hz: ${a}`);     // wie früher: 100 Bilder à 1/60 s
+  assert.ok(nah(a, b, 0.01), `${a} vs ${b}`);
+});

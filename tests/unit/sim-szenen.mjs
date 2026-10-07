@@ -31,7 +31,8 @@ export const SZENEN = {
       const s = sk(H);
       H.S.tapBear(H.S.VW * 0.5 + 128 * s, H.S.VH * 0.58 - 60 * s);
     },
-    snap(H) { const f = H.S.zauber.fx; return { fx: f ? [f.art, r6(f.t)] : null }; },
+    // t selbst steckt in der Bild-Prüfsumme (alt zählte nach dem Zeichnen weiter, neu davor → Stichprobe nur aktiv/Art)
+    snap(H) { const f = H.S.zauber.fx; return { fx: f ? f.art : null }; },
   },
   karussell: {
     seed: 13, frames: 150,

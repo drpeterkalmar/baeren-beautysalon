@@ -546,6 +546,7 @@ S.update = function(dt){
   if(!(dt>0)) return;
   var fr=dt*60, st=S.state;
   if(st==='aquarium' && S.aqua) updAquarium(fr);
+  if(st==='zauber' && S.zauber) updZauber(fr);
 };
 
 // ---- Zeichnen ----------------------------------------------
@@ -1794,7 +1795,7 @@ function drawZauberStation(g){
   // Zauberspruch-Effekte (Partikel je Zauber)
   if(zb.fx){
     var f=zb.fx, q=f.t/f.d, oaZ=g.globalAlpha;
-    if(q>=1){ zb.fx=null; }
+    if(q>=1){ /* vorbei – updZauber räumt ab */ }
     else if(f.art===0){ // Sternenschweif: goldene Sterne kreisen aufwärts
       for(var i2=0;i2<14;i2++){
         var a2=f.seed+i2*0.45+q*5;
@@ -1819,8 +1820,15 @@ function drawZauberStation(g){
       }
     }
     g.globalAlpha=oaZ;
-    if(zb.fx) zb.fx.t+=0.016;
   }
+}
+// Zauberspruch-Uhr (aus S.update): das erste Bild zeigt den Startwert, danach +0,016 pro 60-Hz-Bild
+// (wie früher: erst zeichnen, dann weiterzählen) → Dauer 1,6/0,016 Bilder ≈ 1,67 s, jetzt bei jeder Bildrate.
+function updZauber(fr){
+  var f=S.zauber.fx; if(!f) return;
+  if(f.lauf) f.t+=0.016*fr;
+  f.lauf=1;
+  if(f.t/f.d>=1) S.zauber.fx=null;
 }
 // ---- Karussell: Zelt, Lichterketten, drehendes Pferd mit Bär ----
 function drawKarussell(g){
