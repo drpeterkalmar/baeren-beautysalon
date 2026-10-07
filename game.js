@@ -331,8 +331,10 @@ function update(dt){
 
 // ---- Rendern ----
 function showerFx(g,t){
-  if(S.state!=='waschen' || !S.dusche || !S._brause || !(S.baer.schaum>0)) return;
-  var bx=S._brause[0], by=S._brause[1];
+  if(S.state!=='waschen' || !S.dusche || !(S.baer.schaum>0)) return;
+  var WR=S.REG && S.REG.waschen, br=(WR && WR.hit) ? WR.hit().brause : S._brause; // Brause aus dem Zustand (stations/waschen.js)
+  if(!br) return;
+  var bx=br[0], by=br[1];
   g.save(); g.lineCap='round';
   for(var i=0;i<9;i++){
     var x0=bx+(i-4)*5, x1=440+(i-4)*26, y1=170+((i*37)%50);

@@ -48,3 +48,18 @@ test('Keks: Finger über den Teig ziehen rollt aus, mit Förmchen antippen stich
   assert.equal(S.REG.keks.hit().teig, null, 'nach dem Ausstechen keine Teig-Box mehr');
   assert.deepEqual([...H.ctx.__errors], []);
 });
+
+test('Waschen: Schaum rubbeln per Ziehen, Dusche spült ab, Duschstrahl startet an der Brause', () => {
+  const H = spiel('waschen');
+  const S = H.S, s = Math.min(S.VW, S.VH) / 420, cx = S.VW * 0.5, cy = S.VH * 0.58 + 70 * s;
+  zeiger(H, 'down', cx, cy);
+  for (let i = 0; i < 20; i++) zeiger(H, 'move', cx + (i % 5) * 10, cy + (i % 3) * 8);
+  zeiger(H, 'up', cx, cy);
+  assert.ok(S.baer.schaum > 0.3, 'kein Schaum: ' + S.baer.schaum);
+  const br = S.REG.waschen.hit().brause;
+  assert.ok(Math.abs(br[0] - (cx - 150 * s + 26 * s)) < 1e-9 && Math.abs(br[1] - (S.VH * 0.58 - 250 * s + 26 * s)) < 1e-9);
+  S.buttons.find((b) => /Dusche/.test(b.label)).onTap();
+  for (let i = 0; i < 120 && S.baer.schaum > 0; i++) H.frame();
+  assert.equal(S.baer.schaum, 0, 'Dusche spült nicht ab');
+  assert.deepEqual([...H.ctx.__errors], []);
+});
