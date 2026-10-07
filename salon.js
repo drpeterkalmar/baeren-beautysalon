@@ -90,6 +90,8 @@ S.save = function(){
     lack:S.baer.lack, acc:S.baer.acc, sticker:S.baer.sticker, makeup:S.baer.makeup,
     gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft
   })); }catch(e){}
+  // Menü soll „Weiter mit meinem Bären“ schon in derselben Sitzung zeigen (nicht erst nach dem Neuladen)
+  S.saved = S.saved || {}; S.saved.fell = S.baer.fell; S.saved.fellIdx = S.baer.fellIdx;
 };
 
 // ---- Buttons ----------------------------------------------
