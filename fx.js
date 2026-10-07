@@ -5,7 +5,13 @@
 var Fx = window.BSFx = {};
 var TAU = Math.PI*2;
 Fx.TAU = TAU;
-window.BS_VERSION = '20.3';
+// Version kommt aus der ?v=-Query dieses Skript-Tags in index.html (eine Quelle, kein Build-Schritt);
+// die Konstante ist nur der Rückfall (z. B. Datei ohne Query geladen). Heben: python3 tools/bump-version.py X.Y
+window.BS_VERSION = (function(){
+  var v='20.3';
+  try{ var cs=document.currentScript, m=cs && cs.src && /[?&]v=([^&#]+)/.exec(cs.src); if(m) v=decodeURIComponent(m[1]); }catch(e){}
+  return v;
+})();
 // r20 Deko-Runde: neue Optik (Licht, Einrichtung, Glitzer) — ?deko=0 zeigt das alte Aussehen (A/B-Vergleich)
 Fx.DEKO = !/[?&]deko=0(&|$)/.test(location.search||'');
 // "Bewegung reduzieren" (Betriebssystem): weniger Wackeln, kein Bildschirm-Schütteln, weniger Partikelregen
@@ -32,7 +38,8 @@ Fx.ease = {
 Fx.rand = function(seed){ var s=seed>>>0||1; return function(){ s^=s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%100000)/100000; }; };
 
 // ---------------------------------------------------------------- Farben
-var cache = {};
+// Farb-Cache, gedeckelt: bei Überlauf komplett leeren (pro Bild neu gebaute Farbstrings ließen ihn sonst endlos wachsen)
+var cache = {}, cacheN = 0, CACHE_MAX = 1000;
 function parse(c){
   if(typeof c!=='string' || !c) return [196,160,128,1];
   var hit = cache[c]; if(hit) return hit;
@@ -45,9 +52,12 @@ function parse(c){
     var p=m[1].split(',').map(parseFloat); r=p[0]; g=p[1]; b=p[2]; a=p.length>3?p[3]:1;
   }
   if(!(r>=0)) r=196; if(!(g>=0)) g=160; if(!(b>=0)) b=128; if(!(a>=0)) a=1;
+  if(cacheN>=CACHE_MAX){ cache={}; cacheN=0; }
+  cacheN++;
   return (cache[c]=[r,g,b,a]);
 }
 Fx.parse = parse;
+Fx.parseCacheSize = function(){ return cacheN; }; // für Unit-Tests
 function str(r,g,b,a){
   r=Math.round(Fx.clamp(r,0,255)); g=Math.round(Fx.clamp(g,0,255)); b=Math.round(Fx.clamp(b,0,255));
   return (a===undefined||a>=1) ? 'rgb('+r+','+g+','+b+')' : 'rgba('+r+','+g+','+b+','+(+a).toFixed(3)+')';
@@ -264,6 +274,38 @@ Fx.gradingPaint = function(g,W,H,x,y,w,h){
 Fx.Q = { tier:2,
   dpr: function(){ return [1.25,1.6,2][Fx.Q.tier]; },
   pmul: function(){ var m=[0.45,0.75,1][Fx.Q.tier]; return (Fx.DEKO && Fx.RM) ? m*0.6 : m; } };
+
+// Qualitäts-Automatik als reine Funktion (game.js ruft sie je Bild). Bildabstand > 20 ms → weniger Auflösung/Partikel.
+// Neu: Grundperiode des Displays. In der Warmlaufphase (2,5 s) wird gemessen, ob das Gerät sauber mit 30 Hz läuft
+// (iPhone-Stromsparmodus, Akkusparer): kleinster Abstand > 22 ms, ≥ 60 % der Abstände im 30-Hz-Band (27–40 ms) und
+// JS-Arbeit im Mittel < 8 ms. Dann gilt base = 33,3 ms und herabgestuft wird nur, wenn der Abstand deutlich darüber
+// liegt (> 1,23·base ≈ 41 ms) oder die JS-Arbeit dauerhaft > 0,75·base ≈ 25 ms ist. Sonst (60/90/120 Hz oder
+// unklar) base = 16,7 ms und alle Schwellen wie bisher (20,5 / 17,4 / 6 ms) → Verhalten bei 60 Hz unverändert.
+// Läuft ein 30-Hz-Gerät später ≥ 20 Bilder lang deutlich schneller (Stromsparmodus aus), gilt wieder base = 16,7.
+Fx.Q.newPerf = function(){ return {ema:16.7, work:6, slow:0, fast:0, flips:0, warm:0, base:0, wn:0, wsum:0, wmin:0, w30:0, lo:0}; };
+// sample = {ms: Bildabstand, work: JS-Arbeit (ms), dt: gedeckeltes dt (s), tier: aktuelle Stufe}; P = newPerf()-Zustand.
+// Rückgabe: neue Stufe oder null.
+Fx.Q.step = function(sm, P){
+  var tier=sm.tier===undefined?Fx.Q.tier:sm.tier, ms=+sm.ms||0, work=+sm.work||0, dt=+sm.dt||0;
+  P.warm+=dt;
+  if(P.warm<2.5){
+    if(ms>=4){ P.wn++; P.wsum+=work; if(!P.wmin || ms<P.wmin) P.wmin=ms; if(ms>=27 && ms<=40) P.w30++; }
+    return null;
+  }
+  if(!P.base) P.base=(P.wn>=10 && P.wmin>22 && P.w30>=0.6*P.wn && P.wsum/P.wn<8) ? 33.3 : 16.7;
+  if(P.base>22){ // 30-Hz-Gerät wird schneller → zurück zu den normalen Schwellen
+    if(ms>=4 && ms<P.base*0.7) P.lo++; else P.lo=Math.max(0,P.lo-1);
+    if(P.lo>=20){ P.base=16.7; P.lo=0; }
+  }
+  P.ema+=(Math.min(ms,60)-P.ema)*0.05;
+  P.work+=(work-P.work)*0.05;
+  var lowHz=P.base>22, slowIv=lowHz?P.base*1.23:20.5, fastIv=lowHz?P.base*1.05:17.4, workMax=lowHz?P.base*0.75:Infinity;
+  if(P.ema>slowIv || P.work>workMax) P.slow+=dt; else P.slow=Math.max(0,P.slow-dt*0.5);
+  if(P.slow>1.3 && tier>0){ P.slow=0; P.fast=0; P.flips++; return tier-1; }
+  if(P.ema<fastIv && P.work<6) P.fast+=dt; else P.fast=0;
+  if(P.fast>8 && tier<2 && P.flips<2){ P.fast=0; return tier+1; }
+  return null;
+};
 
 // ---------------------------------------------------------------- Partikel
 var DEF = {

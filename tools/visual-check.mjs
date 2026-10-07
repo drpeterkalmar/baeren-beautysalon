@@ -115,7 +115,7 @@ if (!only || only === 'flow') {
     if (id === 'schmuecken') { await tapBtn("/Brille/.test(b.label)"); await W(200); await tapBtn("/Kette/.test(b.label)"); await W(200); await tapBtn("/Schleife/.test(b.label)"); }
     if (id === 'eis') { await tapBtn("b.fill==='#ff9eb5'"); await W(150); await tapBtn("b.fill==='#c39bd3'"); }
     if (id === 'makeup') { await tapBtn("b.fill==='#3498db'"); }
-    if (id === 'geschenke') { const h = await page.evaluate(() => window.BSSalon._pakHit); if (h) { await tapWorld(h.x + h.w / 2, h.y + h.h / 2); await W(200); await tapWorld(h.x + h.w / 2, h.y + h.h / 2); } }
+    if (id === 'geschenke') { const h = await page.evaluate(() => { const S = window.BSSalon, R = S.REG && S.REG.geschenke; return R && R.hit ? R.hit().paket : S._pakHit; }); if (h) { await tapWorld(h.x + h.w / 2, h.y + h.h / 2); await W(200); await tapWorld(h.x + h.w / 2, h.y + h.h / 2); } }
     if (id === 'ballon') { for (let i = 0; i < 5; i++) { await tapBtn("/Pusten/.test(b.label)"); await W(120); } }
     if (id === 'tanz') { await tapWorld(450, 348); }
     await W(700);

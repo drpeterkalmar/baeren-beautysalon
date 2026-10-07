@@ -6,6 +6,15 @@ Prüfwerkzeug: `node tools/visual-check.mjs <label> [--fps] [--land] [--throttle
 Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster als Worst Case. Playwright aus `~/.cache/r18-pw`.)
 (Android-Viewport 412×915 @ DPR 2, Touch; `--land` = 915×412). Ergebnis: `shots/r18/<label>/` + `report.json`.
 
+## C0 — Unit-Tests ohne Browser (Umbau 20.4, vor jedem Commit)
+- [x] C0.1 `node --test tests/unit` grün (Harness `tests/unit/harness.mjs`, keine npm-Pakete, ~3 s). Enthält u. a.:
+      24-Stationen-Smoke, Speichern/Laden, Album-Schnappschüsse (P1-1), „Weiter mit meinem Bären“ (P1-2), Farb-Cache (P2-4),
+      Kamera nach Resize (P2-1, mit game.js), Version (P2-9), Simulation 60 vs. 120 Hz + Referenz alter Code (P2-3),
+      Qualitäts-Automatik 30/60/90/120 Hz (P2-2), Canvas-Speicherbudget (P2-6), Stations-Registry + jede Station
+      hoch/quer Bild für Bild gegen den Stand vor dem Umzug (P2-7/P2-8), Stations-Logik in der echten game.js-Schleife
+      (`spiel.test.mjs`) und Zeiger-Eingaben (Ziehen/Rubbeln, `eingabe.test.mjs`).
+- [x] C0.2 Python-Werkzeuge: `python3 -m unittest discover -s tests/unit -p "test_*.py"` (bump-version, pixel-diff).
+
 ## C1 — Fehlerfreiheit (automatisch, hart)
 - [x] C1.1 `report.json.errors` ist leer: 0 `pageerror`, 0 `console.error` über den kompletten Flow
       (Menü → Wahl → alle 24 Stationen → Finale inkl. Feier-Loop) in Hoch- UND Querformat.

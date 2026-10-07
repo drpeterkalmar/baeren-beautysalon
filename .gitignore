@@ -5,3 +5,4 @@ tests/shots/*
 !tests/shots/deko/
 tests/shots/deko/*
 !tests/shots/deko/vergleich_*.jpg
+__pycache__/

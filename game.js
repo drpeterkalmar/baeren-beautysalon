@@ -24,7 +24,9 @@ function resize(){
   cv.style.width=view.W+'px'; cv.style.height=view.H+'px';
   var cs=getComputedStyle(probe);
   view.safe={t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0};
-  UI.dirty=true; room.key=''; tw=null; firstCam=true;
+  // camKey leeren: das nächste Bild erkennt einen „neuen“ Schlüssel, schnappt (unsichtbar) aufs aktuelle Ziel und
+  // verbraucht firstCam → der nächste Stationswechsel fährt wieder weich und backt den Raum in Portionen
+  UI.dirty=true; room.key=''; tw=null; firstCam=true; camKey='';
 }
 window.addEventListener('resize',resize);
 if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
@@ -109,10 +111,16 @@ function ensureRoom(){
 }
 // r20 (Deko): während der Kamerafahrt den neuen Raum in Portionen in einen zweiten Canvas backen (je Bild ~2,5 ms,
 // danach erzwungenes Rastern über eine 1-px-Kopie) und erst am Ende der Fahrt austauschen → kein großer Ruckler.
-var bake=null, spareCv=null, flushCv=null;
+var bake=null, spareCv=null, flushCv=null, restT=0;
 function flushRoom(cv){
   if(!flushCv){ flushCv=document.createElement('canvas'); flushCv.width=flushCv.height=256; }
   var fg=flushCv.getContext('2d'); fg.drawImage(cv,0,0,1,1,0,0,1,1); fg.clearRect(0,0,256,256);
+}
+// Speicherbudget: den Ersatz-Raum (bis 16 MB) nach ~3 s Kamera-Ruhe freigeben; beim nächsten Wechsel wird er neu angelegt
+function releaseSpare(dt){
+  if(tw || bake){ restT=0; return; }
+  restT+=dt;
+  if(restT>3 && spareCv && spareCv.width>1){ spareCv.width=spareCv.height=1; }
 }
 function stepRoom(){
   var P=roomPlan(); if(!P) return;
@@ -159,6 +167,11 @@ G.starBurst=function(i){
   Fx.P.emit('twinkle',p[0],p[1],{n:2,speed:40,size:26,life:0.6,grav:0,layer:'screen'});
 };
 G.tier=function(){ return Fx.Q.tier; };
+// Canvas-Speicher in Gerätepixeln (für Prüfwerkzeuge/Unit-Tests; ×4 = Bytes)
+G.canvasMem=function(){
+  var px=function(c){ return c ? c.width*c.height : 0; };
+  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
+};
 
 // ---- Eingabe (Touch zuerst; Maus bewegt nur den Blick) ----
 var down=false, worldDown=false, activeId=null, lastW=[0,0], rubT=0;
@@ -201,9 +214,9 @@ cv.addEventListener('pointermove',function(e){
   }
   if(S.state==='massage'){ S.dragBear(p[0],p[1],lastW[0],lastW[1]); if(live) Art.poke(live,p[0],p[1],14); G._massT=now(); }
   if(S.state==='zuckerwatte' && S._stabDrag && S.watte){ S.watte.sx=p[0]; S.watte.sy=p[1]; }
-  if(S.state==='keks' && S.keks && S._teigHit && !S.keks.stich){
-    var th=S._teigHit;
-    if(p[0]>=th.x&&p[0]<=th.x+th.w&&p[1]>=th.y&&p[1]<=th.y+th.h) S.keks.teig=Math.min(1,S.keks.teig+0.03);
+  if(S.state==='keks' && S.keks && !S.keks.stich){
+    var KR=S.REG && S.REG.keks, th=(KR && KR.hit) ? KR.hit().teig : S._teigHit; // Teig-Hit-Box aus dem Zustand (stations/keks.js)
+    if(th && p[0]>=th.x&&p[0]<=th.x+th.w&&p[1]>=th.y&&p[1]<=th.y+th.h) S.keks.teig=Math.min(1,S.keks.teig+0.03);
   }
   lastW=p;
 },{passive:false});
@@ -220,58 +233,13 @@ document.addEventListener('touchmove',function(e){ e.preventDefault(); },{passiv
 var prevSchaum=0;
 function update(dt){
   var b=S.baer, t=now(), st=S.state;
-  if(st==='waschen'){
-    if(S.dusche && b.schaum>0){
-      b.schaum=Math.max(0,b.schaum-dt*0.55);
-      b.tropfen.length=0;
-      var s=Math.min(S.VW,S.VH)/420;
-      for(var i=0;i<5;i++) b.tropfen.push({x:S.VW*0.5+(Math.random()-0.5)*200*s,y:S.VH*0.35+Math.random()*260*s});
-      if(Math.random()<dt*20) Fx.P.emit('drop',400+Math.random()*120,190+Math.random()*30,{n:2,speed:220,dir:-Math.PI/2,spread:2.4,size:6,life:0.8,grav:900,drag:0.5});
-      if(b.schaum===0){ // fertig abgeduscht: Schütteln wie ein nasser Hund
-        Art.react(b,'shake'); if(window.BSSfx) window.BSSfx.play('splash');
-        Fx.P.emit('drop',S.VW*0.5,S.VH*0.58,{n:40,speed:620,size:7,life:0.9,grav:900,drag:0.8,jx:120,jy:100});
-        S.dusche=false;
-      }
-    } else { b.tropfen.length=0; if(b.schaum<=0) S.dusche=false; }
-  }
-  if(st==='foehnen'){
-    var tgt=(S.foehn && b.schaum<0.1)?1:0;
-    b.fluff+=(tgt-b.fluff)*Math.min(1,dt*3);
-    if(S.foehn && b.schaum<0.1 && Math.random()<dt*14)
-      Fx.P.emit('spark',S.VW*0.5-110,S.VH*0.58-150,{n:1,speed:380,dir:0.35,spread:0.5,size:9,life:0.7,grav:-40,drag:1,colors:['#ffe8c8','#fff6e8']});
-  }
-  if(st==='spa'){
-    b._spa=(b._spa||0)+(((S.spaTarget)?1:0)-(b._spa||0))*Math.min(1,dt*1.4);
-    b.relax=Math.max(b.relax,b._spa);
-  }
-  if(st==='eis' && S.eis && S.eis.leck && S.eis.kugeln.length){
-    var top=S.eis.kugeln[S.eis.kugeln.length-1];
-    top.scale=(top.scale===undefined?1:top.scale)-dt*0.06;
-    if(top.scale<0.3) S.eis.kugeln.pop();
-  }
+  // Stations-Logik vor der Pose (Waschen/Dusche, Föhnen, Spa, Eis, Zuckerwatte, Massage): stations/<id>.js frueh(dt)
+  if(S.updateFrueh) S.updateFrueh(dt);
   if(S.flash>0) S.flash=Math.max(0,S.flash-dt*5);
   if(st!=='spa' && S.spaTarget===0 && b._spa!==undefined) b._spa=Math.max(0,b._spa-dt*0.6);
   b.breathe=(b.breathe||0)+dt;
   if(S.tanz && S.tanz.spin>0) S.tanz.spin=Math.max(0,S.tanz.spin-dt*1.2);
-  if(st==='zuckerwatte' && S.watte){
-    var wt=S.watte;
-    wt.spin=Math.max(0,(wt.spin||0)-dt*0.25);
-    if(wt.spin>0) wt.lvl=Math.min(1,(wt.lvl||0)+dt*wt.spin*0.30);
-    if(wt._bissT===undefined) wt._bissT=4+Math.random()*3;
-    wt._bissT-=dt;
-    if(wt._bissT<0 && wt.lvl>0.15){ wt.lvl=Math.max(0.05,wt.lvl-0.22); wt.kau=1.4; wt._bissT=4+Math.random()*3.5; Art.react(b,'happy'); }
-    if(wt.kau>0) wt.kau=Math.max(0,wt.kau-dt);
-  }
-  if(st==='massage' && S.mass){
-    var rt=Math.min(1,S.mass.prog/100);
-    b.relax+=(rt-b.relax)*Math.min(1,dt*2.5);
-    for(var hi=S.mass.herzen.length-1;hi>=0;hi--){
-      var h=S.mass.herzen[hi]; h.t=(h.t||0)+dt; h.a-=dt*0.7;
-      var r=h.r0+h.t*70;
-      h.x=h.ox+Math.cos(h.a0+h.t*3.2)*r; h.y=h.oy+Math.sin(h.a0+h.t*3.2)*r-h.t*30;
-      if(h.a<=0) S.mass.herzen.splice(hi,1);
-    }
-  } else if(b.relax>0 && st!=='spa') b.relax=Math.max(0,b.relax-dt*0.8);
+  if(!(st==='massage' && S.mass) && b.relax>0 && st!=='spa') b.relax=Math.max(0,b.relax-dt*0.8); // Entspannung klingt ab
   if(S.geschenk && S.geschenk.schuettel>0) S.geschenk.schuettel=Math.max(0,S.geschenk.schuettel-dt);
   if(S.keks && S.keks.glow>0){ S.keks.glow=Math.max(0,S.keks.glow-dt); if(S.keks.glow===0 && S.keks.stich) S.keks.biss=1.4; }
   if(S.keks && S.keks.biss>0){ S.keks.biss=Math.max(0,S.keks.biss-dt); b.jubel=Math.min(1,Math.max(b.jubel||0,S.keks.biss*0.8)); }
@@ -305,6 +273,7 @@ function update(dt){
     Art.updateBear(live,dt,env);
   }
   if(st==='finish-done' && S.updateFinale) S.updateFinale(dt);
+  if(S.update) S.update(dt); // Stations-Simulation (Aquarium, Zauber, Karussell, Noten, Rauch) — bildraten-unabhängig
   if(Fx.DEKO && window.BSDeko && window.BSDeko.update) window.BSDeko.update(dt,t,st,S); // r20: kleine Stations-Effekte
   // Dauer-Sounds
   if(window.BSSfx){
@@ -317,8 +286,10 @@ function update(dt){
 
 // ---- Rendern ----
 function showerFx(g,t){
-  if(S.state!=='waschen' || !S.dusche || !S._brause || !(S.baer.schaum>0)) return;
-  var bx=S._brause[0], by=S._brause[1];
+  if(S.state!=='waschen' || !S.dusche || !(S.baer.schaum>0)) return;
+  var WR=S.REG && S.REG.waschen, br=(WR && WR.hit) ? WR.hit().brause : S._brause; // Brause aus dem Zustand (stations/waschen.js)
+  if(!br) return;
+  var bx=br[0], by=br[1];
   g.save(); g.lineCap='round';
   for(var i=0;i<9;i++){
     var x0=bx+(i-4)*5, x1=440+(i-4)*26, y1=170+((i*37)%50);
@@ -363,6 +334,7 @@ function render(t){
   Fx.P.draw(g,'screen');
   // Crossfade vom alten Bild (kein harter Schnitt)
   var q=(t-snapT)/0.38;
+  if(snap && q>=1 && snap.width>1){ snap.width=snap.height=1; } // Überblendung vorbei → Schnappschuss-Speicher freigeben
   if(snap && q<1){
     g.save(); g.setTransform(1,0,0,1,0,0);
     g.globalAlpha=1-Fx.ease.inOutCubic(q);
@@ -371,17 +343,12 @@ function render(t){
   }
 }
 
-// ---- Qualitätsstufen: Frame-Zeit > 20 ms → weniger Auflösung/Partikel statt FPS-Einbruch ----
-var perf={ema:16.7,work:6,slow:0,fast:0,flips:0,warm:0};
+// ---- Qualitätsstufen: Frame-Zeit > 20 ms → weniger Auflösung/Partikel statt FPS-Einbruch (Logik: Fx.Q.step) ----
+var perf=Fx.Q.newPerf();
 G.perf=perf;
 function tiers(dtMs,work,dt){
-  perf.warm+=dt; if(perf.warm<2.5) return;
-  perf.ema+=(Math.min(dtMs,60)-perf.ema)*0.05;
-  perf.work+=(work-perf.work)*0.05;
-  if(perf.ema>20.5) perf.slow+=dt; else perf.slow=Math.max(0,perf.slow-dt*0.5);
-  if(perf.slow>1.3 && Fx.Q.tier>0){ Fx.Q.tier--; perf.slow=0; perf.fast=0; perf.flips++; resize(); return; }
-  if(perf.ema<17.4 && perf.work<6) perf.fast+=dt; else perf.fast=0;
-  if(perf.fast>8 && Fx.Q.tier<2 && perf.flips<2){ Fx.Q.tier++; perf.fast=0; resize(); }
+  var nt=Fx.Q.step({ms:dtMs,work:work,dt:dt,tier:Fx.Q.tier},perf);
+  if(nt!==null){ Fx.Q.tier=nt; resize(); }
 }
 
 var last=performance.now();
@@ -401,6 +368,7 @@ function frame(ts){
   update(dt);
   updateCamera(dt);
   if(Fx.DEKO && Room.steps) stepRoom(); else if(!tw) ensureRoom();
+  releaseSpare(dt);
   var w0=performance.now();
   render(t);
   tiers(dtRaw*1000,performance.now()-w0,dt);

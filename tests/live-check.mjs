@@ -2,11 +2,17 @@
 // kurzer Rundgang (Menü → Waschen → Aquarium → Finale), Screenshots nach tests/shots/deko/live/.
 // Aufruf: node tests/live-check.mjs [--expect=20.1] [--url=https://…] [--land]
 import { createRequire } from 'module';
+import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
-const { chromium } = require(path.join(process.env.HOME, '.cache/r18-pw/node_modules/playwright'));
+// Playwright: $PW_DIR, ~/.cache/r18-pw (lokal installiert) oder global (wie tools/visual-check.mjs)
+const npmRoot = () => { try { return execSync('npm root -g').toString().trim(); } catch (e) { return ''; } };
+const pwDir = [process.env.PW_DIR, path.join(process.env.HOME || '', '.cache/r18-pw/node_modules'), npmRoot()].filter(Boolean)
+  .find(d => fs.existsSync(path.join(d, 'playwright')));
+if (!pwDir) { console.error('Playwright nicht gefunden: PW_DIR=<ordner mit node_modules/playwright> setzen'); process.exit(2); }
+const { chromium } = require(path.join(pwDir, 'playwright'));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const url = arg('url', 'https://drpeterkalmar.github.io/baeren-beautysalon/') + (arg('query', '') ? '?' + arg('query', '') : '');
