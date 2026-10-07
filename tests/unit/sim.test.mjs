@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, load, go, seeded } from './harness.mjs';
+import { ROOT, load, go, seeded, ALL } from './harness.mjs';
 import { SZENEN, spiele } from './sim-szenen.mjs';
 
 const REF = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'unit', 'fixtures', 'sim-ref-alt.json'), 'utf8'));
@@ -121,7 +121,7 @@ test('Geburtstag: Rauchwölkchen leben bei 60 und 120 Hz gleich lange (1 s)', ()
 });
 
 test('game.js ruft S.update(dt) in jedem Bild (kompletter Modulsatz, rAF-Schleife)', () => {
-  const H = load({ files: ['fx.js', 'art.js', 'room.js', 'deko.js', 'salon.js', 'ui.js', 'game.js'], seed: 4 });
+  const H = load({ files: ALL, seed: 4 });
   let n = 0, last = 0;
   const orig = H.S.update;
   H.S.update = function (dt) { n++; last = dt; return orig.call(this, dt); };

@@ -1,7 +1,7 @@
 // stufen.test.mjs — P2-2: Qualitäts-Automatik Fx.Q.step bewertet JS-Arbeit und Grundperiode (30-Hz-Geräte).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, seeded } from './harness.mjs';
+import { load, seeded, ALL } from './harness.mjs';
 
 const { Fx } = load({ files: ['fx.js'] });
 
@@ -113,11 +113,11 @@ test('Mess-Werkzeuge frieren die Stufe ein (perf.warm = −1e9) → nie ein Wech
 });
 
 test('game.js: 30-Hz-Schleife (10 s) bleibt auf Stufe 2, 60-Hz-Schleife mit 33-ms-Einbruch fällt', () => {
-  const H = load({ files: ['fx.js', 'art.js', 'room.js', 'deko.js', 'salon.js', 'ui.js', 'game.js'], seed: 4 });
+  const H = load({ files: ALL, seed: 4 });
   for (let i = 0; i < 300; i++) H.frame(1000 / 30);
   assert.equal(H.Fx.Q.tier, 2);
   assert.equal(H.G.perf.base, 33.3);
-  const H2 = load({ files: ['fx.js', 'art.js', 'room.js', 'deko.js', 'salon.js', 'ui.js', 'game.js'], seed: 4 });
+  const H2 = load({ files: ALL, seed: 4 });
   for (let i = 0; i < 180; i++) H2.frame(1000 / 60);
   for (let i = 0; i < 300; i++) H2.frame(1000 / 30);
   assert.equal(H2.G.perf.base, 16.7);
