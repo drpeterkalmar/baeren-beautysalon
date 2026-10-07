@@ -179,7 +179,6 @@ S.buildUI = function(){
   else if(st==='schneiden') buildSchneiden();
   else if(st==='pfoten') buildPfoten();
   else if(st==='massage') buildMassage();
-  else if(st==='spa') buildSpa();
   else if(st==='tanz') buildTanz();
   else if(st==='zirkus') buildZirkus();
   else if(st==='parfum') buildParfum();
@@ -293,17 +292,6 @@ function buildZirkus(){
     },{fill:c});
   });
   btn(30, 170, 190, 52, '🧽 Neue Bälle', function(){ S.zirkus.bälle=[{c:'#e74c3c'}]; S.buildUI(); });
-}
-function buildSpa(){
-  stationTabs();
-  S.hinweis = 'Tippe aufs Auge für eine Gurkenscheibe, nochmal zum Abnehmen! 🥒';
-  if(S.baer.gurkeL && S.baer.gurkeR){
-    // Ahhhh — Entspannung ansteuern
-    S.spaTarget = 1;
-  } else S.spaTarget = 0;
-  btn(330,400,240,56,'🧽 Gurken weg',function(){
-    S.baer.gurkeL=false; S.baer.gurkeR=false; S.spaTarget=0; S.save(); S.buildUI();
-  },{active:function(){return S.baer.gurkeL||S.baer.gurkeR;}});
 }
 function buildParfum(){
   stationTabs();
@@ -1373,22 +1361,6 @@ S.tapBear = function(x,y){
     var s4=Math.min(S.VW,S.VH)/420;
     var bx=S.VW*0.5, byc=S.VH*0.58;
     if(Math.hypot(x-bx,y-byc)<160*s4){ S.tanz.spin=1; return true; }
-    return true;
-  }
-  if(S.state==='spa'){
-    var s2=Math.min(S.VW,S.VH)/420;
-    var cx2=S.VW*0.5, ey=S.VH*0.58-105*s2;
-    // linke Seite / rechte Seite
-    if(Math.hypot(x-(cx2-30*s2), y-ey) < 40*s2){
-      S.baer.gurkeL = !S.baer.gurkeL; S.save(); S.buildUI();
-      window.BSGame && window.BSGame.spaTupfer(x,y);
-      return true;
-    }
-    if(Math.hypot(x-(cx2+30*s2), y-ey) < 40*s2){
-      S.baer.gurkeR = !S.baer.gurkeR; S.save(); S.buildUI();
-      window.BSGame && window.BSGame.spaTupfer(x,y);
-      return true;
-    }
     return true;
   }
   if(S.state==='malbuch'){
