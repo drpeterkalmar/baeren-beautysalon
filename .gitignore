@@ -6,3 +6,7 @@ tests/shots/*
 tests/shots/deko/*
 !tests/shots/deko/vergleich_*.jpg
 __pycache__/
+# Umbau 20.4: nur die Übersichts-Collagen vorher/nachher ins Repo
+!tests/shots/umbau/
+tests/shots/umbau/*
+!tests/shots/umbau/vergleich_*.jpg

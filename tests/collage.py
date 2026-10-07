@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """DEV-TOOL: Vorher/Nachher-Collage aus zwei Screenshot-Ordnern.
-Aufruf: python3 tests/collage.py VORHER_DIR NACHHER_DIR AUSGABE.jpg [--names=01-menu,03-waschen-schaum] [--width=520]
+Aufruf: python3 tests/collage.py VORHER_DIR NACHHER_DIR AUSGABE.jpg [--names=01-menu,03-waschen-schaum] [--width=520] [--nach=nachher (r20)]
 Jede Zeile: links vorher, rechts nachher (gleiche Szene), Beschriftung oben."""
 import sys, os
 from PIL import Image, ImageDraw, ImageFont
@@ -35,7 +35,7 @@ for i, (n, a, b) in enumerate(pairs):
     c, r = i % cols, i // cols
     x, y = gap + c * (pw + 30), gap + r * (th + head + gap)
     d.text((x, y + 6), 'vorher  ·  ' + n, fill=(235, 220, 225), font=small)
-    d.text((x + tw + gap, y + 6), 'nachher (r20)', fill=(255, 214, 120), font=small)
+    d.text((x + tw + gap, y + 6), opts.get('nach', 'nachher (r20)'), fill=(255, 214, 120), font=small)
     img.paste(a, (x, y + head))
     img.paste(b, (x + tw + gap, y + head))
 img.save(out, quality=84, optimize=True)

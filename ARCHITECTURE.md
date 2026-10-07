@@ -19,8 +19,9 @@ Ladereihenfolge (index.html, Stand Umbau 20.4): `fx.js → art.js → room.js �
    Grundform (glatter Blob) → Fellmuster (overlay) → Modell-Muster (clip) → Form-Schatten (Radialverlauf, Licht oben-links)
    → Kanten-Okklusion (inner shadow) → Rim-/Bounce-Light → weiche Kontur (Schatten-Blur statt Linie).
    Muster (`Art.MUSTER[key]`: head/body/ear/arm/foot/snout geclippt, `top` = Hüte/Hörner, `back` = Flügel/Umhang) werden mitgebacken.
-   LRU-Cache (max. 10 Sätze) mit Hysterese: ein vorhandener Satz wird bis ~20 % Hochskalierung wiederverwendet (Finale-Zoom backt nicht neu).
-   Frisuren (lockig/kurz/zottig/igel/afro + „wirr“ fürs Vorher-Bild) werden pro Stil+Farbe+Auflösung gebacken; Accessoires sind wenige Live-Pfade.
+   LRU-Cache (max. 5 Sätze seit 20.4, vorher 10) mit Hysterese: ein vorhandener Satz wird bis ~20 % Hochskalierung wiederverwendet (Finale-Zoom backt nicht neu).
+   Frisuren (lockig/kurz/zottig/igel/afro + „wirr“ fürs Vorher-Bild) werden pro Stil+Farbe+Auflösung gebacken. Seit 20.4 auch Hut, Schleife, Kette, Lack und
+   Eis-Waffel (`accSprite`, Art + Farbe + k, LRU 16); Neigung und Pop-Animation wirken live auf das fertige Sprite.
 3. **Frame**: nur `drawImage` der Sprites mit Pose-Transformationen (Atmen, Arme, Kopfneigung, Squash&Stretch),
    Kontakt-Schatten zwischen Teilen als gecachte Glow-Sprites, Gesicht live (Augen/Blinzeln/Blick/Mund — wenige Pfade).
 4. **Thumbnails / Vorher-Bild**: kompletter Bär einmal in einen Canvas komponiert und gecacht.
@@ -86,3 +87,5 @@ Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Back
 (Proxy-Canvas mit Transformationsmatrix, steuerbare Uhr, fester Zufall). Referenzen des alten Stands:
 `fixtures/sim-ref-alt.json` (Simulation, 79d3ca7) und `fixtures/stationen-ref.json` (alle 24 Stationen hoch/quer, a6e223c).
 `tools/visual-check.mjs` (siehe CHECKS.md) — Screenshots nach `shots/r19/<label>/` (gitignored).
+Umbau-Abnahme im Browser: `tests/umbau-shots.mjs` (Stationen mit fester Uhr) + `tests/pixel-diff.py`, `tests/touch-check.mjs`
++ `tests/touch-diff.py` (Tippen/Ziehen vorher/nachher), `tests/hitch-check.mjs --resize --novsync`, `tests/deko-check.mjs --voll`.

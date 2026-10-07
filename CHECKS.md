@@ -7,12 +7,13 @@ Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster 
 (Android-Viewport 412×915 @ DPR 2, Touch; `--land` = 915×412). Ergebnis: `shots/r18/<label>/` + `report.json`.
 
 ## C0 — Unit-Tests ohne Browser (Umbau 20.4, vor jedem Commit)
-- [x] C0.1 `node --test tests/unit` grün (Harness `tests/unit/harness.mjs`, keine npm-Pakete, ~3 s). Enthält u. a.:
+- [x] C0.1 `node --test tests/unit` grün (99 Tests, Harness `tests/unit/harness.mjs`, keine npm-Pakete, ~4 s). Enthält u. a.:
       24-Stationen-Smoke, Speichern/Laden, Album-Schnappschüsse (P1-1), „Weiter mit meinem Bären“ (P1-2), Farb-Cache (P2-4),
       Kamera nach Resize (P2-1, mit game.js), Version (P2-9), Simulation 60 vs. 120 Hz + Referenz alter Code (P2-3),
       Qualitäts-Automatik 30/60/90/120 Hz (P2-2), Canvas-Speicherbudget (P2-6), Stations-Registry + jede Station
       hoch/quer Bild für Bild gegen den Stand vor dem Umzug (P2-7/P2-8), Stations-Logik in der echten game.js-Schleife
-      (`spiel.test.mjs`) und Zeiger-Eingaben (Ziehen/Rubbeln, `eingabe.test.mjs`).
+      (`spiel.test.mjs`), Zeiger-Eingaben (Ziehen/Rubbeln, `eingabe.test.mjs`) und Accessoire-Sprites ohne `shadowBlur`
+      im laufenden Bild (P2-5, `accsprites.test.mjs`).
 - [x] C0.2 Python-Werkzeuge: `python3 -m unittest discover -s tests/unit -p "test_*.py"` (bump-version, pixel-diff).
 
 ## C1 — Fehlerfreiheit (automatisch, hart)
@@ -34,7 +35,8 @@ Standard GPU-Raster wie Android-Chrome; `--swraster` = Headless-Software-Raster 
 ## C3 — Offscreen-Architektur (Code-Review, hart)
 - [x] C3.1 Fell-Textur wird pro Farbe EINMAL in einen Offscreen-Canvas gebacken (Cache-Treffer im Frame-Loop, kein Neu-Backen).
 - [x] C3.2 Körperteile (Kopf, Körper, Arme, Beine, Ohren, Schnauze, Muster) sind pro Modell+Auflösung gebackene Sprites;
-      pro Frame nur `drawImage` + leichte Live-Details (Augen, Mund, Effekte).
+      pro Frame nur `drawImage` + leichte Live-Details (Augen, Mund, Effekte). Seit 20.4 auch Hut, Schleife, Kette, Lack und
+      Eis-Waffel als gebackene Sprites (vorher Live-Pfade mit Weichzeichner, Gutachten P2-5); live bleibt nur das Foto-Badge.
 - [x] C3.3 Keine Schleifen, die pro Frame > 50 Einzelstriche fürs Fell zeichnen.
 - [x] C3.4 100 % prozedural: keine Bilder/CDNs/Fonts von außen (einzige Datei-Referenz bleibt `audio/salon.m4a` aus music.js).
 
@@ -100,3 +102,18 @@ Stufe fest (Auto-Drossel aus) bzw. Auto. Alt = Export von 283f890, abwechselnd m
 - [x] R20.5 Ladegröße gzip 289 → 309 KB (+19 KB, Budget +1 MB), keine neuen Requests, keine Fremd-Assets.
 - [x] R20.6 `?deko=0` = altes Aussehen (Pixel-Abweichung so klein wie zwischen zwei Läufen des alten Stands).
 - [x] R20.7 C1/R19 weiter grün: Flow hoch + quer 0 Fehler, 0 Knöpfe < 48 px; Aquarium-Verdeckung 0 % hoch + quer.
+
+## U — Umbau 20.4 nach Gutachten (gemessen 07.10.2026, Details: UMBAU_BERICHT.md)
+Vorher = Export von 79d3ca7, abwechselnd mit nachher gemessen (Mac während der Messung durch macOS-Update belastet).
+- [x] U.1 `node --test tests/unit` 99/99 grün; P1-1 (Album-Schnappschüsse) und P1-2 („Weiter“ sofort) auch per Touch im
+      Browser belegt (`tests/touch-check.mjs`: 22 Schritte gleich wie vorher, außer genau diesen beiden Fixes).
+- [x] U.2 Pixel-Vergleich aller 24 Stationen hoch + quer (`tests/umbau-shots.mjs`, feste Uhr/Zufall, Bär voll gestylt):
+      ≤ 0,11 % je Bild; Ausnahme Aquarium hoch 1,8 % / quer 0,7 % (andere Zufallsbahn der Fische). Collagen in `tests/shots/umbau/`.
+- [x] U.3 Flow hoch + quer 0 Fehler, 0 Knöpfe < 48 px; R19 Verdeckung 0 %, Bälle Mindestabstand 55; Sprite-Sätze im Flow
+      gleich oft gebacken wie vorher (23 hoch / 13 quer) trotz LRU 5.
+- [x] U.4 Leistung Stufe 2 / Auto (Software-Raster, 4×): p50 je Szene gleich oder besser, p95 im Median der Paare ≤ +5 %
+      (Einzelläufe ±30 % Rauschen); Auto endet wie vorher auf Stufe 0.
+- [x] U.5 Voll gestylter Bär (Hut+Kette+Schleife+6 Lack), Waschen, GPU: JS-Arbeit p50 2,1 → 0,75 ms, p95 4,3 → 3,6 ms.
+- [x] U.6 Ruckler nach Größenwechsel (`hitch-check --resize --novsync --swraster --tier=0`): Mittel/Spitze 232 / 1.097 ms → 48 / 51 ms.
+- [x] U.7 Live-Check `--expect=20.4` hoch + quer: 0 Fehler.
+

@@ -40,7 +40,10 @@ Finale-Zeitplan, Farb-Mathe und Partikel-Grenzen.
 |---|---|
 | `node tools/visual-check.mjs <label> [--land] [--only=flow\|stations\|r19\|…]` | Screenshots + `report.json` gegen CHECKS.md (0 Fehler, Knöpfe ≥ 48 px) |
 | `node tests/deko-check.mjs perf <label> [--tier=2\|1\|0\|auto] [--swraster] [--throttle=4]` | Bildzeiten je Szene |
-| `node tests/hitch-check.mjs [--swraster] [--throttle=4]` | Ruckler beim Stationswechsel |
+| `node tests/hitch-check.mjs [--swraster] [--throttle=4] [--resize] [--novsync]` | Ruckler beim Stationswechsel (ungebremst messen: `--novsync`) |
+| `node tests/umbau-shots.mjs <label> [--src=DIR] [--land]` | alle 24 Stationen mit fester Uhr/festem Zufall (reproduzierbar) |
+| `python3 tests/pixel-diff.py VORHER NACHHER --max=1.0` | Pixel-Vergleich zweier Screenshot-Ordner |
+| `node tests/touch-check.mjs <label> [--src=DIR]` + `python3 tests/touch-diff.py A.json B.json` | echtes Tippen/Ziehen, Zustand vorher/nachher |
 | `node tests/live-check.mjs --expect=<version> [--land]` | Live-Seite auf GitHub Pages prüfen |
 
 ## Musik
