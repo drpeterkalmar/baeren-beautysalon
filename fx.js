@@ -270,6 +270,37 @@ Fx.gradingPaint = function(g,W,H,x,y,w,h){
   g.fillStyle=lg; g.fillRect(x,y,w,h);
 };
 
+// ---------------------------------------------------------------- r21: Glow-Ebene für das Endbild (post.js)
+// Leinwand in halber Szenen-Auflösung. Leuchtendes (Funken, Funkeln, Sterne, Zauber, Seifenblasen, Lämpchen) malt hier
+// zusätzlich einen weichen Licht-Tupfer; post.js zeichnet sie weich und legt sie als Schein über das Bild. Nur aktiv,
+// wenn das Endbild läuft (GL.on) — sonst sind alle Aufrufe leer und das 2D-Bild ist genau wie vorher.
+var GL = Fx.GL = { on:false, cv:null, g:null, main:null, s:0.5, dirty:false };
+// main = 2D-Canvas der Szene; gw/gh = Glow-Größe (0 → aus, Speicher freigeben)
+GL.setze = function(main,gw,gh){
+  if(!main || !gw){ GL.on=false; GL.dirty=false; if(GL.cv) GL.cv.width=GL.cv.height=1; return; }
+  if(!GL.cv){ GL.cv=canvas(gw,gh); GL.g=GL.cv.getContext('2d'); }
+  if(GL.cv.width!==gw || GL.cv.height!==gh){ GL.cv.width=gw; GL.cv.height=gh; }
+  GL.main=main; GL.s=gw/Math.max(1,main.width); GL.on=true; GL.dirty=false;
+};
+// Bildanfang: Ebene leeren, falls im letzten Bild etwas hineingemalt wurde
+GL.anfang = function(){
+  if(GL.on && GL.dirty){ var g=GL.g; g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.clearRect(0,0,GL.cv.width,GL.cv.height); }
+  GL.dirty=false;
+};
+// Glow-Kontext mit derselben Abbildung wie g (nur für den Szenen-Canvas), sonst null
+GL.ctx = function(g){
+  if(!GL.on || !g || g.canvas!==GL.main) return null;
+  var T=g.getTransform(), s=GL.s;
+  GL.g.setTransform(T.a*s,T.b*s,T.c*s,T.d*s,T.e*s,T.f*s); GL.dirty=true;
+  return GL.g;
+};
+// weicher Licht-Tupfer (Koordinaten wie auf g)
+GL.glow = function(g,x,y,r,col,a){
+  if(!GL.on || !(a>0.003) || !(r>0)) return;
+  var G=GL.ctx(g); if(!G) return;
+  G.globalAlpha=Math.min(1,a); G.drawImage(S.glow(col||'#fff1d6'),x-r,y-r,2*r,2*r);
+};
+
 // ---------------------------------------------------------------- Qualitätsstufen
 Fx.Q = { tier:2,
   dpr: function(){ return [1.25,1.6,2][Fx.Q.tier]; },
@@ -314,43 +345,66 @@ var DEF = {
   star:['#ffe19a','#fff4d6'], ring:['#fff1d6'], flower:['#f7b6c9','#fff4ea'], heart:['#f38aa3','#f7b6c9'],
   bubble:['#fff'], hair:['#8a5a3a']
 };
+// r21 (Grafik-Audit #2): Pool ohne Allokation. Verglühte Partikel wandern in einen Vorrat (F) und werden beim nächsten
+// emit wiederverwendet; bei vollem Pool wird reihum (Zeiger ov) ein vorhandener Platz überschrieben statt splice(0,1)
+// (O(n) + neues Objekt je Partikel → GC-Spitzen bei Konfetti/Finale). Zufallsfolge und Felder wie vorher.
 var P = Fx.P = { list:[] };
-var MAXP=[260,480,760];
+var MAXP=[260,480,760], F=[], ov=0;
 P.emit = function(type,x,y,o){
   o=o||{};
   var n=Math.max(1,Math.round((o.n||1)*Fx.Q.pmul())), L=P.list;
   var cols=o.colors||DEF[type]||['#fff'];
   var hasDir=o.dir!==undefined, spread=o.spread===undefined?(hasDir?0.8:TAU):o.spread;
   for(var i=0;i<n;i++){
-    if(L.length>=MAXP[Fx.Q.tier]) L.splice(0,1);
+    var mx=MAXP[Fx.Q.tier], p;
+    if(L.length>=mx){
+      while(L.length>mx) F.push(L.pop());          // Stufe gesunken: Überhang abgeben
+      if(ov>=L.length) ov=0;
+      p=L[ov++];                                    // ältesten Platz (reihum) überschreiben
+    } else { p=F.pop()||{}; L.push(p); }
     var a=hasDir ? o.dir+(Math.random()-0.5)*spread : Math.random()*TAU;
     var sp=(o.speed===undefined?120:o.speed)*(0.35+0.65*Math.random());
     var life=(o.life||1)*(0.7+0.5*Math.random());
-    L.push({type:type, x:x+(Math.random()-0.5)*2*(o.jx||0), y:y+(Math.random()-0.5)*2*(o.jy||0),
-      vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:life, max:life,
-      size:(o.size||10)*(0.7+0.6*Math.random()), col:cols[Math.floor(Math.random()*cols.length)],
-      rot:Math.random()*TAU, vr:(Math.random()-0.5)*8, grav:o.grav===undefined?200:o.grav,
-      drag:o.drag===undefined?1:o.drag, layer:o.layer||'world', ph:Math.random()*TAU});
+    p.type=type; p.x=x+(Math.random()-0.5)*2*(o.jx||0); p.y=y+(Math.random()-0.5)*2*(o.jy||0);
+    p.vx=Math.cos(a)*sp; p.vy=Math.sin(a)*sp; p.life=life; p.max=life;
+    p.size=(o.size||10)*(0.7+0.6*Math.random()); p.col=cols[Math.floor(Math.random()*cols.length)];
+    p.rot=Math.random()*TAU; p.vr=(Math.random()-0.5)*8; p.grav=o.grav===undefined?200:o.grav;
+    p.drag=o.drag===undefined?1:o.drag; p.layer=o.layer||'world'; p.ph=Math.random()*TAU;
   }
 };
 P.update = function(dt){
   var L=P.list;
   for(var i=L.length-1;i>=0;i--){
     var p=L[i]; p.life-=dt;
-    if(p.life<=0){ L[i]=L[L.length-1]; L.pop(); continue; }
+    if(p.life<=0){ L[i]=L[L.length-1]; L.pop(); F.push(p); continue; }
     var d=Math.exp(-p.drag*dt);
     p.vx*=d; p.vy=p.vy*d+p.grav*dt;
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vr*dt;
   }
 };
-P.clear = function(layer){ P.list=P.list.filter(function(p){ return layer && p.layer!==layer; }); };
+// clear() = alles, clear(layer) = nur diese Ebene; in place, Objekte zurück in den Vorrat
+P.clear = function(layer){
+  var L=P.list, j=0;
+  for(var i=0;i<L.length;i++){ var p=L[i]; if(layer && p.layer!==layer) L[j++]=p; else F.push(p); }
+  L.length=j; ov=0;
+};
 P.count = function(){ return P.list.length; };
+P.pool = function(){ return F.length; }; // für Unit-Tests
+// r21: leuchtende Partikel-Sorten → Glow-Ebene [Radius × Größe, Stärke, Farbe (null = Partikelfarbe)]. Startwerte (TODO Bild).
+var GLOWT = { spark:[1.8,0.55,null], twinkle:[1.4,0.7,'#fff1d6'], star:[1.5,0.4,null], bubble:[1.1,0.16,'#dff0ff'] };
+P.GLOWT = GLOWT;
 P.draw = function(g,layer){
   var L=P.list; if(!L.length) return;
-  var T=g.getTransform(), oa=g.globalAlpha;
+  var T=g.getTransform(), oa=g.globalAlpha, GG=null;
   for(var i=0;i<L.length;i++){
     var p=L[i]; if(p.layer!==layer) continue;
     var q=1-p.life/p.max, s=p.size, a;
+    var gt=GL.on && GLOWT[p.type];
+    if(gt){
+      if(!GG) GG=GL.ctx(g);
+      if(GG){ var ga=oa*gt[1]*(p.type==='twinkle'?Math.sin(q*Math.PI):1-q), gr=s*gt[0];
+        if(ga>0.003){ GG.globalAlpha=Math.min(1,ga); GG.drawImage(S.glow(gt[2]||p.col),p.x-gr,p.y-gr,2*gr,2*gr); } }
+    }
     switch(p.type){
       case 'puff':
         a=(1-q)*(1-q)*0.85; var r=s*(0.55+0.6*Fx.ease.outCubic(q));

@@ -18,7 +18,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k +
 const url = arg('url', 'https://drpeterkalmar.github.io/baeren-beautysalon/') + (arg('query', '') ? '?' + arg('query', '') : '');
 const expect = arg('expect', ''), land = process.argv.includes('--land');
 const out = path.join(root, 'tests', 'shots', 'deko', 'live'); fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization'] });
+const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio'] });
 const ctx = await browser.newContext({ viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 const errs = [], bad = [], media = [];

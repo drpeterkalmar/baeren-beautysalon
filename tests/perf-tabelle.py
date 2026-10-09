@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """DEV-TOOL: Messtabelle vorher/nachher aus tests/shots/deko/perf/*.json (Ausgabe: Markdown).
-Mittelt Wiederholungen (…-r1, …-r2). Aufruf: python3 tests/perf-tabelle.py"""
-import json, glob, os, re
-from statistics import mean
+Mittelt Wiederholungen (…-r1, …-r2). Aufruf: python3 tests/perf-tabelle.py
+r21 (Technik-Nacht): python3 tests/perf-tabelle.py r21 [--vorher=r21-vorher] [--nachher=r21-nachher] [--dir=…]
+  liest <prefix>-<hoch|quer>-t<2|1|0>[-rN].json (deko-check perf … --swraster [--land] --tier=T --voll) und druckt je Stufe
+  und Format die p95 der Hauptthread-Zeit bis nach dem Malen (haupt; fehlt sie, die Bildabstände) vorher → nachher,
+  dazu den Canvas-Speicher (MP) am Szenenende. Gate wie Koboldkeller: nachher ≤ vorher · 1,05 + 0,5 ms."""
+import json, glob, os, re, sys
+from statistics import mean, median
 
 D = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shots', 'deko', 'perf')
 SC = ['menu', 'waschen', 'aquarium', 'finale']
@@ -29,6 +33,58 @@ def table(title, alt, neu, extra=None):
         a, n = alt[s], neu[s]
         print(f"| {NAME[s]} | {a['p50']} ms | {a['p95']} ms | {n['p50']} ms | {n['p95']} ms | **{pct(a['p95'], n['p95'])}** |")
     if extra: print(extra)
+
+# ---------------------------------------------------------------- r21: Stufe × Format, haupt-p95, Speicher
+FORMATE = ['hoch', 'quer']
+STUFEN = [2, 1, 0]
+
+def r21_laden(d, prefix, fmt, tier):
+    """Mittel über die Wiederholungen je Szene: p95 (haupt bevorzugt), längstes Bild, Speicher in MP."""
+    name = f'{prefix}-{fmt}-t{tier}'
+    runs = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(d, name + '*.json')))
+            if re.fullmatch(re.escape(name) + r'(-r\d+)?\.json', os.path.basename(f))]
+    if not runs: return None
+    out = {}
+    for s in SC:
+        vals = [r['scenes'][s] for r in runs if s in r.get('scenes', {})]
+        if not vals: continue
+        haupt = all(v.get('hauptP95') is not None for v in vals)
+        k95, kmax = ('hauptP95', 'hauptMax') if haupt else ('p95', 'p99')
+        mem = [sum(x for k, x in v['mem'].items() if k not in ('sets', 'thumbs') and isinstance(x, (int, float)) and x > 1)
+               for v in vals if v.get('mem')]
+        out[s] = {'p95': round(median(v[k95] for v in vals), 1), 'max': round(max(v.get(kmax) or 0 for v in vals)),
+                  'mem': round(mean(mem) / 1e6, 2) if mem else None, 'n': len(vals), 'groesse': 'haupt' if haupt else 'iv'}
+    return out
+
+def gate(a, b): return b <= a * 1.05 + 0.5
+
+def r21_tabelle(d, vorher, nachher):
+    zeilen, ok = [], True
+    zeilen.append('| Stufe | Format | ' + ' | '.join(NAME[s].split(' (')[0] for s in SC) + ' | Canvas-Speicher (MP) |')
+    zeilen.append('|---|---|' + '---|' * len(SC) + '---|')
+    for t in STUFEN:
+        for f in FORMATE:
+            a, n = r21_laden(d, vorher, f, t), r21_laden(d, nachher, f, t)
+            if not a or not n: continue
+            zellen = []
+            for s in SC:
+                if s not in a or s not in n: zellen.append('–'); continue
+                pa, pn = a[s]['p95'], n[s]['p95']
+                g = gate(pa, pn); ok &= g
+                zellen.append(f"{pa:.1f} → **{pn:.1f}** ({(pn - pa) / pa * 100:+.0f} %){'' if g else ' ✗'} [{a[s]['max']} → {n[s]['max']}]")
+            ma = [a[s]['mem'] for s in SC if s in a and a[s]['mem'] is not None]
+            mn = [n[s]['mem'] for s in SC if s in n and n[s]['mem'] is not None]
+            sp = f"{max(ma):.2f} → {max(mn):.2f}" if ma and mn else '–'
+            zeilen.append(f'| {t} | {f} | ' + ' | '.join(zellen) + f' | {sp} |')
+    return zeilen, ok
+
+if len(sys.argv) > 1 and sys.argv[1] == 'r21':
+    opt = dict(a[2:].split('=', 1) for a in sys.argv[2:] if a.startswith('--') and '=' in a)
+    zeilen, ok = r21_tabelle(opt.get('dir', D), opt.get('vorher', 'r21-vorher'), opt.get('nachher', 'r21-nachher'))
+    print('p95 Hauptthread-Zeit je Bild bis nach dem Malen in ms, vorher → nachher (Änderung); [längstes Bild]; ✗ = Gate gerissen\n')
+    print('\n'.join(zeilen))
+    print('\nGate (nachher ≤ vorher · 1,05 + 0,5 ms):', 'bestanden' if ok else 'GERISSEN')
+    sys.exit(0 if ok else 1)
 
 alt2, neu2 = load('final-alt-sw-t2'), load('final-neu-sw-t2')
 alt0, neu0 = load('final-alt-sw-t0'), load('final-neu-sw-t0')

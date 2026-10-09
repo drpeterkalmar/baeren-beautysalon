@@ -1,7 +1,7 @@
 // game.js — Loop (performance.now-Delta), Kamera, Raum-Cache, Licht/Grading, Qualitätsstufen, Eingabe
 (function(){
 'use strict';
-var S=window.BSSalon, Fx=window.BSFx, Art=window.BSArt, UI=window.BSUI, Room=window.BSRoom;
+var S=window.BSSalon, Fx=window.BSFx, Art=window.BSArt, UI=window.BSUI, Room=window.BSRoom, PO=window.BSPost;
 window.__errors=[];
 window.onerror=function(msg,src,line){ window.__errors.push(msg+' @'+line);
   var e=document.getElementById('err'); if(e) e.textContent='⚠️ '+msg; };
@@ -20,8 +20,14 @@ function resize(){
   var wrap=document.getElementById('wrap');
   view.W=Math.max(200,wrap.clientWidth||innerWidth); view.H=Math.max(200,wrap.clientHeight||innerHeight);
   view.dpr=Math.min(Fx.Q.dpr(),window.devicePixelRatio||1);
+  // r21 Kino-Look (post.js): läuft das Endbild, rendert die 2D-Szene kleiner (Stufe 2: DPR 1,6 statt 2) und das Endbild
+  // rechnet sie scharf hoch. Raum-Cache und Bären-Sprites hängen an view.dpr und werden dadurch mit kleiner gebacken.
+  var pm=(PO && PO.an) ? PO.masse(view.W,view.H,window.devicePixelRatio||1,Fx.Q.tier) : null;
+  if(pm && !pm.ruht) view.dpr=pm.RS;
   cv.width=Math.round(view.W*view.dpr); cv.height=Math.round(view.H*view.dpr);
   cv.style.width=view.W+'px'; cv.style.height=view.H+'px';
+  if(pm){ PO.groesse(pm); }
+  if(pm && PO.an && !pm.ruht) Fx.GL.setze(cv,pm.gw,pm.gh); else Fx.GL.setze(null);
   var cs=getComputedStyle(probe);
   view.safe={t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0};
   // camKey leeren: das nächste Bild erkennt einen „neuen“ Schlüssel, schnappt (unsichtbar) aufs aktuelle Ziel und
@@ -86,7 +92,7 @@ function roomPlan(){
   var mx=(x1-x0)*0.14, my=(y1-y0)*0.14; x0-=mx; x1+=mx; y0-=my; y1+=my;
   var k=c.z*view.dpr;
   var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'');
-  var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.6e6,4e6][Fx.Q.tier];
+  var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.5e6,2.5e6][Fx.Q.tier]; // r21 (Audit #5): höchstens 2,5 MP (Handy hochkant DPR 2 ≈ 2,47 MP, greift nur auf Tablets)
   if(pw*ph>maxPx){ var f=Math.sqrt(maxPx/(pw*ph)); k*=f; pw*=f; ph*=f; }
   return {key:key,c:c,cxs:cxs,cys:cys,x0:x0,y0:y0,x1:x1,y1:y1,k:k,pw:pw,ph:ph};
 }
@@ -167,10 +173,14 @@ G.starBurst=function(i){
   Fx.P.emit('twinkle',p[0],p[1],{n:2,speed:40,size:26,life:0.6,grav:0,layer:'screen'});
 };
 G.tier=function(){ return Fx.Q.tier; };
+G.post=function(){ return PO ? PO.zustand() : null; };
 // Canvas-Speicher in Gerätepixeln (für Prüfwerkzeuge/Unit-Tests; ×4 = Bytes)
 G.canvasMem=function(){
   var px=function(c){ return c ? c.width*c.height : 0; };
-  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
+  var pp=(PO && PO.an) ? PO.speicher(PO.masseJetzt) : null;
+  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sprites:Art.spritePx?Art.spritePx():0,
+    post:pp?pp.d2:0, postGpu:pp?pp.gpu:0,   // r21: Glow-Leinwand (2D) bzw. WebGL-Puffer/Texturen des Endbilds
+    sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
 };
 
 // ---- Eingabe (Touch zuerst; Maus bewegt nur den Blick) ----
@@ -304,6 +314,7 @@ function showerFx(g,t){
 var snap=null, snapT=-9, prevState=null;
 function render(t){
   var dpr=view.dpr, W=view.W, H=view.H;
+  Fx.GL.anfang();
   g.setTransform(dpr,0,0,dpr,0,0);
   g.globalAlpha=1; g.globalCompositeOperation='source-over';
   g.fillStyle='#f4e2cf'; g.fillRect(0,0,W,H);
@@ -339,7 +350,7 @@ function render(t){
     g.save(); g.setTransform(1,0,0,1,0,0);
     g.globalAlpha=1-Fx.ease.inOutCubic(q);
     var z=1+0.04*q; g.translate(cv.width/2,cv.height/2); g.scale(z,z); g.translate(-cv.width/2,-cv.height/2);
-    g.drawImage(snap,0,0); g.restore();
+    g.drawImage(snap,0,0,cv.width,cv.height); g.restore();
   }
 }
 
@@ -357,8 +368,11 @@ function frame(ts){
   var dt=Math.min(0.05,Math.max(0,dtRaw)), t=ts/1000;
   if(S.state!==prevState){
     if(prevState!==null && Fx.Q.tier>0){
-      if(!snap || snap.width!==cv.width || snap.height!==cv.height){ snap=document.createElement('canvas'); snap.width=cv.width; snap.height=cv.height; }
-      var sc=snap.getContext('2d'); sc.setTransform(1,0,0,1,0,0); sc.clearRect(0,0,snap.width,snap.height); sc.drawImage(cv,0,0);
+      // r21 (Grafik-Audit #5): Schnappschuss in halber Auflösung (¼ Speicher); er blendet in 0,38 s aus und wird dabei
+      // ohnehin leicht vergrößert — der Unterschied ist nicht zu sehen
+      var sw=Math.ceil(cv.width/2), sh=Math.ceil(cv.height/2);
+      if(!snap || snap.width!==sw || snap.height!==sh){ snap=document.createElement('canvas'); snap.width=sw; snap.height=sh; }
+      var sc=snap.getContext('2d'); sc.setTransform(1,0,0,1,0,0); sc.clearRect(0,0,sw,sh); sc.drawImage(cv,0,0,sw,sh);
       snapT=t;
     }
     if(S.state!=='finish-done') Fx.P.clear('screen');
@@ -371,9 +385,12 @@ function frame(ts){
   releaseSpare(dt);
   var w0=performance.now();
   render(t);
+  if(PO && PO.an && !PO.ruht) PO.bild(cv,Fx.GL,S.state,dt);   // r21: Endbild (WebGL2), zählt zur Arbeitszeit
   tiers(dtRaw*1000,performance.now()-w0,dt);
   requestAnimationFrame(frame);
 }
+// r21: Endbild einschalten (Rückfall → reines 2D: ?post=0, kein WebGL2, Fehler; Kontextverlust → resize() auf 2D-Maße)
+if(PO) PO.init(cv,{ an:!/[?&]post=0(&|$)/.test(location.search||''), aus:function(){ resize(); } });
 resize();
 S.buildUI();
 UI.layout(view,g); UI.dirty=false;

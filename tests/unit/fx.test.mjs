@@ -56,3 +56,52 @@ test('Partikel: clear(layer) löscht nur die Ebene', () => {
   assert.ok(Fx.P.count() > 0 && Fx.P.count() < n);
   assert.ok(Fx.P.list.every((p) => p.layer === 'world'));
 });
+
+// r21 (Grafik-Audit #2): Pool ohne Allokation, gleiche Zufallsfolge wie der alte Pool
+import { execFileSync } from 'node:child_process';
+import { ROOT } from './harness.mjs';
+const FX_ALT = execFileSync('git', ['show', '2a503d4:fx.js'], { cwd: ROOT, encoding: 'utf8' });
+
+function szenario(Fx) {
+  const out = [];
+  for (let i = 0; i < 90; i++) {
+    if (i % 3 === 0) Fx.P.emit('spark', 100 + i, 50, { n: 6, life: 0.4 + (i % 5) * 0.2, dir: -1, spread: 1 });
+    if (i % 7 === 0) Fx.P.emit('confetti', 10, 10, { n: 9, life: 0.8, layer: 'screen' });
+    if (i === 40) Fx.P.clear('screen');
+    Fx.P.update(1 / 60);
+    out.push(Fx.P.list.map((p) => [p.type, +p.x.toFixed(6), +p.y.toFixed(6), +p.life.toFixed(6), p.col, p.layer]));
+  }
+  return out;
+}
+
+test('Partikel-Pool: unterhalb der Obergrenze Bild für Bild wie der alte Pool', () => {
+  const neu = load({ files: ['fx.js'], seed: 9 }), alt = load({ files: ['fx.js'], seed: 9, sources: { 'fx.js': FX_ALT } });
+  assert.deepEqual(JSON.parse(JSON.stringify(szenario(neu.Fx))), JSON.parse(JSON.stringify(szenario(alt.Fx))));
+});
+
+test('Partikel-Pool: keine neuen Objekte im Dauerbetrieb, auch bei vollem Pool', () => {
+  const { Fx } = load({ files: ['fx.js'], seed: 3 });
+  Fx.Q.tier = 0;
+  for (let i = 0; i < 20; i++) Fx.P.emit('confetti', 0, 0, { n: 40, life: 2 });   // füllt den Pool (260)
+  const bekannt = new Set(Fx.P.list);
+  for (let f = 0; f < 600; f++) {                                                     // 10 s Konfetti-Regen + Verglühen
+    Fx.P.emit('confetti', 0, 0, { n: 12, life: 0.5 + (f % 4) * 0.4 });
+    Fx.P.update(1 / 60);
+    for (const p of Fx.P.list) assert.ok(bekannt.has(p), 'neues Partikel-Objekt angelegt');
+    assert.ok(Fx.P.count() <= 260);
+  }
+  assert.ok(Fx.P.count() + Fx.P.pool() <= 260, 'Vorrat wächst über die Obergrenze');
+});
+
+test('Partikel-Pool: Stufe sinkt bei vollem Pool → sofort auf die neue Obergrenze', () => {
+  const { Fx } = load({ files: ['fx.js'], seed: 4 });
+  Fx.Q.tier = 2;
+  for (let i = 0; i < 30; i++) Fx.P.emit('spark', 0, 0, { n: 40, life: 5 });
+  assert.equal(Fx.P.count(), 760);
+  Fx.Q.tier = 0;
+  Fx.P.emit('spark', 0, 0, { n: 1, life: 5 });
+  assert.equal(Fx.P.count(), 260);
+  // ältester Platz wird reihum überschrieben: nach 260 weiteren ist keins der alten Partikel (life 5) mehr jung
+  for (let i = 0; i < 260; i++) Fx.P.emit('spark', 1, 1, { n: 1, life: 0.01 });
+  assert.ok(Fx.P.list.every((p) => p.life < 0.02), 'Überschreiben trifft nicht alle Plätze');
+});

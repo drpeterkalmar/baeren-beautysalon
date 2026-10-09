@@ -1,6 +1,6 @@
 # ARCHITECTURE — R18 Renderer
 
-Ladereihenfolge (index.html, Stand Umbau 20.4): `fx.js → art.js → room.js → deko.js → salon.js → stations/*.js → ui.js → sfx.js → music.js → game.js`.
+Ladereihenfolge (index.html, Stand r21): `fx.js → post.js → relief.js → art.js → room.js → deko.js → salon.js → stations/*.js → ui.js → sfx.js → music.js → game.js`.
 (R18: salon.js / game.js / music.js / index.html blieben damals unverändert; die neuen Module bedienten deren Verträge.)
 
 | Datei | Global | Aufgabe |
@@ -81,6 +81,23 @@ Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Back
 - **Speicherbudget**: Sprite-Satz-LRU 5 (`SETS_MAX`), Thumbnails für zwei Größen, Ersatz-Raum nach 3 s Ruhe und
   Snapshot nach der Überblendung freigegeben; `BSGame.canvasMem()` liefert die Canvas-Pixel.
 - **Version**: `BS_VERSION` aus der `?v=`-Query von fx.js; heben mit `python3 tools/bump-version.py X.Y`.
+
+## r21 Technik: Kino-Look 2D + Fell/Stoff mit Struktur (Vorbau, Abnahme im Browser durch den Heavy-Job)
+- **Endbild** (`post.js`, `BSPost`): game.js `resize()` fragt `PO.masse(W,H,dpr,tier)`; läuft das Endbild, rendert die
+  2D-Szene mit DPR 1,6 (Stufe 2) / 1,3 (Stufe 1) — `view.dpr` sinkt, damit auch Raum-Cache und Bären-Sprites —, und
+  `PO.bild()` lädt das fertige Bild nach jedem `render()` als Textur, zeichnet die Glow-Ebene weich (¼) und gibt aus:
+  Schein (Screen), Farbstimmung je Station (`PO.GRADE`/`PO.stimmung`), Nachschärfen (CAS), Dither. Der 2D-Canvas bleibt
+  für Eingaben zuständig (opacity 0), das WebGL-Canvas liegt darüber (`pointer-events:none`). Stufe 0: Endbild ruht.
+  Rückfall (`?post=0`, kein WebGL2, Fehler, Kontextverlust) → `PO.aus()` → `resize()` mit den alten Maßen.
+- **Glow-Ebene** (`Fx.GL` in fx.js, halbe Szenen-Auflösung): `Fx.GL.anfang()` leert sie zu Bildbeginn (nur wenn benutzt),
+  `Fx.GL.glow(g,…)` / `Fx.GL.ctx(g)` malen mit der Abbildung des Szenen-Canvas hinein. Benutzer: `Fx.P.draw` (Sorten in
+  `Fx.P.GLOWT`), deko.js Lichterkette + Finale-Funkeln (`GLOW_DEKO`), Zauberstern. Ohne Endbild sind alle Aufrufe leer.
+- **Relief** (`relief.js`, `BSRelief`): kachelbare Höhenfelder → Normalen → Lambert → graue Kachel (Mittel 128), per
+  `soft-light` beim Backen eingerechnet: art.js `fur()` (alle Bären-Teile, Keylicht oben links), deko.js Handtuchrollen,
+  Sessel, Vorhang-Sprite, Teppich (Licht aus dem Fenster, `RF.fenster(x,y)`). `?fell=0` = aus, `RF.MIN_STUFE`.
+- **Partikel-Pool** ohne Allokation (Vorrat + reihum überschreiben), Überblend-Schnappschuss in halber Auflösung,
+  Raum-Cache ≤ 2,5 MP. `BSGame.canvasMem()` zählt jetzt auch `sprites` (alle Sprite-Caches), `post` (Glow-Leinwand)
+  und `postGpu` (WebGL-Puffer/Texturen).
 
 ## Prüfung
 `node --test tests/unit` (ohne Browser, ~3 s): Harness `tests/unit/harness.mjs` lädt die Module per `node:vm`

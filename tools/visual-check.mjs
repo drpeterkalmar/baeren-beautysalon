@@ -26,7 +26,7 @@ const report = { label, land, throttle: thr, errors: [], fps: {}, smallButtons: 
 const sw = process.argv.includes('--swraster');
 // --novsync: rAF ungebremst (Headless ohne Display taktet sonst ~11 Hz) — FPS = Durchsatz, nur relativ vergleichbar
 const novs = process.argv.includes('--novsync');
-const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'].concat(sw ? [] : ['--use-angle=metal', '--enable-gpu', '--enable-unsafe-swiftshader']).concat(novs ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
+const browser = await chromium.launch({ args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--mute-audio'].concat(sw ? [] : ['--use-angle=metal', '--enable-gpu', '--enable-unsafe-swiftshader']).concat(novs ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
 report.raster = sw ? 'software' : 'gpu';
 const ctx = await browser.newContext({
   viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,

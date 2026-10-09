@@ -3,6 +3,12 @@
 //   node tests/deko-check.mjs shots <label> [--src=DIR] [--land] [--deko=0|1] [--only=a,b]
 //   node tests/deko-check.mjs perf  <label> [--src=DIR] [--tier=2|1|0|auto] [--throttle=4] [--vsync] [--secs=10.5] [--only=a,b] [--reduced] [--voll]
 // --voll (Umbau 20.4, Gutachten P2-5): Bär zusätzlich mit Hut und Kette (Schleife und 6 Lackkrallen hat er immer)
+// r21: --post=0|1 und --fell=0|1 hängen ?post= / ?fell= an die URL (Kino-Endbild, Fell-/Stoff-Struktur);
+//      --swraster = Profil „Mittelklasse“ wie Koboldkeller (Canvas ohne GPU, CPU ×4 = Standard-Drossel).
+//      Neu je Szene: haupt* = Hauptthread-Zeit je Bild bis NACH dem Malen (MessageChannel-Nachricht als nächste Aufgabe;
+//      im Software-Raster malt Chrome das Canvas erst nach dem JavaScript — work* allein unterschätzt dort stark),
+//      mem = BSGame.canvasMem() am Szenenende, post = BSPost-Zustand (an/ruht/Maße).
+//      Dateiname für tests/perf-tabelle.py r21: <prefix>-<hoch|quer>-t<0|1|2>[-rN], z. B. r21-vorher-hoch-t2-r1
 // --src: Spiel-Ordner (Standard: Repo). Für "vorher" ein git-archive-Export des alten Stands.
 // Handy-Viewport 412×915 @ DPR 2 (quer 915×412), Touch, GPU-Raster (Metal), Zufall per Seed fest.
 // Ausgabe: tests/shots/deko/<label>/*.png bzw. tests/shots/deko/perf/<label>.json
@@ -29,7 +35,7 @@ const vsync = !perfMode || flag('vsync');
 const sw = flag('swraster');
 const args = (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization']
   : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu'])
-  .concat(['--autoplay-policy=no-user-gesture-required']).concat(vsync ? [] : ['--disable-gpu-vsync', '--disable-frame-rate-limit']);
+  .concat(['--autoplay-policy=no-user-gesture-required', '--mute-audio']).concat(vsync ? [] : ['--disable-gpu-vsync', '--disable-frame-rate-limit']);
 const browser = await chromium.launch({ args });
 const ctx = await browser.newContext({
   viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
@@ -46,18 +52,21 @@ await page.addInitScript(() => {
   try { localStorage.clear(); } catch (e) {}
   let s = 20261005 >>> 0;
   Math.random = function () { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const P = window.__perf = { on: false, iv: [], work: [], last: 0, tiers: [], parts: [] };
+  const P = window.__perf = { on: false, iv: [], work: [], haupt: [], last: 0, tiers: [], parts: [] };
   const raf = window.requestAnimationFrame.bind(window);
+  const mc = new MessageChannel(); let t0Bild = 0;
+  mc.port1.onmessage = () => { if (P.on && t0Bild) P.haupt.push(performance.now() - t0Bild); t0Bild = 0; };
   window.requestAnimationFrame = function (cb) {
     return raf(function (ts) {
       const t0 = performance.now(); cb(ts); const w = performance.now() - t0;
       if (P.on) { if (P.last) P.iv.push(ts - P.last); P.work.push(w); P.tiers.push(window.BSFx ? window.BSFx.Q.tier : -1);
-        P.parts.push(window.BSFx ? window.BSFx.P.count() : 0); }
+        P.parts.push(window.BSFx ? window.BSFx.P.count() : 0); t0Bild = t0; mc.port2.postMessage(0); }
       P.last = ts;
     });
   };
 });
-const url = 'file://' + path.join(src, 'index.html') + (deko !== '' ? '?deko=' + deko : '');
+const qs = [['deko', deko], ['post', arg('post', '')], ['fell', arg('fell', '')]].filter(([, v]) => v !== '').map(([k, v]) => k + '=' + v).join('&');
+const url = 'file://' + path.join(src, 'index.html') + (qs ? '?' + qs : '');
 await page.goto(url);
 await page.waitForFunction(() => window.BSSalon && window.BSGame && window.BSFx, null, { timeout: 30000 });
 await page.waitForTimeout(800);
@@ -130,7 +139,8 @@ if (perfMode) {
   const thr = +arg('throttle', '4'), secs = +arg('secs', '10.5'), tier = arg('tier', '2');
   const cdp = await ctx.newCDPSession(page);
   await styleBear(); await pinTier(tier);
-  const res = { label, src, deko, tier, throttle: thr, vsync, raster: sw ? 'software' : 'gpu', secs, viewport: land ? '915x412' : '412x915@2', scenes: {} };
+  const res = { label, src, deko, post: arg('post', ''), fell: arg('fell', ''), tier, throttle: thr, vsync, raster: sw ? 'software' : 'gpu', secs,
+    viewport: land ? '915x412' : '412x915@2', voll: flag('voll'), scenes: {} };
   const measure = async (name, driver) => {
     await page.evaluate(() => { const P = window.__perf; P.iv = []; P.work = []; P.tiers = []; P.parts = []; P.last = 0; P.on = true; });
     const t0 = Date.now(); await driver(secs * 1000); const el = Date.now() - t0;
@@ -139,8 +149,11 @@ if (perfMode) {
       const P = window.__perf; P.on = false;
       const q = (a, f) => { const s = a.slice().sort((x, y) => x - y); return s.length ? +s[Math.min(s.length - 1, Math.floor(s.length * f))].toFixed(2) : null; };
       const avg = (a) => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;
+      const G = window.BSGame, PO = window.BSPost;
       return { frames: P.iv.length, p50: q(P.iv, 0.5), p95: q(P.iv, 0.95), p99: q(P.iv, 0.99), workP50: q(P.work, 0.5), workP95: q(P.work, 0.95),
-        tierEnd: P.tiers[P.tiers.length - 1], tierMin: Math.min.apply(null, P.tiers), partsAvg: avg(P.parts), partsMax: Math.max.apply(null, P.parts) };
+        hauptP50: q(P.haupt, 0.5), hauptP95: q(P.haupt, 0.95), hauptMax: q(P.haupt, 1),
+        tierEnd: P.tiers[P.tiers.length - 1], tierMin: Math.min.apply(null, P.tiers), partsAvg: avg(P.parts), partsMax: Math.max.apply(null, P.parts),
+        mem: G && G.canvasMem ? G.canvasMem() : null, post: PO && PO.zustand ? PO.zustand() : null };
     });
     res.scenes[name] = r; console.log('PERF', label, name, JSON.stringify(r));
   };

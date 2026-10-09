@@ -79,6 +79,7 @@ function drawZauberStation(g){
   g.beginPath(); g.moveTo(0,0); g.lineTo(0,-86*s); g.stroke();
   var tw=0.6+0.4*Math.sin(t*4.5);
   Art.drawSticker(g,'stern',0,-98*s,(14+5*tw)*s,'#ffd24d');
+  Fx.GL.glow(g,0,-98*s,(30+8*tw)*s,'#ffd98a',0.7*tw);          // r21: Schein im Endbild (leer ohne post.js)
   g.globalAlpha=tw*0.6;
   H.circle2(g,0,-98*s,(26+6*Math.sin(t*4.5))*s,'rgba(255,220,120,0.5)');
   g.globalAlpha=1;
@@ -92,8 +93,9 @@ function drawZauberStation(g){
         var a2=f.seed+i2*0.45+q*5;
         var rr2=(60+q*180)*s;
         g.globalAlpha=oaZ*(1-q); // Alpha über globalAlpha statt pro Bild neuer Farbstring (Farb-Cache)
-        Art.drawSticker(g,'stern',cx+Math.cos(a2)*rr2,cy-40*s+Math.sin(a2)*rr2*0.5-q*90*s,
-          (9+3*Math.sin(q*9+i2))*s,'#ffd24d');
+        var zx=cx+Math.cos(a2)*rr2, zy=cy-40*s+Math.sin(a2)*rr2*0.5-q*90*s;
+        Art.drawSticker(g,'stern',zx,zy,(9+3*Math.sin(q*9+i2))*s,'#ffd24d');
+        Fx.GL.glow(g,zx,zy,22*s,'#ffd98a',0.6*(1-q));
       }
     } else if(f.art===1){ // Blütenregen: Rosa Blumen fallen von oben
       for(var b2=0;b2<16;b2++){
