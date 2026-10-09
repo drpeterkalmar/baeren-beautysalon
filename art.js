@@ -942,6 +942,13 @@ function thumbSize(size){
   while(thumbSizes.length>2){ var alt='|'+thumbSizes.pop(); for(var key in thumbs) if(key.slice(-alt.length)===alt) delete thumbs[key]; }
 }
 Art.thumbCount=function(){ return Object.keys(thumbs).length; };
+// r21: Pixel aller Sprite-Caches (Sätze, Frisuren, Accessoires, Thumbnails) für BSGame.canvasMem() und die Messung
+Art.spritePx=function(){
+  var n=0, sp=function(o){ for(var k in o){ var v=o[k]; if(v && v.cv && v.cv.width) n+=v.cv.width*v.cv.height; } };
+  sets.forEach(sp); hairSets.forEach(sp); accCache.forEach(function(a){ sp({a:a.sp}); });
+  for(var key in thumbs){ var c=thumbs[key]; if(c && c.width) n+=c.width*c.height; }
+  return n;
+};
 Art.thumb = function(idx,size){
   size=Math.max(16,Math.round(size||128)); idx=Art.MODELS[idx]?idx:0;
   thumbSize(size);

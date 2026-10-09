@@ -19,7 +19,7 @@ const { chromium } = require(path.join(pwDir, 'playwright'));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const src = path.resolve(arg('src', root)), sw = process.argv.includes('--swraster'), thr = +arg('throttle', '4'), rz = process.argv.includes('--resize'), nv = process.argv.includes('--novsync');
-const browser = await chromium.launch({ args: (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu']).concat(nv ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
+const browser = await chromium.launch({ args: (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu']).concat(['--mute-audio']).concat(nv ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));

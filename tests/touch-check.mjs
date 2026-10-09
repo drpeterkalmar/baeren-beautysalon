@@ -24,7 +24,7 @@ const src = path.resolve(arg('src', root)), land = process.argv.includes('--land
 const outDir = path.join(root, 'tests', 'shots', 'umbau');
 fs.mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--mute-audio'] });
 const out = { label, land, steps: [], errors: [] };
 try {
   const ctx = await browser.newContext({

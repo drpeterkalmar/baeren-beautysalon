@@ -24,7 +24,7 @@ const only = (arg('only', '') || '').split(',').filter(Boolean);
 const outDir = path.join(root, 'tests', 'shots', 'umbau', label);
 fs.mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--mute-audio'] });
 try {
   const ctx = await browser.newContext({
     viewport: land ? { width: 915, height: 412 } : { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,

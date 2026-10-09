@@ -170,7 +170,8 @@ G.tier=function(){ return Fx.Q.tier; };
 // Canvas-Speicher in Gerätepixeln (für Prüfwerkzeuge/Unit-Tests; ×4 = Bytes)
 G.canvasMem=function(){
   var px=function(c){ return c ? c.width*c.height : 0; };
-  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
+  return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sprites:Art.spritePx?Art.spritePx():0,
+    sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
 };
 
 // ---- Eingabe (Touch zuerst; Maus bewegt nur den Blick) ----
