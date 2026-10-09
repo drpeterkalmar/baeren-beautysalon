@@ -86,7 +86,7 @@ function roomPlan(){
   var mx=(x1-x0)*0.14, my=(y1-y0)*0.14; x0-=mx; x1+=mx; y0-=my; y1+=my;
   var k=c.z*view.dpr;
   var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'');
-  var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.6e6,4e6][Fx.Q.tier];
+  var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.5e6,2.5e6][Fx.Q.tier]; // r21 (Audit #5): höchstens 2,5 MP (Handy hochkant DPR 2 ≈ 2,47 MP, greift nur auf Tablets)
   if(pw*ph>maxPx){ var f=Math.sqrt(maxPx/(pw*ph)); k*=f; pw*=f; ph*=f; }
   return {key:key,c:c,cxs:cxs,cys:cys,x0:x0,y0:y0,x1:x1,y1:y1,k:k,pw:pw,ph:ph};
 }
@@ -339,7 +339,7 @@ function render(t){
     g.save(); g.setTransform(1,0,0,1,0,0);
     g.globalAlpha=1-Fx.ease.inOutCubic(q);
     var z=1+0.04*q; g.translate(cv.width/2,cv.height/2); g.scale(z,z); g.translate(-cv.width/2,-cv.height/2);
-    g.drawImage(snap,0,0); g.restore();
+    g.drawImage(snap,0,0,cv.width,cv.height); g.restore();
   }
 }
 
@@ -357,8 +357,11 @@ function frame(ts){
   var dt=Math.min(0.05,Math.max(0,dtRaw)), t=ts/1000;
   if(S.state!==prevState){
     if(prevState!==null && Fx.Q.tier>0){
-      if(!snap || snap.width!==cv.width || snap.height!==cv.height){ snap=document.createElement('canvas'); snap.width=cv.width; snap.height=cv.height; }
-      var sc=snap.getContext('2d'); sc.setTransform(1,0,0,1,0,0); sc.clearRect(0,0,snap.width,snap.height); sc.drawImage(cv,0,0);
+      // r21 (Grafik-Audit #5): Schnappschuss in halber Auflösung (¼ Speicher); er blendet in 0,38 s aus und wird dabei
+      // ohnehin leicht vergrößert — der Unterschied ist nicht zu sehen
+      var sw=Math.ceil(cv.width/2), sh=Math.ceil(cv.height/2);
+      if(!snap || snap.width!==sw || snap.height!==sh){ snap=document.createElement('canvas'); snap.width=sw; snap.height=sh; }
+      var sc=snap.getContext('2d'); sc.setTransform(1,0,0,1,0,0); sc.clearRect(0,0,sw,sh); sc.drawImage(cv,0,0,sw,sh);
       snapT=t;
     }
     if(S.state!=='finish-done') Fx.P.clear('screen');

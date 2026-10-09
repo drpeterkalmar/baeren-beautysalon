@@ -97,3 +97,18 @@ test('Ersatz-Raum nach 3 s Kamera-Ruhe und Schnappschuss nach der Überblendung 
   assert.ok(m2.room > 1000);
   assert.deepEqual([...H.ctx.__errors], []);
 });
+
+// r21 (Grafik-Audit #5): Schnappschuss in halber Auflösung, Raum-Cache höchstens 2,5 MP (auch auf dem Tablet)
+test('Schnappschuss halbe Auflösung, Raum-Cache ≤ 2,5 MP', () => {
+  for (const [w, h] of [[412, 915], [915, 412], [1024, 1366]]) {
+    const H = load({ files: ALL, seed: 2, width: w, height: h });
+    go(H, 'waschen');
+    for (let i = 0; i < 90; i++) H.frame();
+    go(H, 'zirkus'); H.frame();
+    const m = H.G.canvasMem();
+    assert.ok(m.snap > 1 && m.snap <= Math.ceil(m.main / 4) + w + h, `${w}×${h}: Schnappschuss ${m.snap} px bei Bild ${m.main} px`);
+    for (let i = 0; i < 90; i++) H.frame();
+    assert.ok(H.G.canvasMem().room <= 2.5e6 * 1.01, `${w}×${h}: Raum ${H.G.canvasMem().room} px`);
+    assert.deepEqual([...H.ctx.__errors], []);
+  }
+});

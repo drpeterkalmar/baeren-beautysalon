@@ -314,37 +314,51 @@ var DEF = {
   star:['#ffe19a','#fff4d6'], ring:['#fff1d6'], flower:['#f7b6c9','#fff4ea'], heart:['#f38aa3','#f7b6c9'],
   bubble:['#fff'], hair:['#8a5a3a']
 };
+// r21 (Grafik-Audit #2): Pool ohne Allokation. Verglühte Partikel wandern in einen Vorrat (F) und werden beim nächsten
+// emit wiederverwendet; bei vollem Pool wird reihum (Zeiger ov) ein vorhandener Platz überschrieben statt splice(0,1)
+// (O(n) + neues Objekt je Partikel → GC-Spitzen bei Konfetti/Finale). Zufallsfolge und Felder wie vorher.
 var P = Fx.P = { list:[] };
-var MAXP=[260,480,760];
+var MAXP=[260,480,760], F=[], ov=0;
 P.emit = function(type,x,y,o){
   o=o||{};
   var n=Math.max(1,Math.round((o.n||1)*Fx.Q.pmul())), L=P.list;
   var cols=o.colors||DEF[type]||['#fff'];
   var hasDir=o.dir!==undefined, spread=o.spread===undefined?(hasDir?0.8:TAU):o.spread;
   for(var i=0;i<n;i++){
-    if(L.length>=MAXP[Fx.Q.tier]) L.splice(0,1);
+    var mx=MAXP[Fx.Q.tier], p;
+    if(L.length>=mx){
+      while(L.length>mx) F.push(L.pop());          // Stufe gesunken: Überhang abgeben
+      if(ov>=L.length) ov=0;
+      p=L[ov++];                                    // ältesten Platz (reihum) überschreiben
+    } else { p=F.pop()||{}; L.push(p); }
     var a=hasDir ? o.dir+(Math.random()-0.5)*spread : Math.random()*TAU;
     var sp=(o.speed===undefined?120:o.speed)*(0.35+0.65*Math.random());
     var life=(o.life||1)*(0.7+0.5*Math.random());
-    L.push({type:type, x:x+(Math.random()-0.5)*2*(o.jx||0), y:y+(Math.random()-0.5)*2*(o.jy||0),
-      vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:life, max:life,
-      size:(o.size||10)*(0.7+0.6*Math.random()), col:cols[Math.floor(Math.random()*cols.length)],
-      rot:Math.random()*TAU, vr:(Math.random()-0.5)*8, grav:o.grav===undefined?200:o.grav,
-      drag:o.drag===undefined?1:o.drag, layer:o.layer||'world', ph:Math.random()*TAU});
+    p.type=type; p.x=x+(Math.random()-0.5)*2*(o.jx||0); p.y=y+(Math.random()-0.5)*2*(o.jy||0);
+    p.vx=Math.cos(a)*sp; p.vy=Math.sin(a)*sp; p.life=life; p.max=life;
+    p.size=(o.size||10)*(0.7+0.6*Math.random()); p.col=cols[Math.floor(Math.random()*cols.length)];
+    p.rot=Math.random()*TAU; p.vr=(Math.random()-0.5)*8; p.grav=o.grav===undefined?200:o.grav;
+    p.drag=o.drag===undefined?1:o.drag; p.layer=o.layer||'world'; p.ph=Math.random()*TAU;
   }
 };
 P.update = function(dt){
   var L=P.list;
   for(var i=L.length-1;i>=0;i--){
     var p=L[i]; p.life-=dt;
-    if(p.life<=0){ L[i]=L[L.length-1]; L.pop(); continue; }
+    if(p.life<=0){ L[i]=L[L.length-1]; L.pop(); F.push(p); continue; }
     var d=Math.exp(-p.drag*dt);
     p.vx*=d; p.vy=p.vy*d+p.grav*dt;
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vr*dt;
   }
 };
-P.clear = function(layer){ P.list=P.list.filter(function(p){ return layer && p.layer!==layer; }); };
+// clear() = alles, clear(layer) = nur diese Ebene; in place, Objekte zurück in den Vorrat
+P.clear = function(layer){
+  var L=P.list, j=0;
+  for(var i=0;i<L.length;i++){ var p=L[i]; if(layer && p.layer!==layer) L[j++]=p; else F.push(p); }
+  L.length=j; ov=0;
+};
 P.count = function(){ return P.list.length; };
+P.pool = function(){ return F.length; }; // für Unit-Tests
 P.draw = function(g,layer){
   var L=P.list; if(!L.length) return;
   var T=g.getTransform(), oa=g.globalAlpha;
