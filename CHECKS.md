@@ -119,7 +119,10 @@ Im Browser offen (Heavy-Job):
       Auflösung wie 20.4, kein Endbild-Canvas; Stufe 0 ruht, zurück auf Stufe 2 läuft es wieder (Chromium + WebKit).
 - [ ] R21.7 p95 Hauptthread je Stufe (Software-Raster, CPU ×4, hoch + quer, Menü/Waschen voll/Aquarium/Finale) ≤ vorher · 1,05 + 0,5 ms.
 - [ ] R21.8 A/B-Collagen je Station hoch/quer; Lupe auf Text/Knöpfe (Schärfe bei DPR 1,6 + CAS wie DPR 2); Glühen dezent.
-- [ ] R21.9 Fell/Stoff-Struktur sichtbar, aber nicht fleckig (Collage `?fell=0` gegen an); Backzeit Stationswechsel ≤ +30 ms.
+- [x] R21.9 Fell/Stoff-Struktur sichtbar, aber nicht fleckig (`tests/shots/technik/e2_lupe_*`: Braunbär deutliche Fasern, weißer
+      Bär und Stoffe dezent); Backzeit (`tests/perf/r21/hitch_e2.json`): Stationswechsel im Rauschen, neuer Bär +13 ms im Mittel
+      (Stufe 2 und 0, max. +20 ms) → `MIN_STUFE` bleibt 0.
+- [x] R21.11 Regler schalten wirklich alles ab: `?post=0&fell=0` gegen 20.4 (umbau-shots, 24 Stationen hoch) ≤ 0,001 % Pixel.
 - [x] R21.10 Ladegröße ≤ vorher + 100 KB: gzip 322,7 → 337,6 KiB (+15 KB), roh +35 KB, 35 → 37 Dateien.
 
 ## U — Umbau 20.4 nach Gutachten (gemessen 07.10.2026, Details: UMBAU_BERICHT.md)
