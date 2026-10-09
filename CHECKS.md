@@ -103,6 +103,23 @@ Stufe fest (Auto-Drossel aus) bzw. Auto. Alt = Export von 283f890, abwechselnd m
 - [x] R20.6 `?deko=0` = altes Aussehen (Pixel-Abweichung so klein wie zwischen zwei Läufen des alten Stands).
 - [x] R20.7 C1/R19 weiter grün: Flow hoch + quer 0 Fehler, 0 Knöpfe < 48 px; Aquarium-Verdeckung 0 % hoch + quer.
 
+## R21 — Technik „Kino-Look 2D und Fell mit Struktur“ (Kriterien vor der Abnahme; Vorbau ohne Browser, Stand 09.10.2026)
+Ohne Browser erledigt (`node --test tests/unit`, 128 Tests):
+- [x] R21.0 Partikel-Pool ohne Allokation (Bild für Bild gleich dem alten Pool unterhalb der Grenze), Schnappschuss ½, Raum ≤ 2,5 MP.
+- [x] R21.1 Endbild-Maße je Stufe (Szene DPR 1,6/1,3, Stufe 0 ruht), Rückfall bei `?post=0`/kein WebGL2/Kontextverlust in der
+      echten game.js-Schleife (nachgebautes WebGL2), Bloom nur wenn die Glow-Ebene benutzt ist.
+- [x] R21.2 Farbstimmungen verschieben keine UI-Farbe aus ui.js um mehr als 6 % je Kanal (CPU-Abbild des Shaders).
+- [x] R21.3 Canvas-Speicher einer Sitzung (3 Bären, Stationen, Finale): 2D-Canvas 7,65 statt 11,35 MP, mit Grafikspeicher
+      10,5 statt 11,35 MP (Harness-Zählung, hochkant DPR 2).
+- [x] R21.4 Relief-Kacheln kachelbar, Mittel 128, Licht von der richtigen Seite; `?fell=0` backt nichts.
+Im Browser offen (Heavy-Job):
+- [ ] R21.5 Shader übersetzen in Chromium (Metal) und WebKit; `BSGame.post().an === true`, 0 Fehler, Flow hoch + quer.
+- [ ] R21.6 Kontextverlust im echten Browser (`WEBGL_lose_context`) → 2D, Spiel läuft weiter; `?post=0` = Bild wie 20.4.
+- [ ] R21.7 p95 Hauptthread je Stufe (Software-Raster, CPU ×4, hoch + quer, Menü/Waschen voll/Aquarium/Finale) ≤ vorher · 1,05 + 0,5 ms.
+- [ ] R21.8 A/B-Collagen je Station hoch/quer; Lupe auf Text/Knöpfe (Schärfe bei DPR 1,6 + CAS wie DPR 2); Glühen dezent.
+- [ ] R21.9 Fell/Stoff-Struktur sichtbar, aber nicht fleckig (Collage `?fell=0` gegen an); Backzeit Stationswechsel ≤ +30 ms.
+- [ ] R21.10 Ladegröße ≤ vorher + 100 KB (Vorbau-Schätzung +15 KB gzip).
+
 ## U — Umbau 20.4 nach Gutachten (gemessen 07.10.2026, Details: UMBAU_BERICHT.md)
 Vorher = Export von 79d3ca7, abwechselnd mit nachher gemessen (Mac während der Messung durch macOS-Update belastet).
 - [x] U.1 `node --test tests/unit` 99/99 grün; P1-1 (Album-Schnappschüsse) und P1-2 („Weiter“ sofort) auch per Touch im
