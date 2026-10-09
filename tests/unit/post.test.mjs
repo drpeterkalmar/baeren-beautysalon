@@ -290,3 +290,24 @@ test('Glow-Ebene: leuchtende Partikel malen hinein (nur Szenen-Canvas), Konfetti
   Fx.GL.anfang(); assert.equal(Fx.GL.dirty, false);
   void orig;
 });
+
+test('Rauchtest: alle 24 Stationen + Finale hoch und quer mit Endbild und Fell-Struktur, Stufenwechsel unterwegs – 0 Fehler', () => {
+  for (const [w, h] of [[412, 915], [915, 412]]) {
+    const { H, PO } = spiel({ width: w, height: h });
+    const S = H.S, run = (n) => { for (let i = 0; i < n; i++) H.frame(); };
+    go(H, 'wahl'); run(40); S.chooseBear(11); S.baer.frisur = 'lockig';
+    S.STATIONS.forEach((st, i) => {
+      go(H, st.id); run(25);
+      const b = S.buttons.find((x) => x.onTap && !x.nav && x.label); if (b) b.onTap();
+      run(10);
+      if (i === 8) { H.Fx.Q.tier = 1; H.ctx.dispatchEvent(new H.ctx.Event('resize')); }
+      if (i === 16) { H.Fx.Q.tier = 2; H.ctx.dispatchEvent(new H.ctx.Event('resize')); }
+    });
+    S.startFinale(); run(420);
+    go(H, 'menu'); run(30);
+    assert.deepEqual([...H.ctx.__errors], [], `${w}×${h}`);
+    assert.equal(PO.an, true);
+    assert.ok(PO.bloomBilder > 0, 'nie geglüht');
+    assert.ok(PO.bilder > 24 * 30, 'Endbild ausgesetzt');
+  }
+});
