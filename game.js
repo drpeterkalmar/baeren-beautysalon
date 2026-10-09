@@ -1,7 +1,7 @@
 // game.js — Loop (performance.now-Delta), Kamera, Raum-Cache, Licht/Grading, Qualitätsstufen, Eingabe
 (function(){
 'use strict';
-var S=window.BSSalon, Fx=window.BSFx, Art=window.BSArt, UI=window.BSUI, Room=window.BSRoom;
+var S=window.BSSalon, Fx=window.BSFx, Art=window.BSArt, UI=window.BSUI, Room=window.BSRoom, PO=window.BSPost;
 window.__errors=[];
 window.onerror=function(msg,src,line){ window.__errors.push(msg+' @'+line);
   var e=document.getElementById('err'); if(e) e.textContent='⚠️ '+msg; };
@@ -20,8 +20,14 @@ function resize(){
   var wrap=document.getElementById('wrap');
   view.W=Math.max(200,wrap.clientWidth||innerWidth); view.H=Math.max(200,wrap.clientHeight||innerHeight);
   view.dpr=Math.min(Fx.Q.dpr(),window.devicePixelRatio||1);
+  // r21 Kino-Look (post.js): läuft das Endbild, rendert die 2D-Szene kleiner (Stufe 2: DPR 1,6 statt 2) und das Endbild
+  // rechnet sie scharf hoch. Raum-Cache und Bären-Sprites hängen an view.dpr und werden dadurch mit kleiner gebacken.
+  var pm=(PO && PO.an) ? PO.masse(view.W,view.H,window.devicePixelRatio||1,Fx.Q.tier) : null;
+  if(pm && !pm.ruht) view.dpr=pm.RS;
   cv.width=Math.round(view.W*view.dpr); cv.height=Math.round(view.H*view.dpr);
   cv.style.width=view.W+'px'; cv.style.height=view.H+'px';
+  if(pm){ PO.groesse(pm); }
+  if(pm && PO.an && !pm.ruht) Fx.GL.setze(cv,pm.gw,pm.gh); else Fx.GL.setze(null);
   var cs=getComputedStyle(probe);
   view.safe={t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0};
   // camKey leeren: das nächste Bild erkennt einen „neuen“ Schlüssel, schnappt (unsichtbar) aufs aktuelle Ziel und
@@ -167,10 +173,13 @@ G.starBurst=function(i){
   Fx.P.emit('twinkle',p[0],p[1],{n:2,speed:40,size:26,life:0.6,grav:0,layer:'screen'});
 };
 G.tier=function(){ return Fx.Q.tier; };
+G.post=function(){ return PO ? PO.zustand() : null; };
 // Canvas-Speicher in Gerätepixeln (für Prüfwerkzeuge/Unit-Tests; ×4 = Bytes)
 G.canvasMem=function(){
   var px=function(c){ return c ? c.width*c.height : 0; };
+  var pp=(PO && PO.an) ? PO.speicher(PO.masseJetzt) : null;
   return {main:px(cv), room:px(room.cv), spare:px(spareCv), bake:bake?px(bake.cv):0, snap:px(snap), sprites:Art.spritePx?Art.spritePx():0,
+    post:pp?pp.d2:0, postGpu:pp?pp.gpu:0,   // r21: Glow-Leinwand (2D) bzw. WebGL-Puffer/Texturen des Endbilds
     sets:Art.setCount?Art.setCount():-1, thumbs:Art.thumbCount?Art.thumbCount():-1};
 };
 
@@ -305,6 +314,7 @@ function showerFx(g,t){
 var snap=null, snapT=-9, prevState=null;
 function render(t){
   var dpr=view.dpr, W=view.W, H=view.H;
+  Fx.GL.anfang();
   g.setTransform(dpr,0,0,dpr,0,0);
   g.globalAlpha=1; g.globalCompositeOperation='source-over';
   g.fillStyle='#f4e2cf'; g.fillRect(0,0,W,H);
@@ -375,9 +385,12 @@ function frame(ts){
   releaseSpare(dt);
   var w0=performance.now();
   render(t);
+  if(PO && PO.an && !PO.ruht) PO.bild(cv,Fx.GL,S.state,dt);   // r21: Endbild (WebGL2), zählt zur Arbeitszeit
   tiers(dtRaw*1000,performance.now()-w0,dt);
   requestAnimationFrame(frame);
 }
+// r21: Endbild einschalten (Rückfall → reines 2D: ?post=0, kein WebGL2, Fehler; Kontextverlust → resize() auf 2D-Maße)
+if(PO) PO.init(cv,{ an:!/[?&]post=0(&|$)/.test(location.search||''), aus:function(){ resize(); } });
 resize();
 S.buildUI();
 UI.layout(view,g); UI.dirty=false;

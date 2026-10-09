@@ -553,11 +553,14 @@ function liveFish(g,t){
   g.restore();
   bowlGlass(g);
 }
+// r21: Lämpchen der Lichterkette und Finale-Funkeln zusätzlich in die Glow-Ebene des Endbilds (nur wenn es läuft).
+// false = nur Partikel glühen (falls der ständige Schein im Salon im Budget zu teuer ist; TODO Heavy-Job messen)
+var GLOW_DEKO=true;
 function twinkle(g,t,tier,x0,x1){
   add(g,function(g){
     var B=garland().bulbs, step=tier>=2?1:2;
     for(var i=0;i<B.length;i+=step){ var b=B[i]; if(b.x<x0-20||b.x>x1+20) continue;
-      var a=Math.sin(t*1.6+b.ph); if(a>0.15) Fx.glow(g,b.x,b.y,13,b.c,0.34*a); }
+      var a=Math.sin(t*1.6+b.ph); if(a>0.15){ Fx.glow(g,b.x,b.y,13,b.c,0.34*a); if(GLOW_DEKO) Fx.GL.glow(g,b.x,b.y,20,b.c,0.5*a); } }
     for(var j=0;j<MB.length;j++){ var m=MB[j], a2=0.5+0.5*Math.sin(t*1.15+j*0.85); Fx.glow(g,m[0],m[1],22,'#fff0c0',0.24*a2); }
   });
 }
@@ -721,6 +724,7 @@ function orbit(g,t,cx,cy,s,front,fade){
     var x=cx+Math.cos(a)*215*s, y=cy-40*s+sn*70*s-Math.cos(a*0.5)*10*s;
     var z=(12+6*sn+5*Math.sin(t*5+i*1.7))*s, al=fade*(front?1:0.45)*(0.65+0.35*Math.sin(t*4.2+i));
     g.globalAlpha=Math.max(0,al); g.drawImage(tw,x-z,y-z,2*z,2*z);
+    if(GLOW_DEKO) Fx.GL.glow(g,x,y,z*1.6,'#ffe8b8',0.8*Math.max(0,al));
   }
   g.globalAlpha=1;
 }

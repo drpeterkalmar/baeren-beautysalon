@@ -270,6 +270,37 @@ Fx.gradingPaint = function(g,W,H,x,y,w,h){
   g.fillStyle=lg; g.fillRect(x,y,w,h);
 };
 
+// ---------------------------------------------------------------- r21: Glow-Ebene für das Endbild (post.js)
+// Leinwand in halber Szenen-Auflösung. Leuchtendes (Funken, Funkeln, Sterne, Zauber, Seifenblasen, Lämpchen) malt hier
+// zusätzlich einen weichen Licht-Tupfer; post.js zeichnet sie weich und legt sie als Schein über das Bild. Nur aktiv,
+// wenn das Endbild läuft (GL.on) — sonst sind alle Aufrufe leer und das 2D-Bild ist genau wie vorher.
+var GL = Fx.GL = { on:false, cv:null, g:null, main:null, s:0.5, dirty:false };
+// main = 2D-Canvas der Szene; gw/gh = Glow-Größe (0 → aus, Speicher freigeben)
+GL.setze = function(main,gw,gh){
+  if(!main || !gw){ GL.on=false; GL.dirty=false; if(GL.cv) GL.cv.width=GL.cv.height=1; return; }
+  if(!GL.cv){ GL.cv=canvas(gw,gh); GL.g=GL.cv.getContext('2d'); }
+  if(GL.cv.width!==gw || GL.cv.height!==gh){ GL.cv.width=gw; GL.cv.height=gh; }
+  GL.main=main; GL.s=gw/Math.max(1,main.width); GL.on=true; GL.dirty=false;
+};
+// Bildanfang: Ebene leeren, falls im letzten Bild etwas hineingemalt wurde
+GL.anfang = function(){
+  if(GL.on && GL.dirty){ var g=GL.g; g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.clearRect(0,0,GL.cv.width,GL.cv.height); }
+  GL.dirty=false;
+};
+// Glow-Kontext mit derselben Abbildung wie g (nur für den Szenen-Canvas), sonst null
+GL.ctx = function(g){
+  if(!GL.on || !g || g.canvas!==GL.main) return null;
+  var T=g.getTransform(), s=GL.s;
+  GL.g.setTransform(T.a*s,T.b*s,T.c*s,T.d*s,T.e*s,T.f*s); GL.dirty=true;
+  return GL.g;
+};
+// weicher Licht-Tupfer (Koordinaten wie auf g)
+GL.glow = function(g,x,y,r,col,a){
+  if(!GL.on || !(a>0.003) || !(r>0)) return;
+  var G=GL.ctx(g); if(!G) return;
+  G.globalAlpha=Math.min(1,a); G.drawImage(S.glow(col||'#fff1d6'),x-r,y-r,2*r,2*r);
+};
+
 // ---------------------------------------------------------------- Qualitätsstufen
 Fx.Q = { tier:2,
   dpr: function(){ return [1.25,1.6,2][Fx.Q.tier]; },
@@ -359,12 +390,21 @@ P.clear = function(layer){
 };
 P.count = function(){ return P.list.length; };
 P.pool = function(){ return F.length; }; // für Unit-Tests
+// r21: leuchtende Partikel-Sorten → Glow-Ebene [Radius × Größe, Stärke, Farbe (null = Partikelfarbe)]. Startwerte (TODO Bild).
+var GLOWT = { spark:[1.8,0.55,null], twinkle:[1.4,0.7,'#fff1d6'], star:[1.5,0.4,null], bubble:[1.1,0.16,'#dff0ff'] };
+P.GLOWT = GLOWT;
 P.draw = function(g,layer){
   var L=P.list; if(!L.length) return;
-  var T=g.getTransform(), oa=g.globalAlpha;
+  var T=g.getTransform(), oa=g.globalAlpha, GG=null;
   for(var i=0;i<L.length;i++){
     var p=L[i]; if(p.layer!==layer) continue;
     var q=1-p.life/p.max, s=p.size, a;
+    var gt=GL.on && GLOWT[p.type];
+    if(gt){
+      if(!GG) GG=GL.ctx(g);
+      if(GG){ var ga=oa*gt[1]*(p.type==='twinkle'?Math.sin(q*Math.PI):1-q), gr=s*gt[0];
+        if(ga>0.003){ GG.globalAlpha=Math.min(1,ga); GG.drawImage(S.glow(gt[2]||p.col),p.x-gr,p.y-gr,2*gr,2*gr); } }
+    }
     switch(p.type){
       case 'puff':
         a=(1-q)*(1-q)*0.85; var r=s*(0.55+0.6*Fx.ease.outCubic(q));
