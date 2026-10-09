@@ -1,5 +1,5 @@
 // DEV-TOOL: Ruckler beim Stationswechsel (Raum wird nach der Kamerafahrt neu gebacken) — längstes Bild je Wechsel.
-// Aufruf: node tests/hitch-check.mjs [--src=DIR] [--swraster] [--throttle=4] [--resize] [--novsync]
+// Aufruf: node tests/hitch-check.mjs [--src=DIR] [--swraster] [--throttle=4] [--resize] [--novsync] [--query=fell=0&post=0]
 // --novsync: rAF ungebremst (Headless-V-Sync taktet auf dem Mac mini teils nur ~12 Hz und rastet die Werte auf 83 ms)
 // --resize (Gutachten P2-1): 300 ms vor jedem Wechsel ein resize-Ereignis (wie Drehung/iOS-Leiste/Stufenwechsel).
 //   Vorher sprang die Kamera danach und der Raum wurde synchron gebacken; Erwartung nach dem Fix: längstes Bild
@@ -42,5 +42,8 @@ const res = await page.evaluate(async (rz) => {
   }
   return out;
 }, rz);
-const v = Object.values(res).slice(1); console.log(JSON.stringify({ src: path.basename(src), sw, resize: rz, novsync: nv, tier: +arg('tier', '2'), mittel: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1), max: Math.max(...v), res, errs }));
+// r21: Backzeit der Relief-Kacheln (relief.js, ms gesamt) und Endbild-Zustand mitschreiben; Vergleich per --query=fell=0 / post=0
+const extra = await page.evaluate(() => ({ relief: window.BSRelief ? { zeitMs: +window.BSRelief.zeit.toFixed(1), kacheln: window.BSRelief.anzahl(), an: window.BSRelief.an } : null,
+  post: window.BSPost ? window.BSPost.zustand() : null }));
+const v = Object.values(res).slice(1); console.log(JSON.stringify({ src: path.basename(src), query: arg('query', ''), sw, resize: rz, novsync: nv, tier: +arg('tier', '2'), mittel: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1), max: Math.max(...v), res, errs, ...extra }));
 await browser.close();

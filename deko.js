@@ -6,6 +6,8 @@
 (function(){
 'use strict';
 var Fx=window.BSFx, Room=window.BSRoom, TAU=Math.PI*2;
+// r21 (Grafik-Audit #7): Stoff-Struktur mit Licht aus dem Fenster (relief.js), nur beim Backen; ohne relief.js leer
+var RF=window.BSRelief||{ flaeche:function(){}, auftragen:function(){}, fenster:function(){ return [0,0,1]; } };
 var D=window.BSDeko={on:!!Fx.DEKO};
 if(!Fx.DEKO) return;
 var FLOOR=462;
@@ -174,6 +176,7 @@ function rug(g,lite){
   g.fill();
   var tg=g.createRadialGradient(rx-60,ry-20,20,rx,ry,300); tg.addColorStop(0,'#ffe5e2'); tg.addColorStop(1,'#f7c9cb');
   g.fillStyle=tg; g.beginPath(); g.ellipse(rx,ry,280,48,0,0,TAU); g.fill();
+  if(!lite) RF.flaeche(g,'teppich',function(g){ g.beginPath(); g.ellipse(rx,ry,306,57,0,0,TAU); },rx-310,ry-60,620,120);
   // Flor: feine helle Tupfer (rasterfest), Herzchen-Ring, innerer Rand
   var R=Fx.rand(4711);
   var pile=new Path2D();
@@ -274,6 +277,8 @@ function curtainSprite(d){
     var cg=g.createLinearGradient(c-26,0,c+26,0); cg.addColorStop(0,'#f2adb3'); cg.addColorStop(0.5,'#fbd2d1'); cg.addColorStop(1,'#eba0a6');
     path(); g.fillStyle=cg; g.fill();
     g.save(); path(); g.clip();
+    // r21: Webstoff, Licht aus dem Fenster (linker Vorhang d=1 bekommt es von rechts, rechter von links)
+    RF.auftragen(g,'vorhang',RF.fenster(d>0?WIN.x-26:WIN.x+WIN.w+26,WIN.y+WIN.h*0.5),0,0,70,fh+60);
     [-14,-2,11].forEach(function(o,i){ // Falten: weiche dunkle/helle Bahnen
       var fg=g.createLinearGradient(c+o-6,0,c+o+6,0); fg.addColorStop(0,'rgba(200,110,120,0)'); fg.addColorStop(0.5,'rgba(200,110,120,0.22)'); fg.addColorStop(1,'rgba(200,110,120,0)');
       g.fillStyle=fg; g.fillRect(c+o-8,0,16,fh+60);
@@ -393,6 +398,7 @@ function rolls(g,x,y,cols){
     var cx=x+r[0], cy=y+r[1], rr=12;
     var gr=g.createRadialGradient(cx-4,cy-4,1,cx,cy,rr); gr.addColorStop(0,Fx.warmLight(r[2],0.5)); gr.addColorStop(1,Fx.warmShadow(r[2],0.3));
     g.fillStyle=gr; g.beginPath(); g.arc(cx,cy,rr,0,TAU); g.fill();
+    RF.flaeche(g,'frottee',function(g){ g.beginPath(); g.arc(cx,cy,rr,0,TAU); },cx-rr,cy-rr,2*rr,2*rr);
     g.strokeStyle=Fx.alpha(Fx.warmShadow(r[2],0.5),0.55); g.lineWidth=1.4; g.beginPath();
     for(var a=0;a<4*Math.PI;a+=0.35){ var q=1.5+a*1.6; if(a) g.lineTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q); else g.moveTo(cx+q,cy); } g.stroke();
   });
@@ -498,16 +504,19 @@ function armchair(g,x,y){
   g.fillStyle='#d6a35c'; [-74,74].forEach(function(o){ Fx.rr(g,x+o-5,y-18,10,22,4); g.fill(); });
   var bk=g.createLinearGradient(0,y-210,0,y-50); bk.addColorStop(0,'#f9bfca'); bk.addColorStop(1,'#e68ca0');
   g.fillStyle=bk; Fx.rr(g,x-84,y-210,168,160,64); g.fill();
+  RF.flaeche(g,'polster',function(g){ Fx.rr(g,x-84,y-210,168,160,64); },x-84,y-210,168,160);
   g.fillStyle='rgba(255,255,255,0.20)'; Fx.rr(g,x-70,y-200,60,120,40); g.fill();
   for(var r=0;r<3;r++) for(var c=0;c<(r%2?2:3);c++){ var bx=x+(r%2?-26+c*52:-52+c*52), by=y-182+r*36;
     ell(g,bx,by,3.4,3.4,'rgba(170,70,95,0.55)'); ell(g,bx-1,by-1.2,1.3,1.3,'rgba(255,255,255,0.6)'); }
   [-1,1].forEach(function(s){
     var ag=g.createLinearGradient(x+s*92-20,0,x+s*92+20,0); ag.addColorStop(0,s<0?'#f7b3c1':'#ee9aae'); ag.addColorStop(1,s<0?'#e78ea2':'#d97c93');
     g.fillStyle=ag; Fx.rr(g,x+s*92-21,y-124,42,108,21); g.fill();
+    RF.flaeche(g,'polster',function(g){ Fx.rr(g,x+s*92-21,y-124,42,108,21); },x+s*92-21,y-124,42,108);
     g.fillStyle='rgba(255,255,255,0.28)'; Fx.rr(g,x+s*92-14,y-120,22,12,6); g.fill();
   });
   var st=g.createLinearGradient(0,y-74,0,y-22); st.addColorStop(0,'#fdcbd5'); st.addColorStop(1,'#e2869d');
   g.fillStyle=st; Fx.rr(g,x-74,y-76,148,54,22); g.fill();
+  RF.flaeche(g,'polster',function(g){ Fx.rr(g,x-74,y-76,148,54,22); },x-74,y-76,148,54);
   g.fillStyle='#d87b93'; Fx.rr(g,x-100,y-28,200,16,8); g.fill();
   g.fillStyle='rgba(255,236,240,0.5)'; g.fillRect(x-94,y-27,188,2);
   g.save(); g.translate(x+26,y-104); g.rotate(0.12);

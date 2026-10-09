@@ -6,6 +6,7 @@
 'use strict';
 var Art = window.BSArt = {};
 var Fx = window.BSFx;
+var RF = window.BSRelief;   // r21: Fell-Struktur (relief.js), fehlt sie → wie vorher
 var TAU = Math.PI*2;
 
 // ================================================================ Daten (Identität aus R17 übernommen)
@@ -147,6 +148,9 @@ function fur(g,x,y,w,h,amt){
   g.save(); g.globalCompositeOperation='soft-light'; g.globalAlpha=amt===undefined?0.62:amt;
   g.scale(0.62,0.62); g.fillStyle=pat; g.fillRect(x/0.62,y/0.62,w/0.62,h/0.62);
   g.restore();
+  // r21 (Grafik-Audit #7): Fell-Fasern mit gebackener Normalen-Beleuchtung, Licht wie die Form-Schattierung (oben links);
+  // Stärke folgt der Flausch-Stärke des Teils (Schnauze 0,4 → schwächer). Nur beim Backen, ?fell=0 = aus.
+  if(RF) RF.auftragen(g,'fell',RF.KEY,x,y,w,h,(amt===undefined?0.62:amt)/0.62);
 }
 // Form-Schatten: Keylight oben links, warmer Kernschatten unten rechts, Bounce-Rim ganz außen
 function shadeForm(g,ox,oy,rx,ry,str){
