@@ -1,0 +1,157 @@
+{
+  "label": "vorher-hoch",
+  "src": "/tmp/bs_r21/vorher",
+  "query": "",
+  "land": false,
+  "tier": 2,
+  "spitzeMP": 26.73,
+  "spitzeWo": "zurück im Menü",
+  "endeMP": 26.73,
+  "punkte": [
+    {
+      "canvases": 56,
+      "px": 6595264,
+      "gpuExtra": 0,
+      "gesamt": 6595264,
+      "groesste": [
+        2471865,
+        1507920,
+        539580,
+        357446,
+        293760,
+        268370
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 0,
+        "bake": 0,
+        "snap": 0,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "wo": "menu"
+    },
+    {
+      "canvases": 148,
+      "px": 11646241,
+      "gpuExtra": 0,
+      "gesamt": 11646241,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        539580,
+        293760,
+        136800
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sets": 5,
+        "thumbs": 18
+      },
+      "wo": "wahl"
+    },
+    {
+      "canvases": 193,
+      "px": 14726829,
+      "gpuExtra": 0,
+      "gesamt": 14726829,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        542592,
+        539580,
+        539580
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sets": 5,
+        "thumbs": 20
+      },
+      "wo": "3 Bären + Fotos"
+    },
+    {
+      "canvases": 360,
+      "px": 20447911,
+      "gpuExtra": 0,
+      "gesamt": 20447911,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        645904,
+        542592,
+        539580
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 0,
+        "bake": 2471865,
+        "snap": 1,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "alle Stationen"
+    },
+    {
+      "canvases": 389,
+      "px": 22496841,
+      "gpuExtra": 0,
+      "gesamt": 22496841,
+      "groesste": [
+        2471865,
+        1507920,
+        1498416,
+        799680,
+        645904,
+        542592
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 1,
+        "bake": 0,
+        "snap": 1,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "Finale"
+    },
+    {
+      "canvases": 393,
+      "px": 26728881,
+      "gpuExtra": 0,
+      "gesamt": 26728881,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        1498416,
+        799680,
+        683468
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "zurück im Menü"
+    }
+  ],
+  "errors": []
+}

@@ -19,7 +19,7 @@ const { chromium } = require(path.join(pwDir, 'playwright'));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const src = path.resolve(arg('src', root)), sw = process.argv.includes('--swraster'), thr = +arg('throttle', '4'), rz = process.argv.includes('--resize'), nv = process.argv.includes('--novsync');
-const browser = await chromium.launch({ args: (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu']).concat(['--mute-audio']).concat(nv ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
+const browser = await chromium.launch({ args: (sw ? ['--disable-accelerated-2d-canvas', '--disable-gpu-rasterization', '--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu']).concat(['--mute-audio']).concat(nv ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []) });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));
@@ -39,6 +39,15 @@ const res = await page.evaluate(async (rz) => {
     requestAnimationFrame(f);
     S.state = st; S.buildUI(); await wait(2200); run = false;
     out[st + '#' + Object.keys(out).length] = +mx.toFixed(1);
+  }
+  // r21: neuer Bär (Wahl → Waschen) = neuer Sprite-Satz wird gebacken (mit Fell-Struktur), längstes Bild danach
+  for (const idx of [5, 11, 17]) {
+    S.state = 'wahl'; S.buildUI(); await wait(1200);
+    let last = 0, mx = 0, run = true;
+    const f = (t) => { if (last) mx = Math.max(mx, t - last); last = t; if (run) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+    S.chooseBear(idx); await wait(2200); run = false;
+    out['baer' + idx + '#' + Object.keys(out).length] = +mx.toFixed(1);
   }
   return out;
 }, rz);

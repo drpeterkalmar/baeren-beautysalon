@@ -1,0 +1,120 @@
+{
+  "browser": "webkit",
+  "format": "hoch",
+  "checks": {
+    "P1_endbild_an": {
+      "ok": true,
+      "info": {
+        "post": {
+          "an": true,
+          "ruht": false,
+          "vign": false,
+          "grund": "an",
+          "fehler": null,
+          "bilder": 89,
+          "bloomBilder": 89,
+          "stimmung": "menu",
+          "masse": {
+            "RS": 1.6,
+            "aus": 2,
+            "sw": 659,
+            "sh": 1464,
+            "ow": 824,
+            "oh": 1830,
+            "gw": 330,
+            "gh": 732
+          },
+          "speicher": {
+            "d2": 241560,
+            "gpu": 2835036
+          }
+        },
+        "cv": [
+          659,
+          1464
+        ],
+        "postCanvas": {
+          "w": 824,
+          "h": 1830,
+          "display": "block",
+          "pe": "none"
+        }
+      }
+    },
+    "P2_tippen_durch_endbild": {
+      "ok": true,
+      "info": {
+        "vorher": "waschen",
+        "nachher": "foehnen"
+      }
+    },
+    "P6_gluehen_finale": {
+      "ok": true,
+      "info": {
+        "bloomBilder": 391,
+        "bilder": 604,
+        "stimmung": "finale"
+      }
+    },
+    "F1_fell_struktur": {
+      "ok": true,
+      "info": {
+        "an": true,
+        "kacheln": 7,
+        "zeitMs": 65
+      }
+    },
+    "P5_stufe0_ruht": {
+      "ok": true,
+      "info": {
+        "stufe0": {
+          "ruht": true,
+          "cv": [
+            515,
+            1144
+          ]
+        },
+        "zurueck": {
+          "ruht": false,
+          "bilder": 30
+        }
+      }
+    },
+    "P3_kontextverlust": {
+      "ok": true,
+      "info": {
+        "verloren": true,
+        "grund": "Kontextverlust",
+        "cv": [
+          824,
+          1830
+        ],
+        "stateVorher": "waschen",
+        "stateNachher": "foehnen"
+      }
+    },
+    "P4_post0_wie_20_4": {
+      "ok": true,
+      "info": {
+        "post": "?post=0",
+        "cv": [
+          824,
+          1830
+        ]
+      }
+    },
+    "F2_fell0_nichts_gebacken": {
+      "ok": true,
+      "info": {
+        "an": false,
+        "kacheln": 0,
+        "zeitMs": 0
+      }
+    },
+    "Z_keine_fehler": {
+      "ok": true,
+      "info": []
+    }
+  },
+  "fehler": []
+}

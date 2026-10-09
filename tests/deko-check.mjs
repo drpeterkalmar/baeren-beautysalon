@@ -33,8 +33,11 @@ const vsync = !perfMode || flag('vsync');
 
 // --swraster: Canvas ohne GPU (Software-Raster auf der gedrosselten CPU) = pessimistischer Ersatz für schwache Handy-GPUs (Füllrate)
 const sw = flag('swraster');
-const args = (sw ? ['--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization']
-  : ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-gpu'])
+// Wie Koboldkeller perf_gate „sw“: nur das 2D-Canvas läuft ohne GPU, WebGL (Endbild) bleibt auf Metal — sonst gäbe es im
+// Software-Profil gar kein Endbild und „nachher“ würde still den Rückfall messen.
+const GPU = ['--use-angle=metal', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+const args = (sw ? ['--disable-accelerated-2d-canvas', '--disable-gpu-rasterization'].concat(GPU)
+  : GPU.concat(['--enable-gpu-rasterization', '--enable-gpu']))
   .concat(['--autoplay-policy=no-user-gesture-required', '--mute-audio']).concat(vsync ? [] : ['--disable-gpu-vsync', '--disable-frame-rate-limit']);
 const browser = await chromium.launch({ args });
 const ctx = await browser.newContext({

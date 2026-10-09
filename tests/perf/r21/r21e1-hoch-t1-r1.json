@@ -1,0 +1,221 @@
+{
+  "label": "r21e1-hoch-t1-r1",
+  "src": "/Users/wohnzimmer/dev/baeren-beautysalon",
+  "deko": "",
+  "post": "",
+  "fell": "0",
+  "tier": "1",
+  "throttle": 4,
+  "vsync": false,
+  "raster": "software",
+  "secs": 10.5,
+  "viewport": "412x915@2",
+  "voll": true,
+  "scenes": {
+    "menu": {
+      "frames": 416,
+      "p50": 25.4,
+      "p95": 28.8,
+      "p99": 31.5,
+      "workP50": 24,
+      "workP95": 27.3,
+      "hauptP50": 25.3,
+      "hauptP95": 28.8,
+      "hauptMax": 31.7,
+      "tierEnd": 1,
+      "tierMin": 1,
+      "partsAvg": 0,
+      "partsMax": 0,
+      "mem": {
+        "main": 637840,
+        "room": 1044778,
+        "spare": 0,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 1116066,
+        "post": 159460,
+        "postGpu": 1841940,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": false,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 552,
+        "bloomBilder": 552,
+        "stimmung": "menu",
+        "masse": {
+          "RS": 1.3,
+          "aus": 1.6,
+          "sw": 536,
+          "sh": 1190,
+          "ow": 659,
+          "oh": 1464,
+          "gw": 268,
+          "gh": 595
+        },
+        "speicher": {
+          "d2": 159460,
+          "gpu": 1841940
+        }
+      }
+    },
+    "waschen": {
+      "frames": 329,
+      "p50": 35.7,
+      "p95": 42.2,
+      "p99": 50.5,
+      "workP50": 34.3,
+      "workP95": 39.2,
+      "hauptP50": 27.9,
+      "hauptP95": 39.7,
+      "hauptMax": 52.6,
+      "tierEnd": 1,
+      "tierMin": 1,
+      "partsAvg": 32.47,
+      "partsMax": 80,
+      "mem": {
+        "main": 637840,
+        "room": 1044778,
+        "spare": 1,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 1428752,
+        "post": 159460,
+        "postGpu": 1841940,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": false,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 920,
+        "bloomBilder": 920,
+        "stimmung": "salon",
+        "masse": {
+          "RS": 1.3,
+          "aus": 1.6,
+          "sw": 536,
+          "sh": 1190,
+          "ow": 659,
+          "oh": 1464,
+          "gw": 268,
+          "gh": 595
+        },
+        "speicher": {
+          "d2": 159460,
+          "gpu": 1841940
+        }
+      }
+    },
+    "aquarium": {
+      "frames": 448,
+      "p50": 25.3,
+      "p95": 29.9,
+      "p99": 32.1,
+      "workP50": 23.6,
+      "workP95": 27.6,
+      "hauptP50": 26.2,
+      "hauptP95": 38.6,
+      "hauptMax": 52.6,
+      "tierEnd": 1,
+      "tierMin": 1,
+      "partsAvg": 33.98,
+      "partsMax": 143,
+      "mem": {
+        "main": 637840,
+        "room": 1044778,
+        "spare": 1,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 1423986,
+        "post": 159460,
+        "postGpu": 1841940,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": false,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 1423,
+        "bloomBilder": 1423,
+        "stimmung": "aquarium",
+        "masse": {
+          "RS": 1.3,
+          "aus": 1.6,
+          "sw": 536,
+          "sh": 1190,
+          "ow": 659,
+          "oh": 1464,
+          "gw": 268,
+          "gh": 595
+        },
+        "speicher": {
+          "d2": 159460,
+          "gpu": 1841940
+        }
+      }
+    },
+    "finale": {
+      "frames": 239,
+      "p50": 42.6,
+      "p95": 65.4,
+      "p99": 76.2,
+      "workP50": 40.9,
+      "workP95": 64.3,
+      "hauptP50": 27.6,
+      "hauptP95": 46,
+      "hauptMax": 88.7,
+      "tierEnd": 1,
+      "tierMin": 1,
+      "partsAvg": 88.84,
+      "partsMax": 280,
+      "mem": {
+        "main": 637840,
+        "room": 1044778,
+        "spare": 1,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 2214089,
+        "post": 159460,
+        "postGpu": 1841940,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": false,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 1702,
+        "bloomBilder": 1702,
+        "stimmung": "finale",
+        "masse": {
+          "RS": 1.3,
+          "aus": 1.6,
+          "sw": 536,
+          "sh": 1190,
+          "ow": 659,
+          "oh": 1464,
+          "gw": 268,
+          "gh": 595
+        },
+        "speicher": {
+          "d2": 159460,
+          "gpu": 1841940
+        }
+      }
+    }
+  },
+  "errors": []
+}

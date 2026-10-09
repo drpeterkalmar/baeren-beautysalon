@@ -1,0 +1,175 @@
+{
+  "label": "post0-hoch",
+  "src": "/Users/wohnzimmer/dev/baeren-beautysalon",
+  "query": "post=0",
+  "land": false,
+  "tier": 2,
+  "spitzeMP": 26.14,
+  "spitzeWo": "zurück im Menü",
+  "endeMP": 26.14,
+  "punkte": [
+    {
+      "canvases": 63,
+      "px": 6709952,
+      "gpuExtra": 0,
+      "gesamt": 6709952,
+      "groesste": [
+        2471865,
+        1507920,
+        539580,
+        357446,
+        293760,
+        268370
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 0,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 1448519,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "wo": "menu"
+    },
+    {
+      "canvases": 155,
+      "px": 11760929,
+      "gpuExtra": 0,
+      "gesamt": 11760929,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        539580,
+        293760,
+        136800
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 1847191,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 5,
+        "thumbs": 18
+      },
+      "wo": "wahl"
+    },
+    {
+      "canvases": 200,
+      "px": 14841517,
+      "gpuExtra": 0,
+      "gesamt": 14841517,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        542592,
+        539580,
+        539580
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 2972841,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 5,
+        "thumbs": 20
+      },
+      "wo": "3 Bären + Fotos"
+    },
+    {
+      "canvases": 367,
+      "px": 20548319,
+      "gpuExtra": 0,
+      "gesamt": 20548319,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        645904,
+        542592,
+        539580
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 0,
+        "bake": 2471865,
+        "snap": 1,
+        "sprites": 3169019,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "alle Stationen"
+    },
+    {
+      "canvases": 395,
+      "px": 22594945,
+      "gpuExtra": 0,
+      "gesamt": 22594945,
+      "groesste": [
+        2471865,
+        1507920,
+        1498416,
+        799680,
+        645904,
+        542592
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 1,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 5664294,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "Finale"
+    },
+    {
+      "canvases": 398,
+      "px": 26143517,
+      "gpuExtra": 0,
+      "gesamt": 26143517,
+      "groesste": [
+        2471865,
+        2471865,
+        1507920,
+        1498416,
+        799680,
+        645904
+      ],
+      "canvasMem": {
+        "main": 1507920,
+        "room": 2471865,
+        "spare": 2471865,
+        "bake": 0,
+        "snap": 1,
+        "sprites": 6491721,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 5,
+        "thumbs": 21
+      },
+      "wo": "zurück im Menü"
+    }
+  ],
+  "errors": []
+}

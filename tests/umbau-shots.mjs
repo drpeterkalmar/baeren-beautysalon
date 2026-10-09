@@ -1,5 +1,6 @@
 // DEV-TOOL (Umbau 20.4): reproduzierbare Screenshots aller 24 Stationen für den Pixel-Vergleich vorher/nachher.
-// Aufruf: node tests/umbau-shots.mjs <label> [--src=DIR] [--land] [--only=a,b]
+// Aufruf: node tests/umbau-shots.mjs <label> [--src=DIR] [--land] [--only=a,b] [--query=post=0&fell=0] [--tier=2]
+// r21: --query hängt URL-Regler an (A/B Endbild/Fell), --tier legt die Qualitätsstufe fest (Standard 2).
 // Uhr und Zufall sind fest (Playwright page.clock, auf genau 60 Hz gestreckt, + Zufall je Station neu gesät): zwei Läufe desselben Stands
 // liefern dieselben Bilder, Unterschiede kommen nur aus dem Code. Bär voll gestylt (Hut, Schleife, Kette,
 // 6 Lackkrallen, Sticker, Make-up, Frisur), Eisdiele mit zwei Kugeln.
@@ -21,6 +22,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k +
 const label = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'run';
 const src = path.resolve(arg('src', root)), land = process.argv.includes('--land');
 const only = (arg('only', '') || '').split(',').filter(Boolean);
+const query = arg('query', ''), tierFest = +arg('tier', '2');
 const outDir = path.join(root, 'tests', 'shots', 'umbau', label);
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -47,11 +49,11 @@ try {
     window.requestAnimationFrame = (cb) => raf((ts) => cb(ts * K));
     Math.random = function () { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   });
-  await page.goto('file://' + path.join(src, 'index.html'));
+  await page.goto('file://' + path.join(src, 'index.html') + (query ? '?' + query : ''));
   await page.clock.runFor(1500);
   await page.waitForFunction(() => window.BSSalon && window.BSGame && window.BSArt, null, { timeout: 30000 });
   // Qualitätsstufe fest auf 2 (die Automatik misst echte Zeit, hier ist die Uhr gefälscht)
-  await page.evaluate(() => { window.BSGame.perf.warm = -1e9; window.BSFx.Q.tier = 2; window.dispatchEvent(new Event('resize')); });
+  await page.evaluate((t) => { window.BSGame.perf.warm = -1e9; window.BSFx.Q.tier = t; window.dispatchEvent(new Event('resize')); }, tierFest);
   await page.clock.runFor(300);
   const ids = await page.evaluate(() => window.BSSalon.STATIONS.map(s => s.id));
   await page.evaluate(() => {

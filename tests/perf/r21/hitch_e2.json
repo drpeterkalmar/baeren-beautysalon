@@ -1,0 +1,16 @@
+{
+  "werkzeug": "node tests/hitch-check.mjs --swraster --novsync --tier=T [--query=fell=0]  (CPU x4, Software-Raster, Endbild an)",
+  "einheit": "längstes Bild in ms nach dem Wechsel",
+  "t2": {
+    "fell0_r1": {"waschen#0": 223.6, "zirkus#1": 93, "keks#2": 85.4, "aquarium#3": 80.6, "waschen#4": 77.5, "karussell#5": 79.7, "menu#6": 73.2, "waschen#7": 83, "baer5#8": 123, "baer11#9": 136.1, "baer17#10": 151.9},
+    "fell_r1":  {"waschen#0": 238.1, "zirkus#1": 93.6, "keks#2": 83.7, "aquarium#3": 86.7, "waschen#4": 85.7, "karussell#5": 86.8, "menu#6": 80.3, "waschen#7": 79.7, "baer5#8": 140.5, "baer11#9": 146.4, "baer17#10": 157.6},
+    "fell0_r2": {"waschen#0": 232.8, "zirkus#1": 93.9, "keks#2": 82.2, "aquarium#3": 82.2, "waschen#4": 81.9, "karussell#5": 79.1, "menu#6": 70.6, "waschen#7": 80.6, "baer5#8": 124.6, "baer11#9": 134.3, "baer17#10": 135.5},
+    "fell_r2":  {"waschen#0": 239.4, "zirkus#1": 90.8, "keks#2": 81.9, "aquarium#3": 83.3, "waschen#4": 85.1, "karussell#5": 79.5, "menu#6": 60.1, "waschen#7": 80.8, "baer5#8": 144.9, "baer11#9": 149.7, "baer17#10": 143.6},
+    "relief_kacheln_ms": [12.4, 13.5]
+  },
+  "t0": {
+    "fell0": {"waschen#0": 185.1, "zirkus#1": 47.4, "keks#2": 43.3, "aquarium#3": 56.5, "waschen#4": 43.9, "karussell#5": 44.2, "menu#6": 41.5, "waschen#7": 50, "baer5#8": 59.8, "baer11#9": 64.3, "baer17#10": 64.9},
+    "fell":  {"waschen#0": 181.3, "zirkus#1": 49.5, "keks#2": 46.5, "aquarium#3": 62.9, "waschen#4": 45.6, "karussell#5": 47.1, "menu#6": 43.1, "waschen#7": 48.3, "baer5#8": 72.3, "baer11#9": 82.6, "baer17#10": 73.2}
+  },
+  "bewertung": "Stationswechsel im Rauschen (±6 ms). Neuer Bär (Sprite-Satz mit Fell-Struktur): Stufe 2 im Mittel +13 ms (+6…+20), Stufe 0 +13 ms (+8…+18). Grenze +30 ms → kein MIN_STUFE nötig."
+}
