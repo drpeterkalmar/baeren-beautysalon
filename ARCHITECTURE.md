@@ -82,7 +82,7 @@ Button-/Panel-/Karten-Optik wird als Sprite gecacht (Schatten-Blur nur beim Back
   Snapshot nach der Überblendung freigegeben; `BSGame.canvasMem()` liefert die Canvas-Pixel.
 - **Version**: `BS_VERSION` aus der `?v=`-Query von fx.js; heben mit `python3 tools/bump-version.py X.Y`.
 
-## r21 Technik: Kino-Look 2D + Fell/Stoff mit Struktur (Vorbau, Abnahme im Browser durch den Heavy-Job)
+## r21 Technik: Kino-Look 2D + Fell/Stoff mit Struktur (Version 21.1, Details: TECHNIK_BERICHT.md)
 - **Endbild** (`post.js`, `BSPost`): game.js `resize()` fragt `PO.masse(W,H,dpr,tier)`; läuft das Endbild, rendert die
   2D-Szene mit DPR 1,6 (Stufe 2) / 1,3 (Stufe 1) — `view.dpr` sinkt, damit auch Raum-Cache und Bären-Sprites —, und
   `PO.bild()` lädt das fertige Bild nach jedem `render()` als Textur, zeichnet die Glow-Ebene weich (¼) und gibt aus:

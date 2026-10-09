@@ -8,6 +8,8 @@ Vanilla JavaScript + Canvas, kein Build-Step, keine externen Assets (prozedural 
 
 ## Technik
 
+Berichte: `TECHNIK_BERICHT.md` (r21: Kino-Look 2D, Fell mit Struktur), `UMBAU_BERICHT.md` (20.4), `DEKO_BERICHT.md` (r20).
+
 Einfach `index.html` öffnen oder statisch hosten (GitHub Pages).
 
 **Schalter in der Adresse (A/B-Vergleich):** `?post=0` reines 2D ohne Kino-Endbild (r21), `?fell=0` ohne Fell-/Stoff-Struktur
@@ -16,8 +18,8 @@ Einfach `index.html` öffnen oder statisch hosten (GitHub Pages).
 ## Version heben = ein Befehl
 
 ```sh
-python3 tools/bump-version.py 20.4          # setzt alle ?v= in index.html (+ Rückfallwert in fx.js)
-python3 tools/bump-version.py 20.4 --check  # prüft nur, ob überall 20.4 steht
+python3 tools/bump-version.py 21.1          # setzt alle ?v= in index.html (+ Rückfallwert in fx.js)
+python3 tools/bump-version.py 21.1 --check  # prüft nur, ob überall 21.1 steht
 ```
 
 Das Spiel liest seine Version (`BS_VERSION`, unten links im Menü) aus der `?v=`-Query von `fx.js` — es gibt nur noch
@@ -45,6 +47,8 @@ WebGL2 in der echten Spielschleife) und die Fell-/Stoff-Struktur (`relief.test.m
 | `node tools/visual-check.mjs <label> [--land] [--only=flow\|stations\|r19\|…]` | Screenshots + `report.json` gegen CHECKS.md (0 Fehler, Knöpfe ≥ 48 px) |
 | `node tests/deko-check.mjs perf <label> [--tier=2\|1\|0\|auto] [--swraster] [--throttle=4] [--land] [--voll] [--post=0] [--fell=0]` | Bildzeiten je Szene (r21: Hauptthread bis nach dem Malen, Canvas-Speicher) |
 | `python3 tests/perf-tabelle.py r21 --vorher=PREFIX --nachher=PREFIX` | Tabelle vorher/nachher je Stufe × Format mit Gate |
+| `node tests/technik-abnahme.mjs [--browser=webkit] [--land]` | r21: Endbild an, Tippen hindurch, Kontextverlust, `?post=0`, Stufe 0 ruht, Glühen, Fell-Kacheln |
+| `node tests/speicher-check.mjs <label> [--src=DIR] [--query=…] [--land] [--tier=T]` | Canvas-Speicher einer ganzen Sitzung, alter und neuer Stand gleich gezählt |
 | `node tests/hitch-check.mjs [--swraster] [--throttle=4] [--resize] [--novsync]` | Ruckler beim Stationswechsel (ungebremst messen: `--novsync`) |
 | `node tests/umbau-shots.mjs <label> [--src=DIR] [--land]` | alle 24 Stationen mit fester Uhr/festem Zufall (reproduzierbar) |
 | `python3 tests/pixel-diff.py VORHER NACHHER --max=1.0` | Pixel-Vergleich zweier Screenshot-Ordner |

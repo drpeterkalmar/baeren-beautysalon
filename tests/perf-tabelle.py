@@ -39,7 +39,9 @@ FORMATE = ['hoch', 'quer']
 STUFEN = [2, 1, 0]
 
 def r21_laden(d, prefix, fmt, tier):
-    """Mittel über die Wiederholungen je Szene: p95 (haupt bevorzugt), längstes Bild, Speicher in MP."""
+    """Mittel über die Wiederholungen je Szene: p95 (haupt bevorzugt), längstes Bild, Speicher in MP.
+    Speicher = Bild-Leinwände (Bildschirm, Raum, Ersatz-Raum, Schnappschuss, Glow, WebGL-Puffer) OHNE Sprites: der alte
+    Stand zählte Sprites nicht, so bleibt die Spalte vergleichbar. Ganze Sitzung mit Sprites: tests/speicher-check.mjs."""
     name = f'{prefix}-{fmt}-t{tier}'
     runs = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(d, name + '*.json')))
             if re.fullmatch(re.escape(name) + r'(-r\d+)?\.json', os.path.basename(f))]
@@ -50,7 +52,7 @@ def r21_laden(d, prefix, fmt, tier):
         if not vals: continue
         haupt = all(v.get('hauptP95') is not None for v in vals)
         k95, kmax = ('hauptP95', 'hauptMax') if haupt else ('p95', 'p99')
-        mem = [sum(x for k, x in v['mem'].items() if k not in ('sets', 'thumbs') and isinstance(x, (int, float)) and x > 1)
+        mem = [sum(x for k, x in v['mem'].items() if k not in ('sets', 'thumbs', 'sprites') and isinstance(x, (int, float)) and x > 1)
                for v in vals if v.get('mem')]
         out[s] = {'p95': round(median(v[k95] for v in vals), 1), 'max': round(max(v.get(kmax) or 0 for v in vals)),
                   'mem': round(mean(mem) / 1e6, 2) if mem else None, 'n': len(vals), 'groesse': 'haupt' if haupt else 'iv'}
@@ -60,7 +62,7 @@ def gate(a, b): return b <= a * 1.05 + 0.5
 
 def r21_tabelle(d, vorher, nachher):
     zeilen, ok = [], True
-    zeilen.append('| Stufe | Format | ' + ' | '.join(NAME[s].split(' (')[0] for s in SC) + ' | Canvas-Speicher (MP) |')
+    zeilen.append('| Stufe | Format | ' + ' | '.join(NAME[s].split(' (')[0] for s in SC) + ' | Bild-Leinwände (MP) |')
     zeilen.append('|---|---|' + '---|' * len(SC) + '---|')
     for t in STUFEN:
         for f in FORMATE:

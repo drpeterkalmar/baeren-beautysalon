@@ -1,25 +1,25 @@
 {
-  "label": "nachher-hoch",
+  "label": "nachher-quer",
   "src": "/Users/wohnzimmer/dev/baeren-beautysalon",
   "query": "",
-  "land": false,
+  "land": true,
   "tier": 2,
-  "spitzeMP": 21.53,
+  "spitzeMP": 17.66,
   "spitzeWo": "zurück im Menü",
-  "endeMP": 21.53,
+  "endeMP": 17.66,
   "punkte": [
     {
       "canvases": 65,
-      "px": 6302282,
+      "px": 5754012,
       "gpuExtra": 1327116,
-      "gesamt": 7629398,
+      "gesamt": 7081128,
       "groesste": [
         1581656,
         1507920,
         964776,
-        330480,
+        254320,
         241560,
-        219030
+        102000
       ],
       "canvasMem": {
         "main": 964776,
@@ -27,7 +27,7 @@
         "spare": 0,
         "bake": 0,
         "snap": 0,
-        "sprites": 887726,
+        "sprites": 273360,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 1,
@@ -36,16 +36,16 @@
       "wo": "menu"
     },
     {
-      "canvases": 157,
-      "px": 9653838,
+      "canvases": 122,
+      "px": 9350603,
       "gpuExtra": 1327116,
-      "gesamt": 10980954,
+      "gesamt": 10677719,
       "groesste": [
         1581656,
         1581656,
         1507920,
         964776,
-        330480,
+        254320,
         241560
       ],
       "canvasMem": {
@@ -54,26 +54,26 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 1120360,
+        "sprites": 927635,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 5,
-        "thumbs": 18
+        "thumbs": 10
       },
       "wo": "wahl"
     },
     {
-      "canvases": 205,
-      "px": 11913426,
+      "canvases": 177,
+      "px": 10916157,
       "gpuExtra": 1327116,
-      "gesamt": 13240542,
+      "gesamt": 12243273,
       "groesste": [
         1581656,
         1581656,
         1507920,
         964776,
-        539580,
-        348076
+        281486,
+        254320
       ],
       "canvasMem": {
         "main": 964776,
@@ -81,26 +81,26 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 2093664,
+        "sprites": 1167545,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 5,
-        "thumbs": 20
+        "thumbs": 12
       },
       "wo": "3 Bären + Fotos"
     },
     {
-      "canvases": 375,
-      "px": 16107464,
+      "canvases": 345,
+      "px": 14752143,
       "gpuExtra": 1327116,
-      "gesamt": 17434580,
+      "gesamt": 16079259,
       "groesste": [
         1581656,
         1581656,
         1507920,
         964776,
-        539580,
-        449004
+        340442,
+        281486
       ],
       "canvasMem": {
         "main": 964776,
@@ -108,26 +108,26 @@
         "spare": 0,
         "bake": 1581656,
         "snap": 241560,
-        "sprites": 2319775,
+        "sprites": 1217472,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 5,
-        "thumbs": 21
+        "thumbs": 13
       },
       "wo": "alle Stationen"
     },
     {
-      "canvases": 412,
-      "px": 17019851,
+      "canvases": 386,
+      "px": 14341383,
       "gpuExtra": 1327116,
-      "gesamt": 18346967,
+      "gesamt": 15668499,
       "groesste": [
         1581656,
         1507920,
         964776,
-        958956,
-        539580,
-        449004
+        340442,
+        281486,
+        262144
       ],
       "canvasMem": {
         "main": 964776,
@@ -135,26 +135,26 @@
         "spare": 1,
         "bake": 0,
         "snap": 1,
-        "sprites": 3405549,
+        "sprites": 1608664,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 5,
-        "thumbs": 21
+        "thumbs": 13
       },
       "wo": "Finale"
     },
     {
-      "canvases": 419,
-      "px": 20204161,
+      "canvases": 392,
+      "px": 16331350,
       "gpuExtra": 1327116,
-      "gesamt": 21531277,
+      "gesamt": 17658466,
       "groesste": [
         1581656,
         1581656,
         1507920,
         964776,
-        958956,
-        539580
+        340442,
+        281486
       ],
       "canvasMem": {
         "main": 964776,
@@ -162,11 +162,11 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 4838475,
+        "sprites": 1872591,
         "post": 241560,
         "postGpu": 2835036,
         "sets": 5,
-        "thumbs": 21
+        "thumbs": 13
       },
       "wo": "zurück im Menü"
     }

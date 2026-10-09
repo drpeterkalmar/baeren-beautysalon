@@ -1,0 +1,221 @@
+{
+  "label": "r21-nachher-hoch-t0-r1",
+  "src": "/Users/wohnzimmer/dev/baeren-beautysalon",
+  "deko": "",
+  "post": "",
+  "fell": "",
+  "tier": "0",
+  "throttle": 4,
+  "vsync": false,
+  "raster": "software",
+  "secs": 10.5,
+  "viewport": "412x915@2",
+  "voll": true,
+  "scenes": {
+    "menu": {
+      "frames": 587,
+      "p50": 17.6,
+      "p95": 20.6,
+      "p99": 33.3,
+      "workP50": 0.2,
+      "workP95": 3.1,
+      "hauptP50": 17.6,
+      "hauptP95": 20.5,
+      "hauptMax": 23,
+      "tierEnd": 0,
+      "tierMin": 0,
+      "partsAvg": 0,
+      "partsMax": 0,
+      "mem": {
+        "main": 589160,
+        "room": 966240,
+        "spare": 0,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 1116066,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": true,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 84,
+        "bloomBilder": 84,
+        "stimmung": "menu",
+        "masse": {
+          "RS": 1.25,
+          "aus": 1.25,
+          "sw": 515,
+          "sh": 1144,
+          "ow": 515,
+          "oh": 1144,
+          "gw": 258,
+          "gh": 572
+        },
+        "speicher": {
+          "d2": 0,
+          "gpu": 0
+        }
+      }
+    },
+    "waschen": {
+      "frames": 432,
+      "p50": 26.8,
+      "p95": 33.3,
+      "p99": 49.8,
+      "workP50": 0.4,
+      "workP95": 3.5,
+      "hauptP50": 20.4,
+      "hauptP95": 29.1,
+      "hauptMax": 36.7,
+      "tierEnd": 0,
+      "tierMin": 0,
+      "partsAvg": 14.63,
+      "partsMax": 40,
+      "mem": {
+        "main": 589160,
+        "room": 966240,
+        "spare": 1,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 1428752,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 1,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": true,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 84,
+        "bloomBilder": 84,
+        "stimmung": "menu",
+        "masse": {
+          "RS": 1.25,
+          "aus": 1.25,
+          "sw": 515,
+          "sh": 1144,
+          "ow": 515,
+          "oh": 1144,
+          "gw": 258,
+          "gh": 572
+        },
+        "speicher": {
+          "d2": 0,
+          "gpu": 0
+        }
+      }
+    },
+    "aquarium": {
+      "frames": 666,
+      "p50": 16.9,
+      "p95": 20.4,
+      "p99": 21.3,
+      "workP50": 0.4,
+      "workP95": 3.5,
+      "hauptP50": 18.4,
+      "hauptP95": 28.4,
+      "hauptMax": 36.7,
+      "tierEnd": 0,
+      "tierMin": 0,
+      "partsAvg": 19.49,
+      "partsMax": 91,
+      "mem": {
+        "main": 589160,
+        "room": 966900,
+        "spare": 1,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 1580926,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 2,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": true,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 84,
+        "bloomBilder": 84,
+        "stimmung": "menu",
+        "masse": {
+          "RS": 1.25,
+          "aus": 1.25,
+          "sw": 515,
+          "sh": 1144,
+          "ow": 515,
+          "oh": 1144,
+          "gw": 258,
+          "gh": 572
+        },
+        "speicher": {
+          "d2": 0,
+          "gpu": 0
+        }
+      }
+    },
+    "finale": {
+      "frames": 389,
+      "p50": 25.3,
+      "p95": 42.7,
+      "p99": 54.9,
+      "workP50": 0.6,
+      "workP95": 4.2,
+      "hauptP50": 19.4,
+      "hauptP95": 29.9,
+      "hauptMax": 68.9,
+      "tierEnd": 0,
+      "tierMin": 0,
+      "partsAvg": 51.15,
+      "partsMax": 169,
+      "mem": {
+        "main": 589160,
+        "room": 966240,
+        "spare": 1,
+        "bake": 0,
+        "snap": 0,
+        "sprites": 2139536,
+        "post": 0,
+        "postGpu": 0,
+        "sets": 2,
+        "thumbs": 0
+      },
+      "post": {
+        "an": true,
+        "ruht": true,
+        "vign": false,
+        "grund": "an",
+        "fehler": null,
+        "bilder": 84,
+        "bloomBilder": 84,
+        "stimmung": "menu",
+        "masse": {
+          "RS": 1.25,
+          "aus": 1.25,
+          "sw": 515,
+          "sh": 1144,
+          "ow": 515,
+          "oh": 1144,
+          "gw": 258,
+          "gh": 572
+        },
+        "speicher": {
+          "d2": 0,
+          "gpu": 0
+        }
+      }
+    }
+  },
+  "errors": []
+}

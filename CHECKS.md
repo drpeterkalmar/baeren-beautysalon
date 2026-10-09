@@ -103,7 +103,7 @@ Stufe fest (Auto-Drossel aus) bzw. Auto. Alt = Export von 283f890, abwechselnd m
 - [x] R20.6 `?deko=0` = altes Aussehen (Pixel-Abweichung so klein wie zwischen zwei Läufen des alten Stands).
 - [x] R20.7 C1/R19 weiter grün: Flow hoch + quer 0 Fehler, 0 Knöpfe < 48 px; Aquarium-Verdeckung 0 % hoch + quer.
 
-## R21 — Technik „Kino-Look 2D und Fell mit Struktur“ (Kriterien vor der Abnahme; Vorbau ohne Browser, Stand 09.10.2026)
+## R21 — Technik „Kino-Look 2D und Fell mit Struktur“ (Kriterien vor der Abnahme geschrieben, abgenommen 09.10.2026, TECHNIK_BERICHT.md)
 Ohne Browser erledigt (`node --test tests/unit`, 128 Tests):
 - [x] R21.0 Partikel-Pool ohne Allokation (Bild für Bild gleich dem alten Pool unterhalb der Grenze), Schnappschuss ½, Raum ≤ 2,5 MP.
 - [x] R21.1 Endbild-Maße je Stufe (Szene DPR 1,6/1,3, Stufe 0 ruht), Rückfall bei `?post=0`/kein WebGL2/Kontextverlust in der
@@ -112,13 +112,18 @@ Ohne Browser erledigt (`node --test tests/unit`, 128 Tests):
 - [x] R21.3 Canvas-Speicher einer Sitzung (3 Bären, Stationen, Finale): 2D-Canvas 7,65 statt 11,35 MP, mit Grafikspeicher
       10,5 statt 11,35 MP (Harness-Zählung, hochkant DPR 2).
 - [x] R21.4 Relief-Kacheln kachelbar, Mittel 128, Licht von der richtigen Seite; `?fell=0` backt nichts.
-Im Browser offen (Heavy-Job):
+Im Browser abgenommen:
 - [x] R21.5 Shader übersetzen in Chromium (Metal) und WebKit; `BSGame.post().an === true`, 0 Fehler, hoch + quer
       (`tests/technik-abnahme.mjs`, Ergebnis `tests/perf/r21/abnahme_*.json`; Tippen geht durch das Endbild hindurch).
 - [x] R21.6 Kontextverlust im echten Browser (`WEBGL_lose_context`) → 2D (DPR 2), Spiel läuft weiter, Tippen geht; `?post=0` =
       Auflösung wie 20.4, kein Endbild-Canvas; Stufe 0 ruht, zurück auf Stufe 2 läuft es wieder (Chromium + WebKit).
-- [ ] R21.7 p95 Hauptthread je Stufe (Software-Raster, CPU ×4, hoch + quer, Menü/Waschen voll/Aquarium/Finale) ≤ vorher · 1,05 + 0,5 ms.
-- [ ] R21.8 A/B-Collagen je Station hoch/quer; Lupe auf Text/Knöpfe (Schärfe bei DPR 1,6 + CAS wie DPR 2); Glühen dezent.
+- [x] R21.7 p95 Hauptthread je Stufe (Software-Raster, CPU ×4, hoch + quer, Menü/Waschen voll/Aquarium/Finale) ≤ vorher · 1,05 + 0,5 ms:
+      bestanden, Stufe 2/1 hoch −17…−31 %, quer −21…+1 %, Stufe 0 −2…−6 %. GPU-Profil: +1 ms auf Stufe 1/2 (Warten auf die
+      Grafikkarte bei ungebremster Bildrate, Endbild-JS 0,1 ms) – siehe Bericht.
+- [x] R21.8 A/B-Collagen je Station hoch/quer (`tests/shots/technik/`); Lupe auf Text/Knöpfe: Schärfe bei DPR 1,6 + CAS wie
+      DPR 2; Glühen dezent (Startwerte ≈ 1,5× verstärkt); UI-Farben ohne sichtbare Verschiebung.
+- [x] R21.12 Canvas-Speicher ganze Sitzung (`tests/speicher-check.mjs`): hoch 26,7 → 21,5 MP, quer 21,0 → 17,7 MP, Stufe 1
+      18,3 → 14,1 MP (inkl. WebGL-Puffer; Budget 150 MB ≈ 37,5 MP).
 - [x] R21.9 Fell/Stoff-Struktur sichtbar, aber nicht fleckig (`tests/shots/technik/e2_lupe_*`: Braunbär deutliche Fasern, weißer
       Bär und Stoffe dezent); Backzeit (`tests/perf/r21/hitch_e2.json`): Stationswechsel im Rauschen, neuer Bär +13 ms im Mittel
       (Stufe 2 und 0, max. +20 ms) → `MIN_STUFE` bleibt 0.

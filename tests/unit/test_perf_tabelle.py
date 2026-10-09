@@ -41,7 +41,7 @@ class R21Tabelle(unittest.TestCase):
             self.assertTrue(ok)
             text = '\n'.join(zeilen)
             self.assertIn('42.0 → **30.5**', text)       # Median der haupt-p95, nicht die Bildabstände (80)
-            self.assertIn('3.00 → 1.80', text)           # Speicher: Pixel > 1 ohne Zähler (sets/thumbs), in MP
+            self.assertIn('2.00 → 1.20', text)           # Speicher: Pixel > 1 ohne Zähler (sets/thumbs) und ohne Sprites (alt nicht gezählt), in MP
 
     def test_gate_reisst(self):
         m = modul()

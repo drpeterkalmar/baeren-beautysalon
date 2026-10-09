@@ -1,25 +1,25 @@
 {
-  "label": "nachher-hoch",
-  "src": "/Users/wohnzimmer/dev/baeren-beautysalon",
+  "label": "vorher-hoch-t1",
+  "src": "/tmp/bs_r21/vorher",
   "query": "",
   "land": false,
-  "tier": 2,
-  "spitzeMP": 21.53,
+  "tier": 1,
+  "spitzeMP": 18.29,
   "spitzeWo": "zurück im Menü",
-  "endeMP": 21.53,
+  "endeMP": 18.29,
   "punkte": [
     {
-      "canvases": 65,
-      "px": 6302282,
-      "gpuExtra": 1327116,
-      "gesamt": 7629398,
+      "canvases": 60,
+      "px": 5499443,
+      "gpuExtra": 0,
+      "gesamt": 5499443,
       "groesste": [
         1581656,
-        1507920,
         964776,
-        330480,
-        241560,
-        219030
+        539580,
+        357446,
+        293760,
+        268370
       ],
       "canvasMem": {
         "main": 964776,
@@ -27,26 +27,23 @@
         "spare": 0,
         "bake": 0,
         "snap": 0,
-        "sprites": 887726,
-        "post": 241560,
-        "postGpu": 2835036,
         "sets": 1,
         "thumbs": 0
       },
       "wo": "menu"
     },
     {
-      "canvases": 157,
-      "px": 9653838,
-      "gpuExtra": 1327116,
-      "gesamt": 10980954,
+      "canvases": 152,
+      "px": 8528748,
+      "gpuExtra": 0,
+      "gesamt": 8528748,
       "groesste": [
         1581656,
         1581656,
-        1507920,
         964776,
-        330480,
-        241560
+        539580,
+        293760,
+        188224
       ],
       "canvasMem": {
         "main": 964776,
@@ -54,24 +51,21 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 1120360,
-        "post": 241560,
-        "postGpu": 2835036,
         "sets": 5,
         "thumbs": 18
       },
       "wo": "wahl"
     },
     {
-      "canvases": 205,
-      "px": 11913426,
-      "gpuExtra": 1327116,
-      "gesamt": 13240542,
+      "canvases": 197,
+      "px": 10739184,
+      "gpuExtra": 0,
+      "gesamt": 10739184,
       "groesste": [
         1581656,
         1581656,
-        1507920,
         964776,
+        539580,
         539580,
         348076
       ],
@@ -81,24 +75,21 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 2093664,
-        "post": 241560,
-        "postGpu": 2835036,
         "sets": 5,
         "thumbs": 20
       },
       "wo": "3 Bären + Fotos"
     },
     {
-      "canvases": 375,
-      "px": 16107464,
-      "gpuExtra": 1327116,
-      "gesamt": 17434580,
+      "canvases": 365,
+      "px": 14683801,
+      "gpuExtra": 0,
+      "gesamt": 14683801,
       "groesste": [
         1581656,
         1581656,
-        1507920,
         964776,
+        539580,
         539580,
         449004
       ],
@@ -107,25 +98,22 @@
         "room": 1581656,
         "spare": 0,
         "bake": 1581656,
-        "snap": 241560,
-        "sprites": 2319775,
-        "post": 241560,
-        "postGpu": 2835036,
+        "snap": 1,
         "sets": 5,
         "thumbs": 21
       },
       "wo": "alle Stationen"
     },
     {
-      "canvases": 412,
-      "px": 17019851,
-      "gpuExtra": 1327116,
-      "gesamt": 18346967,
+      "canvases": 393,
+      "px": 15713388,
+      "gpuExtra": 0,
+      "gesamt": 15713388,
       "groesste": [
         1581656,
-        1507920,
         964776,
         958956,
+        539580,
         539580,
         449004
       ],
@@ -135,25 +123,22 @@
         "spare": 1,
         "bake": 0,
         "snap": 1,
-        "sprites": 3405549,
-        "post": 241560,
-        "postGpu": 2835036,
         "sets": 5,
         "thumbs": 21
       },
       "wo": "Finale"
     },
     {
-      "canvases": 419,
-      "px": 20204161,
-      "gpuExtra": 1327116,
-      "gesamt": 21531277,
+      "canvases": 397,
+      "px": 18291212,
+      "gpuExtra": 0,
+      "gesamt": 18291212,
       "groesste": [
         1581656,
         1581656,
-        1507920,
         964776,
         958956,
+        539580,
         539580
       ],
       "canvasMem": {
@@ -162,9 +147,6 @@
         "spare": 1581656,
         "bake": 0,
         "snap": 1,
-        "sprites": 4838475,
-        "post": 241560,
-        "postGpu": 2835036,
         "sets": 5,
         "thumbs": 21
       },
