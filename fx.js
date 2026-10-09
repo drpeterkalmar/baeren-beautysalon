@@ -8,7 +8,7 @@ Fx.TAU = TAU;
 // Version kommt aus der ?v=-Query dieses Skript-Tags in index.html (eine Quelle, kein Build-Schritt);
 // die Konstante ist nur der Rückfall (z. B. Datei ohne Query geladen). Heben: python3 tools/bump-version.py X.Y
 window.BS_VERSION = (function(){
-  var v='21.0';
+  var v='21.1';
   try{ var cs=document.currentScript, m=cs && cs.src && /[?&]v=([^&#]+)/.exec(cs.src); if(m) v=decodeURIComponent(m[1]); }catch(e){}
   return v;
 })();
@@ -390,8 +390,9 @@ P.clear = function(layer){
 };
 P.count = function(){ return P.list.length; };
 P.pool = function(){ return F.length; }; // für Unit-Tests
-// r21: leuchtende Partikel-Sorten → Glow-Ebene [Radius × Größe, Stärke, Farbe (null = Partikelfarbe)]. Startwerte (TODO Bild).
-var GLOWT = { spark:[1.8,0.55,null], twinkle:[1.4,0.7,'#fff1d6'], star:[1.5,0.4,null], bubble:[1.1,0.16,'#dff0ff'] };
+// r21: leuchtende Partikel-Sorten → Glow-Ebene [Radius × Größe, Stärke, Farbe (null = Partikelfarbe)]. Am Bild abgestimmt
+// (Heavy-Job: die Vorbau-Startwerte waren auf dem hellen Salon kaum zu sehen).
+var GLOWT = { spark:[2,0.85,null], twinkle:[1.7,0.95,'#fff1d6'], star:[1.7,0.65,null], bubble:[1.3,0.32,'#dff0ff'] };
 P.GLOWT = GLOWT;
 P.draw = function(g,layer){
   var L=P.list; if(!L.length) return;

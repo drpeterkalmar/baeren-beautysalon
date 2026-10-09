@@ -10,3 +10,5 @@ __pycache__/
 !tests/shots/umbau/
 tests/shots/umbau/*
 !tests/shots/umbau/vergleich_*.jpg
+# r21 Technik-Nacht: Collagen/Lupen vorher/nachher ins Repo
+!tests/shots/technik/

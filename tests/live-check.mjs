@@ -42,7 +42,10 @@ await st('aquarium'); await page.waitForTimeout(1400); await page.screenshot({ p
 await st('finish'); await page.waitForTimeout(800); await page.evaluate(() => window.BSSalon.startFinale());
 await page.waitForTimeout(6500); await page.screenshot({ path: path.join(out, tag + '-4-finale.png') });
 errs.push(...(await page.evaluate(() => window.__errors || [])).map(e => 'window.__errors: ' + e));
-const ok = resp.status() === 200 && !errs.length && !bad.length && (!expect || ver === expect);
-console.log(JSON.stringify({ url, status: resp.status(), version: ver, deko, errors: errs, badRequests: bad, mediaAborted: media.length, ok }));
+// r21: Endbild (WebGL2) und Fell-Struktur müssen auch live laufen
+const post = await page.evaluate(() => window.BSGame.post ? (({ an, grund, fehler, bloomBilder }) => ({ an, grund, fehler, bloomBilder }))(window.BSGame.post()) : null);
+const fell = await page.evaluate(() => window.BSRelief ? window.BSRelief.anzahl() : null);
+const ok = resp.status() === 200 && !errs.length && !bad.length && (!expect || ver === expect) && (!post || (post.an && !post.fehler));
+console.log(JSON.stringify({ url, status: resp.status(), version: ver, deko, post, fellKacheln: fell, errors: errs, badRequests: bad, mediaAborted: media.length, ok }));
 await browser.close();
 process.exit(ok ? 0 : 1);

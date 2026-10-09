@@ -113,12 +113,14 @@ Ohne Browser erledigt (`node --test tests/unit`, 128 Tests):
       10,5 statt 11,35 MP (Harness-Zählung, hochkant DPR 2).
 - [x] R21.4 Relief-Kacheln kachelbar, Mittel 128, Licht von der richtigen Seite; `?fell=0` backt nichts.
 Im Browser offen (Heavy-Job):
-- [ ] R21.5 Shader übersetzen in Chromium (Metal) und WebKit; `BSGame.post().an === true`, 0 Fehler, Flow hoch + quer.
-- [ ] R21.6 Kontextverlust im echten Browser (`WEBGL_lose_context`) → 2D, Spiel läuft weiter; `?post=0` = Bild wie 20.4.
+- [x] R21.5 Shader übersetzen in Chromium (Metal) und WebKit; `BSGame.post().an === true`, 0 Fehler, hoch + quer
+      (`tests/technik-abnahme.mjs`, Ergebnis `tests/perf/r21/abnahme_*.json`; Tippen geht durch das Endbild hindurch).
+- [x] R21.6 Kontextverlust im echten Browser (`WEBGL_lose_context`) → 2D (DPR 2), Spiel läuft weiter, Tippen geht; `?post=0` =
+      Auflösung wie 20.4, kein Endbild-Canvas; Stufe 0 ruht, zurück auf Stufe 2 läuft es wieder (Chromium + WebKit).
 - [ ] R21.7 p95 Hauptthread je Stufe (Software-Raster, CPU ×4, hoch + quer, Menü/Waschen voll/Aquarium/Finale) ≤ vorher · 1,05 + 0,5 ms.
 - [ ] R21.8 A/B-Collagen je Station hoch/quer; Lupe auf Text/Knöpfe (Schärfe bei DPR 1,6 + CAS wie DPR 2); Glühen dezent.
 - [ ] R21.9 Fell/Stoff-Struktur sichtbar, aber nicht fleckig (Collage `?fell=0` gegen an); Backzeit Stationswechsel ≤ +30 ms.
-- [ ] R21.10 Ladegröße ≤ vorher + 100 KB (Vorbau-Schätzung +15 KB gzip).
+- [x] R21.10 Ladegröße ≤ vorher + 100 KB: gzip 322,7 → 337,6 KiB (+15 KB), roh +35 KB, 35 → 37 Dateien.
 
 ## U — Umbau 20.4 nach Gutachten (gemessen 07.10.2026, Details: UMBAU_BERICHT.md)
 Vorher = Export von 79d3ca7, abwechselnd mit nachher gemessen (Mac während der Messung durch macOS-Update belastet).

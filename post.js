@@ -68,14 +68,14 @@ PO.speicher=function(m){
 // selben Bild und darf ihre Farben nicht sichtbar wechseln (Unit-Test: Knopf-/Textfarben je Kanal ≤ 6 % Abweichung).
 // Startwerte, TODO Heavy-Job: am Bild abstimmen.
 PO.GRADE={
-  salon:      { lift:[0.006,0.003,0],     gamma:[1,1,1],          gain:[1.025,1.0,0.97],  sat:1.05, kon:1.03, bloom:0.32, tint:[1,0.9,0.74],   vign:0.5 },
-  menu:       { lift:[0.006,0.003,0],     gamma:[1,1,1],          gain:[1.02,1.0,0.975],  sat:1.04, kon:1.02, bloom:0.28, tint:[1,0.9,0.76],   vign:0.4 },
-  aquarium:   { lift:[0,0.004,0.01],      gamma:[1,1,1.01],       gain:[0.985,1.0,1.02],  sat:1.07, kon:1.04, bloom:0.38, tint:[0.82,0.94,1],  vign:0.5 },
-  spa:        { lift:[0.002,0.005,0.002], gamma:[1,1.01,1],       gain:[1.0,1.01,0.985],  sat:0.98, kon:0.99, bloom:0.3,  tint:[0.94,1,0.86],  vign:0.4 },
-  disco:      { lift:[0.004,0,0.01],      gamma:[1,1,1],          gain:[1.0,0.99,1.02],   sat:1.06, kon:1.04, bloom:0.55, tint:[1,0.82,1],     vign:0.7 },
-  zauber:     { lift:[0.006,0,0.012],     gamma:[1,1,1.01],       gain:[1.0,0.98,1.03],   sat:1.08, kon:1.04, bloom:0.6,  tint:[0.95,0.84,1],  vign:0.6 },
-  geburtstag: { lift:[0.008,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.96],   sat:1.04, kon:1.03, bloom:0.45, tint:[1,0.86,0.66],  vign:0.6 },
-  finale:     { lift:[0.006,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.955],  sat:1.05, kon:1.04, bloom:0.5,  tint:[1,0.9,0.7],    vign:0.6 }
+  salon:      { lift:[0.006,0.003,0],     gamma:[1,1,1],          gain:[1.025,1.0,0.97],  sat:1.05, kon:1.03, bloom:0.5, tint:[1,0.9,0.74],   vign:0.5 },
+  menu:       { lift:[0.006,0.003,0],     gamma:[1,1,1],          gain:[1.02,1.0,0.975],  sat:1.04, kon:1.02, bloom:0.42, tint:[1,0.9,0.76],   vign:0.4 },
+  aquarium:   { lift:[0,0.004,0.01],      gamma:[1,1,1.01],       gain:[0.985,1.0,1.02],  sat:1.07, kon:1.04, bloom:0.55, tint:[0.82,0.94,1],  vign:0.5 },
+  spa:        { lift:[0.002,0.005,0.002], gamma:[1,1.01,1],       gain:[1.0,1.01,0.985],  sat:0.98, kon:0.99, bloom:0.45,  tint:[0.94,1,0.86],  vign:0.4 },
+  disco:      { lift:[0.004,0,0.01],      gamma:[1,1,1],          gain:[1.0,0.99,1.02],   sat:1.06, kon:1.04, bloom:0.75, tint:[1,0.82,1],     vign:0.7 },
+  zauber:     { lift:[0.006,0,0.012],     gamma:[1,1,1.01],       gain:[1.0,0.98,1.03],   sat:1.08, kon:1.04, bloom:0.85,  tint:[0.95,0.84,1],  vign:0.6 },
+  geburtstag: { lift:[0.008,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.96],   sat:1.04, kon:1.03, bloom:0.65, tint:[1,0.86,0.66],  vign:0.6 },
+  finale:     { lift:[0.006,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.955],  sat:1.05, kon:1.04, bloom:0.75,  tint:[1,0.9,0.7],    vign:0.6 }
 };
 var STIMMUNG={ menu:'menu', wahl:'menu', aquarium:'aquarium', spa:'spa', massage:'spa', disco:'disco', tanz:'disco',
   zauber:'zauber', geburtstag:'geburtstag', 'finish-done':'finale' };

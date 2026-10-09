@@ -51,8 +51,8 @@
     "P6_gluehen_finale": {
       "ok": true,
       "info": {
-        "bloomBilder": 86,
-        "bilder": 139,
+        "bloomBilder": 105,
+        "bilder": 171,
         "stimmung": "finale"
       }
     },
@@ -61,7 +61,7 @@
       "info": {
         "an": true,
         "kacheln": 7,
-        "zeitMs": 19
+        "zeitMs": 13
       }
     },
     "P5_stufe0_ruht": {
@@ -76,7 +76,7 @@
         },
         "zurueck": {
           "ruht": false,
-          "bilder": 7
+          "bilder": 10
         }
       }
     },
