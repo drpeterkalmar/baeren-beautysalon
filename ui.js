@@ -386,6 +386,7 @@ function drawWahl(g){
     blit(g,card,x,y,q.tw,q.th);
     if(Art.thumbReady(i,thumbPx) || built<1){ if(!Art.thumbReady(i,thumbPx)) built++; g.drawImage(Art.thumb(i,thumbPx),x+q.tw*0.04,y+2,q.tw*0.92,q.tw*0.92); }
     else { Fx.glow(g,x+q.tw/2,y+q.tw*0.46,q.tw*0.3,m.fell,0.6); }
+    var KW=window.BSKunden; if(KW && KW.karteMarke && !surprise) KW.karteMarke(g,i,x,y,q.tw,q.th);   // r22: Herzen, beste Freunde, Geburtstag
     if(surprise){ var tw=Fx.S.twinkle(); for(var s=0;s<3;s++){ var a=t*2+s*2.1, z=8+8*Math.max(0,Math.sin(a)); g.drawImage(tw,x+q.tw*(0.2+0.3*s)-z/2,y+q.tw*(0.2+0.25*(s%2))-z/2,z,z); } }
   }
   g.restore();

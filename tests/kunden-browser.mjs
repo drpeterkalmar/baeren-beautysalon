@@ -58,9 +58,13 @@ try {
   const tapWorld = async (x, y) => { const p = await page.evaluate(([x, y]) => window.BSGame.worldToScreen(x, y), [x, y]); await tapAt(p); };
 
   await shot('menu');
+  if (process.argv.includes('--wahl')) { await tapBtn('Bären einladen'); await run(1500); await shot('wahl'); await tapBtn('^home$|🏠'); await run(600); }
   await tapBtn('Kunde kommt');
   for (const ms of [250, 300, 300]) { await run(ms); await shot('einlauf'); }
   await run(700); await shot('blase');
+  if (await page.evaluate(() => !!(window.BSKunden.besuch.geschenk))) {   // E2: Geschenk ab Herz 3 antippen
+    const gp = await page.evaluate(() => { const p = window.BSKunden.geschenkPos(); return window.BSGame.worldToScreen(p[0], p[1]); });
+    await tapAt(gp); await run(200); await shot('geschenk-offen'); await run(600); }
   // Wunsch-Knopf 1 → Station, eine Handlung (erstes Werkzeug oder Tippen auf den Bären)
   const w = await page.evaluate(() => window.BSKunden.besuch.wuensche);
   await tapBtn('^' + (await page.evaluate((id) => { const s = window.BSKunden.station(id); return s.icon; }, w[0])));
@@ -75,6 +79,8 @@ try {
   await page.evaluate((id) => window.BSSalon.setState(id), andere); await run(900); await shot('andere-' + andere);
   await tapBtn('^💭$'); await run(900); await shot('wunsch2-' + w[1]);
   await page.evaluate(() => window.BSKunden.aktion()); await run(400); await shot('beide-erfuellt');
+  await page.evaluate(() => { const K = window.BSKunden, S = window.BSSalon; K.besuch.wuensche.forEach((id) => { if (!K.besuch.erfuellt[id]) { S.setState(id); K.aktion(); } }); });
+  await run(300);
   await tapBtn('^💭$'); await run(900); await shot('fertig-station');
   await tapBtn('Fertig!'); await run(5600); await shot('finale');
   await tapBtn('Nächster Kunde'); await run(1800); await shot('naechster-kunde');

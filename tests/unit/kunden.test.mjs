@@ -10,7 +10,11 @@ const run = (H, n) => { for (let i = 0; i < n; i++) H.frame(); };
 test('Parametergruppe: Standard, Regler, Grenzen', () => {
   const H = load({ files: ALL, seed: 1 });
   const K = H.ctx.BSKunden;
-  assert.deepEqual({ ...K.liesParameter('') }, { kunden: 1, wunsch: 2, einlauf: 1.2 });
+  const P0 = K.liesParameter('');
+  assert.equal(P0.kunden, 1); assert.equal(P0.wunsch, 2); assert.equal(P0.einlauf, 1.2);
+  assert.equal(P0.freund, 1); assert.equal(P0.herz, 20); assert.equal(P0.herzen, 5); assert.equal(P0.vorliebe, 2); assert.equal(P0.geburtstag, 3);
+  assert.equal(P0.tag, null); assert.equal(K.liesParameter('?tag=20261224').tag, '20261224'); assert.equal(K.liesParameter('?tag=2026').tag, null);
+  assert.equal(K.liesParameter('?freund=0').freund, 0); assert.equal(K.liesParameter('?herz=0').herz, 1);
   assert.equal(K.liesParameter('?kunden=0').kunden, 0);
   assert.equal(K.liesParameter('?x=1&wunsch=3').wunsch, 3);
   assert.equal(K.liesParameter('?wunsch=9').wunsch, 3);
@@ -133,8 +137,12 @@ test('„Bären einladen“: der gewählte Bär kommt als Kunde mit Wünschen; ?
   assert.ok(K.besuch.idx < H.Art.MODELS.length - 1);
   const A = load({ files: ALL, seed: 7, search: '?kunden=0' });
   go(A, 'wahl'); A.S.chooseBear(3);
-  assert.equal(A.S.state, 'waschen'); assert.equal(A.ctx.BSKunden.besuch, null);
+  assert.equal(A.S.state, 'waschen');
+  assert.ok(A.ctx.BSKunden.besuch.frei); assert.deepEqual([...A.ctx.BSKunden.besuch.wuensche], []);   // Freundschaft zählt trotzdem
   assert.equal(A.ctx.BSKunden.aktion(), false);
+  const V = load({ files: ALL, seed: 7, search: '?kunden=0&freund=0' });
+  go(V, 'wahl'); V.S.chooseBear(3);
+  assert.equal(V.S.state, 'waschen'); assert.equal(V.ctx.BSKunden.besuch, null);
 });
 
 test('Wunsch-Knopf (💭) führt zum nächsten offenen Wunsch, danach zu „Fertig!“', () => {

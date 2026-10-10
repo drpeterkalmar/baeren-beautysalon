@@ -8,7 +8,7 @@ Fx.TAU = TAU;
 // Version kommt aus der ?v=-Query dieses Skript-Tags in index.html (eine Quelle, kein Build-Schritt);
 // die Konstante ist nur der Rückfall (z. B. Datei ohne Query geladen). Heben: python3 tools/bump-version.py X.Y
 window.BS_VERSION = (function(){
-  var v='22.1';
+  var v='22.2';
   try{ var cs=document.currentScript, m=cs && cs.src && /[?&]v=([^&#]+)/.exec(cs.src); if(m) v=decodeURIComponent(m[1]); }catch(e){}
   return v;
 })();

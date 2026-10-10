@@ -280,6 +280,7 @@ function update(dt){
     if(st==='zirkus') env.arms=0.3; // r19: Pfoten zum Jonglieren seitlich vorgestreckt
     if(st==='menu'){ var ph=(t%7); env.wave=ph<2.2?1:0; env.armR=ph<2.2?1:0; }
     if(st==='finish-done' && S.finaleEnv) S.finaleEnv(env);
+    if(S.poseEnv) S.poseEnv(env,st);   // r22: Begrüßung (Winken ab Herz 1)
     Art.updateBear(live,dt,env);
   }
   if(st==='finish-done' && S.updateFinale) S.updateFinale(dt);

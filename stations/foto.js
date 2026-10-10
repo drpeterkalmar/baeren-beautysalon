@@ -38,6 +38,7 @@ S.registerStation({
         lack:H.kopie(S.baer.lack), acc:H.kopie(S.baer.acc), sticker:H.kopie(S.baer.sticker),
         makeup:H.kopie(S.baer.makeup), gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft});
       while(S.album.length>4) S.album.shift();
+      if(window.BSKunden && window.BSKunden.foto) window.BSKunden.foto();   // r22: Foto zählt für die Freundschaft
       try{ localStorage.setItem('bs_album', JSON.stringify(S.album)); }catch(e){}
     },{big:1});
   },
