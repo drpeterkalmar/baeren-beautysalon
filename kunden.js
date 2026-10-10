@@ -6,6 +6,8 @@
 // Speicher `bs_freunde` (mit Version; kaputt/alt/leer → leer, nie Absturz).
 // E3: Sammelalbum (je Bär 5 Felder = ein Sticker je Herz → 37 × 5 = 185; Fotos 4 → 12) und Bild-Postkarte vom
 // letzten Kunden beim nächsten Start (ab Herz 3 mit Geschenk). Album-Bilder sind gecacht und werden beim Verlassen frei.
+// E4: Kitzeln (3 Tipper in 1,2 s → Kichern + Hüpfer), Haptik nur bei großen Momenten (≥ 1,5 s Abstand, ≤ 4 je Besuch),
+// Mini-Pokal nach dem Finale (meistgenutzte Stationsgruppe), Tageszeit als Licht im Raum, Gast des Tages mit Extra-Stempel.
 // Reine Teile (Parameter, Wunsch-/Kunden-Auswahl, Punkte, Herzen, Speicher) sind ohne Browser getestet: tests/unit/kunden.test.mjs.
 (function(){
 'use strict';
@@ -21,6 +23,7 @@ function now(){ return performance.now()/1000; }
 //   ?vorliebe=2   Faktor für Lieblings-Wunsch     ?geburtstag=3   Faktor am Geburtstag des Bären
 //   ?tag=JJJJMMTT Datum vorgeben (Prüfen von Geburtstag/Gast des Tages)
 //   ?album=12     Fotos im Album (4 = wie vor r22)   ?karte=0/1   Bild-Postkarte beim nächsten Start
+//   ?kitzel=0/1   Kitzeln   ?haptik=0/1   Vibration   ?pokal=0/1   Mini-Pokal   ?zeit=passend|tag|abend|nacht (tag = wie vor r22)
 K.liesParameter=function(q){
   q=String(q||'');
   function roh(k){ var m=new RegExp('[?&]'+k+'=([^&#]*)').exec(q); return m?decodeURIComponent(m[1]):null; }
@@ -43,7 +46,12 @@ K.liesParameter=function(q){
     geschenkAb: 3,          // ab diesem Herz bringt der Bär ein Geschenk mit
     winkenAb: 1, besteAb: 5,
     album: Math.round(zahl('album',12,4,24)),
-    karte: zahl('karte',1,0,1)>=0.5?1:0
+    karte: zahl('karte',1,0,1)>=0.5?1:0,
+    kitzel: zahl('kitzel',1,0,1)>=0.5?1:0, kitzelN:3, kitzelFenster:1.2, kitzelPause:2,
+    haptik: zahl('haptik',1,0,1)>=0.5?1:0, haptikAbstand:1.5, haptikMax:4,
+    haptikMuster: { tada:35, herz:[30,60,30], geschenk:40 },   // ms, keiner < 25 ms
+    pokal: zahl('pokal',1,0,1)>=0.5?1:0,
+    zeit: /^(passend|tag|abend|nacht)$/.test(roh('zeit')||'') ? roh('zeit') : 'passend'
   };
 };
 K.P=K.liesParameter((function(){ try{ return location.search||''; }catch(e){ return ''; } })());
@@ -121,9 +129,11 @@ K.lade=function(text){
     var ein={ p:isFinite(p)?Math.max(0,Math.min(K.deckel(),Math.round(p))):0, n:isFinite(n)?Math.max(0,Math.floor(n)):0, e:{} };
     if(e.e && typeof e.e==='object') ['duft','farbe','station'].forEach(function(x){ if(e.e[x]) ein.e[x]=1; });
     var kg=+e.k; if(isFinite(kg) && kg>0) ein.k=Math.min(999,Math.floor(kg));          // geöffnete Postkarten-Geschenke
+    var tg=+e.t; if(isFinite(tg) && tg>0) ein.t=Math.min(999,Math.floor(tg));          // Stempel „Gast des Tages“
     out.b[k]=ein;
   }
   if(typeof o.gb==='string' && /^\d{8}$/.test(o.gb)) out.gb=o.gb;   // Geburtstagskind heute schon da gewesen
+  if(typeof o.tg==='string' && /^\d{8}$/.test(o.tg)) out.tg=o.tg;   // Gast des Tages heute schon da gewesen
   var ka=o.karte; if(ka && typeof ka==='object' && Art.MODELS[ka.i] && isFinite(+ka.h)) out.karte={ i:ka.i|0, h:Math.max(0,Math.min(5,ka.h|0)), g:!!ka.g };
   return out;
 };
@@ -160,11 +170,63 @@ K.albumStand=function(store){
 };
 K.gesamtHerzen=function(){ return K.albumStand().voll; };
 K.albumMax=function(){ return K.P.album; };
+// ---- E4 (rein): Kitzeln, Haptik-Taktgeber, Pokal, Tageszeit, Gast des Tages
+// Kitzeln: Zustand {taps:[], pause:0}; true, wenn N Tipper im Fenster liegen und keine Pause läuft
+K.kitzelSchritt=function(z,t,P){
+  P=P||K.P; z.taps=(z.taps||[]).filter(function(x){ return t-x<=P.kitzelFenster; }); z.taps.push(t);
+  if(t>=(z.pause||0) && z.taps.length>=P.kitzelN){ z.taps=[]; z.pause=t+P.kitzelPause; return true; }
+  return false;
+};
+// Haptik: Zustand {letzte:-1e9, n:0} je Besuch; liefert das Muster oder null (Abstand, Höchstzahl, Regler)
+K.haptikMuster=function(z,art,t,P){
+  P=P||K.P; if(!P.haptik) return null;
+  var m=P.haptikMuster[art]; if(m===undefined) return null;
+  if(t-(z.letzte===undefined?-1e9:z.letzte)<P.haptikAbstand || (z.n||0)>=P.haptikMax) return null;
+  z.letzte=t; z.n=(z.n||0)+1; return m;
+};
+// Pokal: 6 Sorten nach Stationsgruppen; die Gruppe mit den meisten Handlungen gewinnt, sonst die erste
+K.POKALE=[
+  {id:'schaum', icon:'🛁', name:'Schaum-Meister', farbe:'#9fd0f0', st:['waschen','foehnen','spa','massage']},
+  {id:'frisur', icon:'✂️', name:'Frisur-Profi',  farbe:'#f6b0c4', st:['schneiden','pfoten','makeup','parfum']},
+  {id:'glitzer',icon:'🎀', name:'Glitzer-Star',  farbe:'#d9b8f2', st:['schmuecken','zauber','geschenke','malbuch']},
+  {id:'party',  icon:'🪩', name:'Party-Star',    farbe:'#ffd27a', st:['tanz','disco','zirkus','karussell','ballon']},
+  {id:'nasch',  icon:'🍦', name:'Naschkatze',    farbe:'#ffc7a0', st:['eis','zuckerwatte','keks','geburtstag']},
+  {id:'foto',   icon:'📸', name:'Foto-Profi',    farbe:'#b9e3c6', st:['foto','aquarium']}
+];
+K.pokalWahl=function(aktionen){
+  aktionen=aktionen||{}; var best=K.POKALE[0], bs=-1;
+  K.POKALE.forEach(function(p){ var s=0; p.st.forEach(function(id){ s+=aktionen[id]||0; }); if(s>bs){ bs=s; best=p; } });
+  return best;
+};
+// Tageszeit: passend = nach der Uhr (7–17 Tag, 17–20 Abend, sonst Nacht)
+K.zeitStufe=function(param,stunde){
+  if(param==='tag'||param==='abend'||param==='nacht') return param;
+  return (stunde>=7 && stunde<17) ? 'tag' : (stunde>=17 && stunde<20) ? 'abend' : 'nacht';
+};
+K.ZEIT_TINT={ tag:null, abend:{c:'#ffc49a',a:0.42}, nacht:{c:'#8d9fd8',a:0.5} };
+// Gast des Tages: ein Modell je Datum (fest aus dem Datum)
+K.tagesgast=function(heute){ heute=heute||K.heute(); return K.hash('tagesgast|'+heute.key)%Art.MODELS.length; };
 K.store=K.lade((function(){ try{ return localStorage.getItem('bs_freunde'); }catch(e){ return null; } })());
 K.speichere=function(){ if(!K.P.freund) return; try{ localStorage.setItem('bs_freunde',JSON.stringify(K.store)); }catch(e){} };
 
 // ---------------------------------------------------------------- Besuch (Laufzeit)
-K.besuch=null; K.letzte=[]; K.moment=null;
+K.besuch=null; K.letzte=[]; K.moment=null; K.haptikZ={}; K.kitzelZ={}; K.vibLog=[];
+// Haptik (Android; iPhone-Safari kennt navigator.vibrate nicht → still): nur große Momente, Abstand, Höchstzahl je Besuch
+K.vibriere=function(art){
+  var m=K.haptikMuster(K.haptikZ,art,now()); if(m===null) return false;
+  K.vibLog.push([Math.round(now()*1000),art]);
+  try{ if(navigator && typeof navigator.vibrate==='function') navigator.vibrate(m); }catch(e){}
+  return true;
+};
+// Kitzeln (game.js meldet jedes Antippen eines Bären-Teils): 3 Tipper in 1,2 s → Kichern + Hüpfer, danach 2 s Pause
+S.kitzel=function(live,x,y){
+  if(!K.P.kitzel || !live || S.state==='finish-done') return false;
+  if(!K.kitzelSchritt(K.kitzelZ,now())) return false;
+  Art.react(live,'happy',1.4); sfx('kicher');
+  Fx.P.emit('heart',x,y-20,{n:6,speed:220,size:10,life:1.0,grav:-60,drag:1.6});
+  Fx.P.emit('twinkle',x,y-30,{n:4,speed:160,size:20,life:0.7,grav:0,drag:2});
+  return true;
+};
 // Geburtstagskind von heute (falls eines der Modelle heute Geburtstag hat und heute noch nicht da war)
 K.geburtstagskind=function(){
   if(!K.P.freund) return null;
@@ -175,8 +237,14 @@ K.geburtstagskind=function(){
 K.neuerBesuch=function(idx,opt){
   opt=opt||{};
   var frei=!K.an();                       // ?kunden=0: freies Spiel (nur Freundschaft zählt, keine Wünsche)
-  if(idx===undefined || idx===null || !Art.MODELS[idx]) idx=K.waehleKundeMit(Math.random,K.letzte,K.store,{geburtstag:K.geburtstagskind()});
+  var tgast=false;
+  if(idx===undefined || idx===null || !Art.MODELS[idx]){
+    var gk=K.geburtstagskind();
+    if(gk===null && K.P.freund && K.store.tg!==K.heute().key){ gk=K.tagesgast(); tgast=true; }   // erster Kunde des Tages
+    idx=K.waehleKundeMit(Math.random,K.letzte,K.store,{geburtstag:gk});
+  }
   K.letzte=[idx].concat(K.letzte.filter(function(x){ return x!==idx; })).slice(0,2);
+  K.haptikZ={};                            // Haptik-Höchstzahl gilt je Besuch
   if(!opt.behalten){ S.baer=S.H.neuerBaer(idx); S.save(); }
   var F=K.P.freund, herz=F?K.herzVon(idx):0, gb=F && K.istGeburtstag(idx);
   var vl=K.vorlieben(idx), n=Math.min(3,K.P.wunsch+(herz>=K.P.wunschPlusAb?1:0));
@@ -188,10 +256,12 @@ K.neuerBesuch=function(idx,opt){
   }
   K.besuch={ idx:idx, wuensche:w, erfuellt:{}, t:opt.schonDa?K.P.einlauf+0.3:0, da:!!opt.schonDa, fertig:false, aktionen:{},
     frei:frei, herz:herz, geburtstag:gb, liebling:F?vl.station:null, vorliebe:vl, renner:herz>=K.P.besteAb,
-    geschenk:(F && !frei && herz>=K.P.geschenkAb)?{offen:false}:null, foto:false, entdeckt:{}, punkte:0 };
+    geschenk:(F && !frei && herz>=K.P.geschenkAb)?{offen:false}:null, foto:false, entdeckt:{}, punkte:0,
+    tagesgast:tgast && !frei, haptik:{}, kitzel:{} };
   if(F){
     var e=K.eintrag(K.store,idx); e.n++;
     if(gb) K.store.gb=K.heute().key;
+    if(K.besuch.tagesgast){ K.store.tg=K.heute().key; e.t=(e.t||0)+1; }   // Extra-Stempel im Album
     punkte('besuch',{geburtstag:gb},true);
   }
   if(!frei) S.setState('kunde');
@@ -311,6 +381,7 @@ S.registerStation({
     if(t0<0.02 && B.t>=0.02 && !B.da) sfx('klingel');
     if(!B.da && B.t>=E){ B.da=true; if(S.baer) Art.react(S.baer,B.renner?'pop':'happy',B.renner?1.4:0.9); if(B.renner) sfx('boing'); }
     if(B.da && B.herzNeu && B.t>=E+0.6){ var hn=B.herzNeu; B.herzNeu=0; neuesHerz(hn); }
+    if(B.tagesgast && t0<E+0.7 && B.t>=E+0.7){ sfx('sparkle'); var kp=kopfPunkt(); Fx.P.emit('twinkle',kp[0],kp[1]-140,{n:8,speed:180,size:24,life:0.9,grav:0,drag:2}); }
     if(t0<E+0.15 && B.t>=E+0.15) sfx('pop',{pitch:1.2});
     // beste Freunde: Herzchen-Spur beim Anrennen
     if(B.renner && B.t<E && Math.random()<dt*20 && window.BSGame){ var k=kopfPunkt(), q=Math.min(1,B.t/E);
@@ -398,6 +469,7 @@ function zeichneBlase(g,sc){
     herzReihe(g,G.cx,hy,hr,K.punkteVon(B.idx));
     if(B.geburtstag){ g.font=Math.round(G.r*0.9)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
       g.fillText('🎂',G.cx+G.w/2+G.r*0.2,hy-4+Math.sin(t*5)*3); }
+    if(B.tagesgast) Art.drawSticker(g,'stern',G.cx-G.w/2-G.r*0.1,hy-2,G.r*0.42*(1+0.08*Math.sin(t*4)),'#ffcf4a');   // Gast des Tages
   }
   g.restore();
 }
@@ -534,7 +606,7 @@ K.zeichneAlbum=function(g,L){
     g.fillText(kennt?m.name:'?',bx+q.w/2,by+q.kh-11,q.w-8);
     // entdeckte Vorlieben + Postkarten-Geschenke klein oben
     if(kennt && e){ var V=K.vorlieben(j), ic=[]; if(e.e.station){ var st=K.station(V.station); if(st) ic.push(st.icon); } if(e.e.duft) ic.push(Art.DUFTE[V.duft].icon);
-      if(e.k) ic.push('🎁'); g.font='13px sans-serif'; g.textAlign='left'; ic.forEach(function(c,ii){ g.fillText(c,bx+5,by+12+ii*16); });
+      if(e.k) ic.push('🎁'); if(e.t) ic.push('🌟'); g.font='13px sans-serif'; g.textAlign='left'; ic.forEach(function(c,ii){ g.fillText(c,bx+5,by+12+ii*16); });
       if(e.e.farbe){ g.fillStyle=V.farbe; g.beginPath(); g.arc(bx+q.w-11,by+12,6,0,Math.PI*2); g.fill(); } }
     if(best) Art.drawSticker(g,'stern',bx+q.w-12,by+q.kh*0.55,9+Math.sin(t*3+j)*1,'#ffcf4a');
   }
@@ -643,9 +715,42 @@ var origFinale=S.startFinale;
 S.startFinale=function(){
   var B=K.besuch;
   if(B && !B.fertig){ punkte('finale',{geburtstag:B.geburtstag},true); B.fertig=true;
+    B.pokal=K.P.pokal ? K.pokalWahl(B.aktionen) : null;
     if(K.P.karte && K.P.freund){ var hz=K.herzVon(B.idx); K.store.karte={ i:B.idx, h:hz, g:hz>=K.P.geschenkAb }; K.speichere(); } }   // Postkarte für den nächsten Start
   return origFinale.apply(this,arguments);
 };
+var origFinUpd=S.updateFinale;
+S.updateFinale=function(dt){
+  var r=origFinUpd.apply(this,arguments), F=S.fin, B=K.besuch;
+  if(F && F.fired && F.fired.tada && !F._vib){ F._vib=1; K.vibriere('tada'); }
+  if(F && B && B.pokal && !F._pokal && F.t>=K.POKAL_T){ F._pokal=1; sfx('ding',{i:2}); sfx('sparkle',{delay:0.1}); }
+  return r;
+};
+K.POKAL_T=S.FIN.star+0.95;   // nach den drei Sternen, vor den Knöpfen
+// Mini-Pokal im Finale (ui.js drawFinale): goldener Becher mit dem Symbol der Gruppe, gegenüber dem Vorher-Polaroid
+K.zeichnePokal=function(g,L,F){
+  var B=K.besuch; if(!B || !B.pokal || !F) return;
+  var q=Fx.seg(F.t,K.POKAL_T,K.POKAL_T+0.5); if(q<=0) return;
+  var P=B.pokal, t=now(), top=L.top.y, sc=Fx.ease.outBack(q), w=L.port?84:74;
+  var x=L.W-L.safe.r-14-w/2, y=top+(L.port?150:70)+w*0.6+(L.port?0:56);
+  g.save(); g.translate(x,y+Math.sin(t*2)*2); g.rotate(0.08); g.scale(sc,sc);
+  g.save(); g.globalCompositeOperation='lighter'; Fx.glow(g,0,-6,w*0.9,'#ffe6a0',0.55); g.restore();
+  // Becher: Schale, Henkel, Fuß (Gold-Verlauf)
+  var gr=g.createLinearGradient(-w/2,0,w/2,0); gr.addColorStop(0,'#e9b23a'); gr.addColorStop(0.45,'#ffe08a'); gr.addColorStop(1,'#d39a2a');
+  g.fillStyle=gr; g.strokeStyle='#b07a1c'; g.lineWidth=2.5;
+  g.beginPath(); g.moveTo(-w*0.38,-w*0.42); g.lineTo(w*0.38,-w*0.42); g.quadraticCurveTo(w*0.36,w*0.12,0,w*0.16); g.quadraticCurveTo(-w*0.36,w*0.12,-w*0.38,-w*0.42); g.closePath(); g.fill(); g.stroke();
+  g.lineWidth=5; g.strokeStyle='#e0a836';
+  g.beginPath(); g.arc(-w*0.38,-w*0.22,w*0.14,Math.PI*0.5,Math.PI*1.5); g.stroke();
+  g.beginPath(); g.arc(w*0.38,-w*0.22,w*0.14,-Math.PI*0.5,Math.PI*0.5); g.stroke();
+  g.fillStyle=gr; g.fillRect(-w*0.06,w*0.14,w*0.12,w*0.16); Fx.rr(g,-w*0.26,w*0.29,w*0.52,w*0.13,4); g.fill();
+  g.fillStyle=P.farbe; g.beginPath(); g.arc(0,-w*0.17,w*0.2,0,Math.PI*2); g.fill();
+  g.font=Math.round(w*0.26)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#000'; g.fillText(P.icon,0,-w*0.16);
+  g.font='800 '+(L.port?11:10)+'px system-ui,sans-serif'; g.lineWidth=4; g.strokeStyle='#ffffff'; g.strokeText(P.name,0,w*0.56); g.fillStyle='#6b3f4a'; g.fillText(P.name,0,w*0.56);
+  g.restore();
+};
+// Tageszeit: Licht im Raum (game.js backt das in den Raum-Cache; der Bär bleibt hell und freundlich)
+K.zeitJetzt=function(){ return K.zeitStufe(K.P.zeit,new Date().getHours()); };
+S.zeitTint=function(){ return K.ZEIT_TINT[K.zeitJetzt()]||null; };
 // großer Herz-Moment (neues Herz): Herz-Reihe ploppt über dem Kopf auf, 1,8 s, in jeder Station
 var origDraw=S.draw;
 S.draw=function(g){

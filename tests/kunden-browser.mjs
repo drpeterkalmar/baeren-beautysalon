@@ -80,6 +80,11 @@ try {
   if (werk) await tapAt(werk); else await tapWorld(450, 380);
   await page.evaluate(() => { const K = window.BSKunden; if (!K.besuch.erfuellt[window.BSSalon.state]) K.aktion(); });
   await run(250); await shot('erfuellt-' + w[0]);
+  // E4: Kitzeln – drei schnelle Tipper auf den Kopf
+  await run(1500);
+  const kopf = await page.evaluate(() => { const b = window.BSSalon.baer, G = b._geo || { cx: 450, cy: 348, s: 1.43 }; return window.BSGame.worldToScreen(G.cx, G.cy - 82 * G.s); });
+  for (let i = 0; i < 3; i++) { await page.touchscreen.tap(kopf[0], kopf[1]); await run(110); }
+  await run(120); await shot('kitzeln');
   await run(900);
   // eine nicht gewünschte Station über die Reiter: Leiste + Marken sichtbar
   const andere = await page.evaluate(() => { const K = window.BSKunden; return window.BSSalon.STATIONS.map(s => s.id).find(id => !K.besuch.wuensche.includes(id) && id !== 'finish' && id !== window.BSSalon.state); });
@@ -90,6 +95,7 @@ try {
   await run(300);
   await tapBtn('^💭$'); await run(900); await shot('fertig-station');
   await tapBtn('Fertig!'); await run(5600); await shot('finale');
+  await run(1500); await shot('finale-pokal');
   await tapBtn('Nächster Kunde'); await run(1800); await shot('naechster-kunde');
   out.vibrate = await page.evaluate(() => window.__vib);
   out.windowErrors = await page.evaluate(() => window.__errors.slice());

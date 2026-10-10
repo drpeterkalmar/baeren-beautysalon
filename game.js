@@ -91,7 +91,8 @@ function roomPlan(){
   var x0=c.x-cxs/c.z, x1=c.x+(view.W-cxs)/c.z, y0=c.y-cys/c.z, y1=c.y+(view.H-cys)/c.z;
   var mx=(x1-x0)*0.14, my=(y1-y0)*0.14; x0-=mx; x1+=mx; y0-=my; y1+=my;
   var k=c.z*view.dpr;
-  var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'');
+  var zt=S.zeitTint?S.zeitTint():null;
+  var key=[x0,y0,x1,y1,k*100].map(Math.round).join(',')+'|'+Fx.Q.tier+(Fx.DEKO?'|'+(Fx.RMver||0)+'|'+(Room.ver||0):'')+(zt?'|'+zt.c:'');
   var pw=(x1-x0)*k, ph=(y1-y0)*k, maxPx=[1.6e6,2.5e6,2.5e6][Fx.Q.tier]; // r21 (Audit #5): höchstens 2,5 MP (Handy hochkant DPR 2 ≈ 2,47 MP, greift nur auf Tablets)
   if(pw*ph>maxPx){ var f=Math.sqrt(maxPx/(pw*ph)); k*=f; pw*=f; ph*=f; }
   return {key:key,c:c,cxs:cxs,cys:cys,x0:x0,y0:y0,x1:x1,y1:y1,k:k,pw:pw,ph:ph};
@@ -105,6 +106,9 @@ function roomGrade(rg,P){ // r20: Grading (Vignette + Lichtschleier) einmal in d
   var c=P.c, k=P.k, gz=k/c.z;
   rg.setTransform(gz,0,0,gz,k*(c.x-P.x0)-gz*P.cxs,k*(c.y-P.y0)-gz*P.cys);
   Fx.gradingPaint(rg,view.W,view.H,P.cxs+(P.x0-c.x)*c.z,P.cys+(P.y0-c.y)*c.z,(P.x1-P.x0)*c.z,(P.y1-P.y0)*c.z);
+  var zt=S.zeitTint?S.zeitTint():null;   // r22: Tageszeit (Abend/Nacht) einmal mit in den Raum gebacken, kostet pro Bild nichts
+  if(zt){ rg.save(); rg.setTransform(1,0,0,1,0,0); rg.globalCompositeOperation='multiply'; rg.globalAlpha=zt.a; rg.fillStyle=zt.c;
+    rg.fillRect(0,0,rg.canvas.width,rg.canvas.height); rg.restore(); }
 }
 function roomCommit(cv,P){ room.cv=cv; room.key=P.key; room.x0=P.x0; room.y0=P.y0; room.ww=cv.width/P.k; room.wh=cv.height/P.k; }
 function ensureRoom(){
@@ -200,6 +204,7 @@ cv.addEventListener('pointerdown',function(e){
   var live=Art.liveBear;
   if(live && S.state!=='finish-done' && S.state!=='wahl'){
     var part=Art.poke(live,w[0],w[1],85);
+    if(part && S.kitzel) S.kitzel(live,w[0],w[1]);   // r22: 3 Tipper schnell hintereinander = Kichern
     if(part && PASSIV[S.state]){ Art.react(live,'pop',0.5); if(window.BSSfx) window.BSSfx.play('boing'); Fx.P.emit('heart',w[0],w[1]-10,{n:3,speed:160,size:9,life:0.9,grav:-60,drag:1.5}); }
   }
   S.tapBear(w[0],w[1]);

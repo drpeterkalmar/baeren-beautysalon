@@ -440,6 +440,7 @@ function drawFinale(g){
     Fx.glow(g,p[0],p[1],r*2.4,'#ffe6a0',0.6*qs);
     Art.drawSticker(g,'stern',p[0],p[1],r,'#ffcf4a');
   }
+  var KP=window.BSKunden; if(KP && KP.zeichnePokal) KP.zeichnePokal(g,L,F);   // r22: Mini-Pokal
   // Vorher-Polaroid fliegt in die Ecke
   var qp=Fx.seg(t,FIN.pola,FIN.pola+0.7);
   if(qp>0 && F.vorher){
