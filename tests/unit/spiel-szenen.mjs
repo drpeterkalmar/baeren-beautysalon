@@ -2,7 +2,7 @@
 // Stationen, deren Logik pro Bild aus game.js update() in die Stationen wandert (Haken frueh(dt)).
 // Referenz: tests/unit/fixtures/spiel-ref.json (spiel-ref.mjs), erzeugt vor dem Umzug (Commit 104268f).
 import crypto from 'node:crypto';
-import { load, go, ALL } from './harness.mjs';
+import { load, go, ALL, VOR_R22 } from './harness.mjs';
 
 const knopf = (S, re) => { const b = S.buttons.find((x) => re.test(x.label || '')); if (b) b.onTap(); };
 export const SPIEL = {
@@ -21,7 +21,7 @@ function digest(H) {
     eis: S.eis, watte: S.watte, mass: S.mass, dusche: S.dusche, foehn: S.foehn, parts: H.Fx.P.list.map((p) => [p.type, p.x, p.y]), state: S.state }, r4);
 }
 export function spieleSchleife(st, { frames = 300 } = {}) {
-  const H = load({ files: ALL, seed: 31, date: '2026-10-07T10:00:00' });
+  const H = load({ files: ALL, seed: 31, date: '2026-10-07T10:00:00', search: VOR_R22 });
   H.S.chooseBear(4);
   go(H, st);
   for (let i = 0; i < 20; i++) H.frame();

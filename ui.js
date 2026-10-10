@@ -30,7 +30,7 @@ UI.layout=function(view){
   L.tabs=null; L.tray=null; L.cta=null; L.grid=null;
   if(st==='menu'){
     L.title={x:0,y:top,w:W,h:P?150:86};
-    var ch=P?(2*66+16+24):(90);
+    var nCta=S.buttons.filter(function(b){ return !b.nav; }).length, ch=P?(Math.max(2,nCta)*66+16+24):(90);   // r22: bis 3 Knöpfe
     L.cta={x:sf.l+16,y:H-sf.b-ch,w:W-sf.l-sf.r-32,h:ch-16};
     L.vp={x:0,y:L.title.y+L.title.h-10,w:W,h:L.cta.y-(L.title.y+L.title.h-10)};
   } else if(st==='wahl'){
@@ -80,6 +80,7 @@ function layoutButtons(){
     if(b.nav==='home') b.r={x:L.top.x,y:y,w:56,h:56};
     else if(b.nav==='mute') b.r={x:L.top.x+L.top.w-56,y:y,w:56,h:56};
     else if(b.nav==='next') b.r={x:L.top.x+L.top.w-56-10-72,y:y,w:72,h:56};
+    else if(b.nav==='wunsch'){ var KW=window.BSKunden, lw=KW&&KW.leisteBreite?KW.leisteBreite():100; b.r={x:L.top.x,y:y+56+6,w:lw,h:48}; }   // r22
     b._zone='top';
   });
   // CTA (Menü / Finale)
@@ -259,7 +260,7 @@ UI.draw=function(g,view){
 };
 function drawButtons(g,zone,alpha,scaleFn){
   var B=S.buttons, t=now();
-  for(var i=0;i<B.length;i++){ var b=B[i]; if(!b.r||b._zone!==zone) continue;
+  for(var i=0;i<B.length;i++){ var b=B[i]; if(!b.r||b._zone!==zone||b.selbst) continue;
     var act=false; try{ act=!!(b.active&&b.active()); }catch(e){}
     var spr=b._zone==='tabs'?tabSprite(b,act):btnSprite(b,act);
     var sc=1, pt=b._tapT?t-b._tapT:9;
@@ -275,7 +276,7 @@ function drawButtons(g,zone,alpha,scaleFn){
 function drawStation(g){
   var T=L.tray, st=S.state, t=now();
   // Stations-Titel in der Kopfzeile
-  var sd=S.STATIONS.filter(function(s){ return s.id===st; })[0];
+  var sd=S.STATIONS.filter(function(s){ return s.id===st; })[0]||(S.TITEL&&S.TITEL[st]);
   if(sd){ var tt=sd.icon+' '+sd.name, key='title|'+tt+'|'+L.dpr;
     // zwischen Haus- und Weiter-Knopf zentriert
     var x0=L.top.x+56+10, x1=L.top.x+L.top.w-56-10-(S.buttons.some(function(b){ return b.nav==='next'; })?82:0);
@@ -283,6 +284,8 @@ function drawStation(g){
     if(tw>60){ var c=cached(key+'|'+tw,tw,44,function(g,w,h){ pill(g,w,h,22,'#fff6ee'); label(g,tt,w/2,h/2+1,'800 20px '+FONT,INK,w-20); });
       blit(g,c,x0+(x1-x0-tw)/2,L.top.y+6,tw,44); } }
   drawButtons(g,'top');
+  var KD=window.BSKunden;
+  if(KD && KD.zeichneLeiste && st!=='kunde') KD.zeichneLeiste(g,L);   // r22: Wunsch-Leiste unter dem Haus-Knopf
   if(T){
     if(L.port){ panel(g,{x:T.x,y:T.y,w:T.w,h:L.H-T.y},true,'rgba(255,246,238,0.96)'); }
     else { panel(g,{x:T.x,y:T.y,w:T.w+30,h:T.h+4},true,'rgba(255,246,238,0.95)'); }
@@ -308,6 +311,7 @@ function drawStation(g){
     }
     g.save(); g.beginPath(); g.rect(0,L.tabs.y,L.W,L.tabs.h); g.clip();
     drawButtons(g,'tabs');
+    if(KD && KD.reiterMarke) S.buttons.forEach(function(b){ if(b._zone==='tabs') KD.reiterMarke(g,b); });   // r22: Wunsch-Marken
     g.restore();
     if(L.tabMax>0){ // Scroll-Hinweis: sanfte Ränder
       var fg=g.createLinearGradient(0,0,26,0); fg.addColorStop(0,'rgba(255,240,230,0.95)'); fg.addColorStop(1,'rgba(255,240,230,0)');

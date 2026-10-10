@@ -40,6 +40,7 @@ var SND={
   sparkle:function(){ [1320,1660,1980,2640].forEach(function(f,i){ tone(f,f*1.01,0.18,'sine',0.08,i*0.05); }); },
   kiss:function(){ tone(900,1600,0.08,'sine',0.16); },
   pop:function(o){ var p=(o&&o.pitch)||1; tone(380*p,900*p,0.07,'sine',0.2); },
+  klingel:function(){ tone(1319,1319,0.55,'sine',0.13,0,0.004); tone(2638,2638,0.25,'sine',0.03); tone(1047,1047,0.8,'sine',0.13,0.3,0.004); tone(2094,2094,0.3,'sine',0.03,0.3); },  // r22 Türglocke
   chime:function(){ [880,1320,1760].forEach(function(f,i){ tone(f,f,0.9,'sine',0.1,i*0.06,0.01); }); },
   tada:function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,f,0.7,'triangle',0.13,i*0.07,0.01); }); },
   whoosh:function(){ noise(0.45,'bandpass',400,2400,1.2,0.22,0,0.12); },

@@ -81,11 +81,13 @@ const styleBear = (m) => page.evaluate((m) => {
 // ---------------------------------------------------------------- Flow über echte UI-Taps (C1.3)
 if (!only || only === 'flow') {
   await shot('01-menu'); await checkButtons('menu');
-  await tapBtn("/Los geht/.test(b.label)"); await W(900); await shot('02-wahl');
+  await tapBtn("/Los geht|Bären einladen/.test(b.label)"); await W(900); await shot('02-wahl');   // r22: Kunden-Menü
   if (doFps) await fps('wahl', 5000);
   await page.evaluate(() => {}); // Kachel 0 antippen
   const p0 = await page.evaluate(() => { const G = window.BSUI.L.grid; return [G.x + 40, G.y + 50]; });
   await page.touchscreen.tap(p0[0], p0[1]); await W(1000);
+  if (await page.evaluate(() => window.BSSalon.state === 'kunde')) {   // r22: eingeladener Bär kommt als Kunde → Reiter „Waschen“
+    await W(1200); await shot('02b-kunde'); await checkButtons('kunde'); await tapBtn("b.tab==='waschen'"); await W(900); }
   await shot('03-waschen'); await checkButtons('waschen');
   // Waschen: Seife + rubbeln + Dusche
   await tapBtn("/Seife/.test(b.label)"); await W(300); await tapBtn("/Seife/.test(b.label)"); await W(500);

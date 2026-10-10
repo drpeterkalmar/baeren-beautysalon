@@ -751,7 +751,7 @@ function sweep(){
   for(var i=0;i<11;i++){ var q=i/10, x=v.x+v.w*(-0.02+q*1.04), y=v.y+v.h*(0.9-q*0.8)+(Math.random()-0.5)*v.h*0.1;
     Fx.P.emit('twinkle',x,y,{n:1,speed:24,size:15+Math.random()*12,life:0.32+q*0.5,grav:-24,drag:1,layer:'screen'}); }
 }
-var NOSTATION={menu:1,wahl:1,'finish-done':1};
+var NOSTATION={menu:1,wahl:1,'finish-done':1,kunde:1};   // r22: Kundenbesuch hat eigenen Auftritt (Hereinlaufen)
 var prevSt=null, hopT=-1, lastFinT=-1;
 
 // ---------------------------------------------------------------- pro Bild: kleine Effekte je Station (Partikel aus dem vorhandenen Pool)

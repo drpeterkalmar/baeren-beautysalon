@@ -60,7 +60,10 @@ Art.DUFTE = [
   {name:'Wald', icon:'🌲', c:'#4a8860'}
 ];
 
-S.state = 'menu';          // menu | wahl | station-<id> | finish-done
+// r22: Kopfzeilen-Titel für Zustände außerhalb der Stationsliste (Kundenbesuch, Album)
+S.TITEL = {kunde:{icon:'🔔', name:'Besuch!'}};
+
+S.state = 'menu';          // menu | wahl | station-<id> | finish-done | kunde (r22)
 S.eis = null; S.fotoRahmen = 0; S.fotoBadge = false; S.flash = 0; S.rainbow = 0;
 S.tanz = null; S.zirkus = null; S.album = [];
 S.baer = neuerBaer(0);
@@ -142,7 +145,9 @@ S.buildUI = function(){
     S.menuBaer = Object.assign(mb, {breath:0});
   } else if(st!=='wahl'){ S.flash=0; }
   if(S._prev!==st){ var alt=S._prev; S._prev = st; if(alt!==undefined) wechsel(alt, st); }
+  var KB=window.BSKunden, kunden=!!(KB && KB.an());   // r22: Kundenbesuche (kunden.js, ?kunden=0 = wie vorher)
   if(st==='menu'){
+    if(kunden){ KB.menuKnoepfe(btn); return; }
     if(S.saved && S.saved.fell){
       btn(230,458,440,64,'🧸 Weiter mit meinem Bären',function(){ S.setState('waschen'); },{big:1,cta:1,primary:1});
       btn(230,534,440,64,'🌟 Neuen Bären wählen',function(){ S.setState('wahl'); },{big:1,cta:1});
@@ -157,6 +162,12 @@ S.buildUI = function(){
   }
   if(st==='finish-done'){
     btn(16,16,120,56,'🏠',function(){ S.fin=null; S.setState('menu'); },{nav:'home'});
+    if(kunden){
+      btn(150,518,280,62,'🔔 Nächster Kunde',function(){ S.fin=null; KB.neuerBesuch(); },{big:1,cta:1,finCta:1,primary:1});
+      btn(470,518,280,62,'🔄 Nochmal',function(){ S.fin=null;
+        if(KB.besuch) KB.neuerBesuch(S.baer.fellIdx,{schonDa:true}); else { S.baer=neuerBaer(S.baer.fellIdx); S.setState('waschen'); } },{big:1,cta:1,finCta:1});
+      return;
+    }
     btn(150,518,280,62,'🐻 Neuer Bär',function(){ S.fin=null; S.setState('wahl'); },{big:1,cta:1,finCta:1});
     btn(470,518,280,62,'🔄 Nochmal',function(){ S.fin=null; S.baer=neuerBaer(S.baer.fellIdx); S.setState('waschen'); },{big:1,cta:1,finCta:1,primary:1});
     return;

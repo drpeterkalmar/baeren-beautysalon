@@ -169,6 +169,9 @@ export function load(opt = {}) {
   return H;
 }
 
+// r22: alle neuen Mechaniken aus (Regler 0) = Verhalten vor r22 — für Vergleiche mit Referenzen von früheren Ständen
+export const VOR_R22 = '?kunden=0';
+
 // Zustand setzen wie ein Knopfdruck in der Stations-Leiste
 export function go(H, st) { H.S.state = st; H.S.buildUI(); }
 // alle Stations-IDs (24)
