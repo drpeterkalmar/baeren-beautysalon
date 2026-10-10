@@ -61,9 +61,9 @@ Art.DUFTE = [
 ];
 
 // r22: Kopfzeilen-Titel für Zustände außerhalb der Stationsliste (Kundenbesuch, Album)
-S.TITEL = {kunde:{icon:'🔔', name:'Besuch!'}};
+S.TITEL = {kunde:{icon:'🔔', name:'Besuch!'}, album:{icon:'📖', name:'Album'}};
 
-S.state = 'menu';          // menu | wahl | station-<id> | finish-done | kunde (r22)
+S.state = 'menu';          // menu | wahl | station-<id> | finish-done | kunde, album (r22)
 S.eis = null; S.fotoRahmen = 0; S.fotoBadge = false; S.flash = 0; S.rainbow = 0;
 S.tanz = null; S.zirkus = null; S.album = [];
 S.baer = neuerBaer(0);
@@ -222,7 +222,7 @@ S.draw = function(g){
   var W=S.VW,H=S.VH;
   drawDeko(g);
   if(S.state==='menu'){ drawSchmetterlinge(g); Art.drawBear(g,S.menuBaer||S.baer,{w:W,h:H}); return; }
-  if(S.state==='wahl') return;
+  if(S.state==='wahl' || S.state==='album') return;   // r22: Album zeichnet nur ui.js
   if(S.state==='finish-done'){ drawFinaleWelt(g); return; }
   // Duft-Wolken im Stations-Screen
   if(S.baer && S.baer.duft!==null && S.baer.duft!==undefined) drawDuftWolken(g);

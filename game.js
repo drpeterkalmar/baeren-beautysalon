@@ -44,7 +44,7 @@ var FOCUS={ _def:[205,15,695,655], menu:[190,-20,710,660], 'finish-done':[150,-7
   geburtstag:[190,15,810,655], eis:[205,15,770,655], geschenke:[205,15,820,655], keks:[110,15,850,655],
   zuckerwatte:[190,15,760,655], ballon:[205,-40,860,655], zauber:[205,-40,760,655], karussell:[150,20,760,665],
   malbuch:[190,70,710,450], foto:[190,25,710,655], disco:[190,15,710,655],
-  zirkus:[170,-20,730,655], tanz:[190,-30,710,655], wahl:[205,15,695,655] };
+  zirkus:[170,-20,730,655], tanz:[190,-30,710,655], wahl:[205,15,695,655], album:[205,15,695,655] };
 S.focusRect=function(st){ if(st==='aquarium' && S.aquaFocus) return S.aquaFocus(); if(S.FOKUS && S.FOKUS[st]) return S.FOKUS[st](); return FOCUS[st]||FOCUS._def; }; // r19: Aquarium je Orientierung, r22: S.FOKUS (Kundenbesuch)
 function camTarget(){
   var fr=S.focusRect(S.state), v=UI.L.vp, fw=fr[2]-fr[0], fh=fr[3]-fr[1];

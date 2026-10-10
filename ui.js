@@ -33,7 +33,7 @@ UI.layout=function(view){
     var nCta=S.buttons.filter(function(b){ return !b.nav; }).length, ch=P?(Math.max(2,nCta)*66+16+24):(90);   // r22: bis 3 Knöpfe
     L.cta={x:sf.l+16,y:H-sf.b-ch,w:W-sf.l-sf.r-32,h:ch-16};
     L.vp={x:0,y:L.title.y+L.title.h-10,w:W,h:L.cta.y-(L.title.y+L.title.h-10)};
-  } else if(st==='wahl'){
+  } else if(st==='wahl' || st==='album'){   // r22: Album hat dasselbe Raster-Layout wie die Bärenwahl
     L.grid={x:sf.l+12,y:top+70,w:W-sf.l-sf.r-24,h:H-sf.b-(top+70)};
     L.vp={x:0,y:top+64,w:W,h:H-top-64};
   } else if(st==='finish-done'){
@@ -80,6 +80,7 @@ function layoutButtons(){
     if(b.nav==='home') b.r={x:L.top.x,y:y,w:56,h:56};
     else if(b.nav==='mute') b.r={x:L.top.x+L.top.w-56,y:y,w:56,h:56};
     else if(b.nav==='next') b.r={x:L.top.x+L.top.w-56-10-72,y:y,w:72,h:56};
+    else if(b.nav==='album') b.r=L.port?{x:L.top.x+L.top.w-56,y:y+66,w:56,h:56}:{x:L.top.x+L.top.w-56-10-56,y:y,w:56,h:56};   // r22 Menü
     else if(b.nav==='wunsch'){ var KW=window.BSKunden, lw=KW&&KW.leisteBreite?KW.leisteBreite():100; b.r={x:L.top.x,y:y+56+6,w:lw,h:48}; }   // r22
     b._zone='top';
   });
@@ -139,7 +140,8 @@ function hitButton(x,y){
 function finaleUI(){ return S.state!=='finish-done' || (S.fin && S.fin.t>=S.FIN.cta); }
 UI.down=function(x,y){
   press=null; drag=null; moved=false; sx=x; sy=y;
-  var st=S.state;
+  var st=S.state, KU=window.BSKunden;
+  if(KU && KU.karteOffen && KU.karteOffen()){ KU.karteTipp(); return true; }   // r22: Postkarte liegt über dem Menü
   if(st==='finish-done' && !finaleUI()) return false;
   var b=hitButton(x,y);
   if(b){ press={b:b,t:now()}; if(b.hold){ S.foehn=true; }
@@ -147,6 +149,7 @@ UI.down=function(x,y){
     else if(b._zone==='tray' && trayMax>0) drag={kind:'tray',s0:trayScroll};
     return true; }
   if(st==='wahl'){ if(inR(L.grid,x,y)) drag={kind:'grid',s0:gridScroll}; return true; }
+  if(st==='album'){ if(inR(L.grid,x,y)) drag={kind:'album',s0:KU.albumScroll}; return true; }
   if(L.tabs && inR(L.tabs,x,y)){ drag={kind:'tabs',s0:tabScroll}; return true; }
   if(L.tray && inR(L.tray,x,y)){ drag={kind:'tray',s0:trayScroll}; return true; }
   if(inR(L.cta,x,y) && S.buttons.some(function(q){ return q._zone==='cta'; })) return true;
@@ -160,6 +163,7 @@ UI.move=function(x,y){
     if(drag.kind==='tabs'){ tabScroll=Fx.clamp(drag.s0-dx,0,L.tabMax||0); tabTarget=null; }
     else if(drag.kind==='tray') trayScroll=Fx.clamp(drag.s0-dy,0,trayMax);
     else if(drag.kind==='grid') gridScroll=Fx.clamp(drag.s0-dy,0,gridMax);
+    else if(drag.kind==='album') window.BSKunden.albumZiehen(drag.s0,dy);
     refreshScrolls();
   }
   return true;
@@ -253,6 +257,7 @@ UI.draw=function(g,view){
   g.save(); g.setTransform(view.dpr,0,0,view.dpr,0,0);
   var st=S.state;
   if(st==='wahl') drawWahl(g);
+  else if(st==='album') drawAlbum(g);
   else if(st==='menu') drawMenu(g);
   else if(st==='finish-done') drawFinale(g);
   else drawStation(g);
@@ -343,11 +348,24 @@ function drawMenu(g){
     g.drawImage(tw,L.W*(0.18+i*0.21)-s/2,R.y+R.h*(0.2+0.5*((i*37)%10)/10)-s/2,s,s); }
   g.globalAlpha=1;
   drawButtons(g,'top'); drawButtons(g,'cta');
+  var KM=window.BSKunden;
+  if(KM && KM.P.freund){ // r22: Herzen im Menü – Summe aller Freundschafts-Herzen am Album-Knopf
+    var ab=S.buttons.filter(function(b){ return b.nav==='album' && b.r; })[0], hz=KM.gesamtHerzen();
+    if(ab && hz>0){ var bx=ab.r.x+ab.r.w-4, by=ab.r.y+ab.r.h-6; Art.drawSticker(g,'herz',bx,by,13,'#f0607e');
+      g.font='800 11px '+FONT; g.fillStyle='#ffffff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(String(hz),bx,by+1); } }
   // Versions-Kennung (klein, oben links, frei von Knöpfen und Titel) — "alte Optik" bei ?deko=0
   g.font='600 10.5px '+FONT; g.fillStyle='rgba(107,63,74,0.5)'; g.textAlign='left'; g.textBaseline='alphabetic';
   g.fillText('v'+(window.BS_VERSION||'')+(Fx.DEKO?'':' · alte Optik'),L.safe.l+10,L.safe.t+16);
+  if(KM && KM.zeichneKarte) KM.zeichneKarte(g,L);   // r22: Bild-Postkarte vom letzten Kunden
 }
 
+// ---- r22 Sammelalbum (Inhalt aus kunden.js)
+function drawAlbum(g){
+  var c=cached('albumTitle|'+L.W+'|'+L.dpr,Math.min(L.W-150,220),46,function(g,w,h){ pill(g,w,h,23,'#fff6ee'); label(g,'📖 Album',w/2,h/2+1,'800 19px '+FONT,INK,w-20); });
+  var tw0=Math.min(L.W-150,220); blit(g,c,(L.W-tw0)/2,L.top.y+5,tw0,46);
+  window.BSKunden.zeichneAlbum(g,L);
+  drawButtons(g,'top');
+}
 // ---- Bären-Wahl
 var built=0;
 function gridGeom(){

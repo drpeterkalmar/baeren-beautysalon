@@ -58,6 +58,13 @@ try {
   const tapWorld = async (x, y) => { const p = await page.evaluate(([x, y]) => window.BSGame.worldToScreen(x, y), [x, y]); await tapAt(p); };
 
   await shot('menu');
+  if (process.argv.includes('--karte')) {   // E3: Postkarte liegt beim Start über dem Menü
+    await run(600); await shot('karte'); await tapAt([200, 400]); await run(700); await shot('karte-geschenk'); await tapAt([200, 400]); await run(700); await shot('karte-weg'); }
+  if (process.argv.includes('--album')) {   // E3: Album über den 📖-Knopf, scrollen, zurück
+    await tapBtn('📖'); await run(2500); await shot('album');
+    await page.evaluate(() => window.BSKunden.albumZiehen(0, -window.BSUI.L.H * 0.8)); await run(1500); await shot('album-bären');
+    await page.evaluate(() => window.BSKunden.albumZiehen(0, -1e5)); await run(1500); await shot('album-ende');
+    await tapBtn('🏠'); await run(600); }
   if (process.argv.includes('--wahl')) { await tapBtn('Bären einladen'); await run(1500); await shot('wahl'); await tapBtn('^home$|🏠'); await run(600); }
   await tapBtn('Kunde kommt');
   for (const ms of [250, 300, 300]) { await run(ms); await shot('einlauf'); }

@@ -36,13 +36,14 @@ test('Wünsche: n verschiedene Stationen, nie „Fertig!“, „zuerst“ steht 
   assert.equal(g[0], 'geburtstag'); assert.equal(new Set(g).size, 3);
 });
 
-test('Kunde: nie die Überraschungs-Kachel, nicht einer der letzten zwei', () => {
+test('Kunde: alle 37 Modelle möglich (Album 37 × 5), nicht einer der letzten zwei', () => {
   const H = load({ files: ALL, seed: 1 });
-  const K = H.ctx.BSKunden, rnd = K.zufall(3);
-  for (let i = 0; i < 500; i++) {
-    const k = K.waehleKunde(rnd, [4, 9]);
-    assert.ok(k >= 0 && k < H.Art.MODELS.length - 1 && k !== 4 && k !== 9, String(k));
+  const K = H.ctx.BSKunden, rnd = K.zufall(3), seen = new Set();
+  for (let i = 0; i < 2000; i++) {
+    const k = K.waehleKunde(rnd, [4, 9]); seen.add(k);
+    assert.ok(k >= 0 && k < H.Art.MODELS.length && k !== 4 && k !== 9, String(k));
   }
+  assert.equal(seen.size, H.Art.MODELS.length - 2);
 });
 
 test('Menü (Standard): „Kunde kommt!“ zuerst, „Bären einladen“ bleibt; ?kunden=0 = altes Menü', () => {

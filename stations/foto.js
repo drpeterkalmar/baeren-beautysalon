@@ -37,7 +37,8 @@ S.registerStation({
         rahmen: S.fotoRahmen||0,
         lack:H.kopie(S.baer.lack), acc:H.kopie(S.baer.acc), sticker:H.kopie(S.baer.sticker),
         makeup:H.kopie(S.baer.makeup), gurkeL:S.baer.gurkeL, gurkeR:S.baer.gurkeR, duft:S.baer.duft});
-      while(S.album.length>4) S.album.shift();
+      var KA=window.BSKunden, maxF=KA&&KA.albumMax?KA.albumMax():4;           // r22: Album mit 12 Fotos (?album=4 = wie vorher)
+      while(S.album.length>maxF) S.album.shift();
       if(window.BSKunden && window.BSKunden.foto) window.BSKunden.foto();   // r22: Foto zählt für die Freundschaft
       try{ localStorage.setItem('bs_album', JSON.stringify(S.album)); }catch(e){}
     },{big:1});

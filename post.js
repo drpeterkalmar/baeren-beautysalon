@@ -77,7 +77,7 @@ PO.GRADE={
   geburtstag: { lift:[0.008,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.96],   sat:1.04, kon:1.03, bloom:0.65, tint:[1,0.86,0.66],  vign:0.6 },
   finale:     { lift:[0.006,0.003,0],     gamma:[1,1,0.99],       gain:[1.02,1.0,0.955],  sat:1.05, kon:1.04, bloom:0.75,  tint:[1,0.9,0.7],    vign:0.6 }
 };
-var STIMMUNG={ menu:'menu', wahl:'menu', aquarium:'aquarium', spa:'spa', massage:'spa', disco:'disco', tanz:'disco',
+var STIMMUNG={ menu:'menu', wahl:'menu', album:'menu', aquarium:'aquarium', spa:'spa', massage:'spa', disco:'disco', tanz:'disco',
   zauber:'zauber', geburtstag:'geburtstag', 'finish-done':'finale' };
 PO.stimmung=function(state){ return STIMMUNG[state]||'salon'; };
 var SKALAR=['sat','kon','bloom','vign'], VEK=['lift','gamma','gain','tint'];

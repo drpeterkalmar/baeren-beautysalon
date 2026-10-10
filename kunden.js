@@ -4,6 +4,8 @@
 // Alle Regler stehen in EINER Parametergruppe K.P (aus der Adresse); Regler 0 = Verhalten vor r22.
 // E2: Freundschaft je Bärenmodell (5 Herzen, nur Zuwachs, kein Verfall), Vorlieben, Schwellen-Belohnungen, Geburtstag,
 // Speicher `bs_freunde` (mit Version; kaputt/alt/leer → leer, nie Absturz).
+// E3: Sammelalbum (je Bär 5 Felder = ein Sticker je Herz → 37 × 5 = 185; Fotos 4 → 12) und Bild-Postkarte vom
+// letzten Kunden beim nächsten Start (ab Herz 3 mit Geschenk). Album-Bilder sind gecacht und werden beim Verlassen frei.
 // Reine Teile (Parameter, Wunsch-/Kunden-Auswahl, Punkte, Herzen, Speicher) sind ohne Browser getestet: tests/unit/kunden.test.mjs.
 (function(){
 'use strict';
@@ -18,6 +20,7 @@ function now(){ return performance.now()/1000; }
 //   ?freund=0/1   Freundschafts-Herzen je Bär     ?herz=20   Punkte je Herz (5 Herzen)
 //   ?vorliebe=2   Faktor für Lieblings-Wunsch     ?geburtstag=3   Faktor am Geburtstag des Bären
 //   ?tag=JJJJMMTT Datum vorgeben (Prüfen von Geburtstag/Gast des Tages)
+//   ?album=12     Fotos im Album (4 = wie vor r22)   ?karte=0/1   Bild-Postkarte beim nächsten Start
 K.liesParameter=function(q){
   q=String(q||'');
   function roh(k){ var m=new RegExp('[?&]'+k+'=([^&#]*)').exec(q); return m?decodeURIComponent(m[1]):null; }
@@ -38,7 +41,9 @@ K.liesParameter=function(q){
     wieder: 0.5,            // Anteil Stammkunden: bekannter Bär kommt wieder (sonst ein neuer)
     wunschPlusAb: 3,        // ab diesem Herz ein Wunsch mehr
     geschenkAb: 3,          // ab diesem Herz bringt der Bär ein Geschenk mit
-    winkenAb: 1, besteAb: 5
+    winkenAb: 1, besteAb: 5,
+    album: Math.round(zahl('album',12,4,24)),
+    karte: zahl('karte',1,0,1)>=0.5?1:0
   };
 };
 K.P=K.liesParameter((function(){ try{ return location.search||''; }catch(e){ return ''; } })());
@@ -61,8 +66,9 @@ K.wuensche=function(n,rnd,opt){
   while(out.length<n && pool.length){ out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]); }
   return out;
 };
-// Kunde wählen: zufälliges Modell (ohne die „Überraschung?“-Kachel), nicht einer der zuletzt da gewesenen
-K.KUNDEN_ANZAHL=Art.MODELS.length-1;
+// Kunde wählen: zufälliges Modell, nicht einer der zuletzt da gewesenen. Alle 37 Modelle können kommen (auch der
+// Fragezeichen-Bär, dessen Kachel in der Bärenwahl „Überraschung?“ heißt) — so passt das Album mit 37 × 5 Feldern.
+K.KUNDEN_ANZAHL=Art.MODELS.length;
 K.waehleKunde=function(rnd,letzte){
   rnd=rnd||Math.random; letzte=letzte||[];
   var pool=[]; for(var i=0;i<K.KUNDEN_ANZAHL;i++) if(letzte.indexOf(i)<0) pool.push(i);
@@ -114,9 +120,11 @@ K.lade=function(text){
     var p=+e.p, n=+e.n;
     var ein={ p:isFinite(p)?Math.max(0,Math.min(K.deckel(),Math.round(p))):0, n:isFinite(n)?Math.max(0,Math.floor(n)):0, e:{} };
     if(e.e && typeof e.e==='object') ['duft','farbe','station'].forEach(function(x){ if(e.e[x]) ein.e[x]=1; });
+    var kg=+e.k; if(isFinite(kg) && kg>0) ein.k=Math.min(999,Math.floor(kg));          // geöffnete Postkarten-Geschenke
     out.b[k]=ein;
   }
   if(typeof o.gb==='string' && /^\d{8}$/.test(o.gb)) out.gb=o.gb;   // Geburtstagskind heute schon da gewesen
+  var ka=o.karte; if(ka && typeof ka==='object' && Art.MODELS[ka.i] && isFinite(+ka.h)) out.karte={ i:ka.i|0, h:Math.max(0,Math.min(5,ka.h|0)), g:!!ka.g };
   return out;
 };
 K.eintrag=function(store,idx){
@@ -144,6 +152,14 @@ K.waehleKundeMit=function(rnd,letzte,store,opt){
   }
   return K.waehleKunde(rnd,letzte);
 };
+// Sammelalbum: je Bär so viele Sticker wie Herzen (5 Felder) → 185 Felder; „kennengelernt“ = mindestens ein Besuch
+K.albumStand=function(store){
+  store=store||K.store; var voll=0, kennen=0, beste=0;
+  Art.MODELS.forEach(function(m){ var e=store.b[m.name]; if(!e) return; if(e.n>0) kennen++; var h=K.herzen(e.p); voll+=h; if(h>=K.P.herzen) beste++; });
+  return { voll:voll, felder:Art.MODELS.length*K.P.herzen, kennen:kennen, baeren:Art.MODELS.length, beste:beste };
+};
+K.gesamtHerzen=function(){ return K.albumStand().voll; };
+K.albumMax=function(){ return K.P.album; };
 K.store=K.lade((function(){ try{ return localStorage.getItem('bs_freunde'); }catch(e){ return null; } })());
 K.speichere=function(){ if(!K.P.freund) return; try{ localStorage.setItem('bs_freunde',JSON.stringify(K.store)); }catch(e){} };
 
@@ -441,6 +457,136 @@ K.reiterMarke=function(g,b){
   else { var p=1+0.12*Math.sin(now()*5); Art.drawSticker(g,'herz',x,y,8*p,'#f2837a'); }
 };
 
+// ---------------------------------------------------------------- Sammelalbum (Zustand 'album', Bildschirm-Koordinaten)
+K.albumScroll=0; K.albumMaxScroll=0;
+var fotoCache={}, fotoKeys=[], silh=null;
+function fotoBild(p,px){
+  var key=JSON.stringify(p)+'|'+px; if(fotoCache[key]) return fotoCache[key];
+  var mod=Art.MODELS[p.fellIdx]||Art.MODELS[0];
+  var mini={ fellIdx:p.fellIdx|0, fell:mod.fell, haar:p.haar||Art.HAAR[0], frisur:p.frisur||'lockig', lack:p.lack||{}, schaum:0, tropfen:[], fluff:0,
+    makeup:(p.makeup && {rouge:p.makeup.rouge||null,lid:p.makeup.lid||null,gp:(p.makeup.gp||[]).slice(0,8)})||{rouge:null,lid:null,gp:[]},
+    acc:p.acc||{hut:null,schleife:null,brille:null,kette:null}, sticker:[], gurkeL:false, gurkeR:false, duft:null };
+  var c=Fx.canvas(px,px), g=c.getContext('2d'), U=px/560;
+  g.translate(px/2,px*0.6); g.scale(U,U); g.translate(-210,-243.6);
+  Art.drawBear(g,mini,{w:420,h:420});
+  fotoCache[key]=c; fotoKeys.push(key);
+  while(fotoKeys.length>K.P.album){ var alt=fotoKeys.shift(); delete fotoCache[alt]; }
+  return c;
+}
+function silhouette(px){
+  if(silh && silh.width===px) return silh;
+  var t=Art.thumb(0,px), c=Fx.canvas(px,px), g=c.getContext('2d');
+  g.drawImage(t,0,0); g.globalCompositeOperation='source-in'; g.fillStyle='#e6d6ca'; g.fillRect(0,0,px,px);
+  return (silh=c);
+}
+K.albumFrei=function(){ fotoCache={}; fotoKeys=[]; silh=null; };   // beim Verlassen des Albums: Speicher frei
+function albumGeo(L){
+  var G=L.grid, cols=L.port?3:6, gap=10, w=(G.w-gap*(cols-1))/cols;
+  return { G:G, cols:cols, gap:gap, w:w, ph:w*1.18, kh:w*1.32 };
+}
+K.zeichneAlbum=function(g,L){
+  if(!L.grid) return;
+  var q=albumGeo(L), G=q.G, d=L.dpr||1, t=now(), A=K.albumStand(), y=G.y-K.albumScroll, x0=G.x;
+  g.save(); g.beginPath(); g.rect(0,G.y-6,L.W,G.h+6); g.clip();
+  // Fortschritt: Sticker-Herz + Zahl, Bären-Kopf + Zahl (für Eltern lesbar, Kinder sehen die Felder)
+  g.font='800 17px system-ui,sans-serif'; g.textBaseline='middle'; g.textAlign='left'; g.fillStyle='#6b3f4a';
+  Art.drawSticker(g,'herz',x0+14,y+18,11,'#f0607e'); g.fillText(A.voll+' / '+A.felder,x0+32,y+19);
+  g.fillText('🐻 '+A.kennen+' / '+A.baeren,x0+G.w*0.5,y+19);
+  y+=44;
+  // Fotos: alle Plätze (leer = gestrichelt), neueste zuerst
+  var fotos=(S.album||[]).slice(-K.P.album).reverse(), nPl=K.P.album, built=0;
+  for(var i=0;i<nPl;i++){
+    var cx=i%q.cols, cy=Math.floor(i/q.cols), x=x0+cx*(q.w+q.gap), yy=y+cy*(q.ph+q.gap);
+    if(yy>G.y+G.h || yy+q.ph<G.y-6) continue;
+    var p=fotos[i];
+    if(!p){ g.save(); g.setLineDash([6,6]); g.strokeStyle='rgba(107,63,74,0.25)'; g.lineWidth=2; Fx.rr(g,x+3,yy+3,q.w-6,q.ph-6,10); g.stroke(); g.restore();
+      g.font='22px sans-serif'; g.textAlign='center'; g.globalAlpha=0.35; g.fillText('📸',x+q.w/2,yy+q.ph/2); g.globalAlpha=1; continue; }
+    g.save(); g.translate(x+q.w/2,yy+q.ph/2); g.rotate(((i*37)%7-3)*0.012);
+    g.shadowColor='rgba(80,40,40,0.25)'; g.shadowBlur=6; g.shadowOffsetY=2; g.fillStyle='#fffdf8'; g.fillRect(-q.w/2+3,-q.ph/2+3,q.w-6,q.ph-6);
+    g.shadowBlur=0; g.shadowOffsetY=0;
+    var iw=q.w-16, px=Math.round(iw*d), key=JSON.stringify(p)+'|'+px;
+    g.fillStyle=['#fde8ef','#e8f4ff','#fff3d6'][p.rahmen|0]||'#fde8ef'; g.fillRect(-iw/2,-q.ph/2+8,iw,iw);
+    if(fotoCache[key] || built<1){ if(!fotoCache[key]) built++; g.drawImage(fotoBild(p,px),-iw/2,-q.ph/2+8,iw,iw); }
+    g.font='600 10px system-ui,sans-serif'; g.textAlign='center'; g.fillStyle='#8a6a5a'; g.fillText(p.datum||'',0,q.ph/2-12);
+    g.restore();
+  }
+  y+=Math.ceil(nPl/q.cols)*(q.ph+q.gap)+8;
+  // Bären: je 5 Sticker-Felder; unbekannte Bären als Schatten
+  var n=Art.MODELS.length, tpx=Math.round(q.w*0.8*d), tb=0;
+  for(var j=0;j<n;j++){
+    var bx=x0+(j%q.cols)*(q.w+q.gap), by=y+Math.floor(j/q.cols)*(q.kh+q.gap);
+    if(by>G.y+G.h || by+q.kh<G.y-6) continue;
+    var m=Art.MODELS[j], e=K.store.b[m.name], kennt=!!(e && e.n>0), hz=e?K.herzen(e.p):0, best=hz>=K.P.besteAb;
+    g.save(); g.shadowColor='rgba(110,50,50,0.18)'; g.shadowBlur=6; g.shadowOffsetY=2;
+    g.fillStyle=best?'#fff4cf':'#fffaf4'; Fx.rr(g,bx,by,q.w,q.kh,16); g.fill(); g.restore();
+    if(best){ g.strokeStyle='#f2c14e'; g.lineWidth=3; Fx.rr(g,bx+1.5,by+1.5,q.w-3,q.kh-3,15); g.stroke(); }
+    var tw=q.w*0.8, tx=bx+q.w*0.1, ty=by+4;
+    if(kennt){ if(Art.thumbReady(j,tpx) || tb<1){ if(!Art.thumbReady(j,tpx)) tb++; g.drawImage(Art.thumb(j,tpx),tx,ty,tw,tw); } }
+    else { g.globalAlpha=0.9; g.drawImage(silhouette(tpx),tx,ty,tw,tw); g.globalAlpha=1;
+      g.font='800 '+Math.round(tw*0.3)+'px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(107,63,74,0.35)'; g.fillText('?',tx+tw/2,ty+tw*0.55); }
+    // 5 Sticker-Felder
+    var sr=Math.max(5,q.w*0.065), sg=sr*2.5, sx0=bx+q.w/2-2*sg, sy=by+tw+sr+6;
+    for(var k=0;k<5;k++){
+      if(k<hz) Art.drawSticker(g,k===4?'stern':'herz',sx0+k*sg,sy,sr*(k===4?1.15:1),k===4?'#ffcf4a':'#f0607e');
+      else { g.strokeStyle='rgba(107,63,74,0.22)'; g.lineWidth=1.5; g.setLineDash([3,3]); g.beginPath(); g.arc(sx0+k*sg,sy,sr*0.9,0,Math.PI*2); g.stroke(); g.setLineDash([]); }
+    }
+    g.font='700 '+(q.w<110?10:11.5)+'px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#6b3f4a';
+    g.fillText(kennt?m.name:'?',bx+q.w/2,by+q.kh-11,q.w-8);
+    // entdeckte Vorlieben + Postkarten-Geschenke klein oben
+    if(kennt && e){ var V=K.vorlieben(j), ic=[]; if(e.e.station){ var st=K.station(V.station); if(st) ic.push(st.icon); } if(e.e.duft) ic.push(Art.DUFTE[V.duft].icon);
+      if(e.k) ic.push('🎁'); g.font='13px sans-serif'; g.textAlign='left'; ic.forEach(function(c,ii){ g.fillText(c,bx+5,by+12+ii*16); });
+      if(e.e.farbe){ g.fillStyle=V.farbe; g.beginPath(); g.arc(bx+q.w-11,by+12,6,0,Math.PI*2); g.fill(); } }
+    if(best) Art.drawSticker(g,'stern',bx+q.w-12,by+q.kh*0.55,9+Math.sin(t*3+j)*1,'#ffcf4a');
+  }
+  y+=Math.ceil(n/q.cols)*(q.kh+q.gap);
+  K.albumMaxScroll=Math.max(0,y+K.albumScroll-G.y-G.h+16);
+  g.restore();
+};
+K.albumZiehen=function(s0,dy){ K.albumScroll=Math.max(0,Math.min(K.albumMaxScroll,s0-dy)); };
+S.registerStation({ id:'album', build:function(){ S.hinweis=''; }, onLeave:function(){ K.albumFrei(); }, onEnter:function(){ K.albumScroll=0; } });
+
+// ---------------------------------------------------------------- Bild-Postkarte (Menü, beim nächsten Start)
+K.karte=(K.P.karte && K.P.freund && K.store.karte) ? {i:K.store.karte.i, h:K.store.karte.h, g:K.store.karte.g, t0:null, offen:false, weg:null} : null;
+K.karteOffen=function(){ return !!K.karte && S.state==='menu'; };
+K.karteTipp=function(){
+  var C=K.karte; if(!C) return;
+  var G=window.BSGame, L=window.BSUI && window.BSUI.L;
+  if(C.weg) return;
+  if(C.g && !C.offen){
+    C.offen=now(); sfx('tada');
+    if(G && L) Fx.P.emit('confetti',L.W/2,L.H*0.45,{n:70,speed:520,size:11,life:2.2,grav:700,drag:1.2,layer:'screen'});
+    var e=K.eintrag(K.store,C.i); e.k=(e.k||0)+1;
+    if(K.vibriere) K.vibriere('geschenk');
+  } else { C.weg=now(); sfx('whoosh'); }
+  delete K.store.karte; K.speichere();
+};
+K.zeichneKarte=function(g,L){
+  var C=K.karte; if(!C || S.state!=='menu') return;
+  var t=now(); if(C.t0===null){ C.t0=t; sfx('whoosh'); }
+  var q=Fx.ease.outBack(Math.min(1,(t-C.t0)/0.55)), wq=C.weg?Math.min(1,(t-C.weg)/0.45):0;
+  if(wq>=1){ K.karte=null; return; }
+  var w=Math.min(L.W-40,L.port?330:380), h=w*0.66, cx=L.W/2, cy=L.H*(L.port?0.45:0.5);
+  // Hintergrund abdunkeln (Karte ist das Einzige, was gerade zählt)
+  g.fillStyle='rgba(60,30,40,'+(0.35*(1-wq)*Math.min(1,q))+')'; g.fillRect(0,0,L.W,L.H);
+  g.save(); g.translate(cx+wq*L.W*0.7,cy-wq*80); g.rotate(-0.05+wq*0.5); g.scale(q,q);
+  g.shadowColor='rgba(60,30,30,0.35)'; g.shadowBlur=16; g.shadowOffsetY=6;
+  g.fillStyle='#fffaf0'; Fx.rr(g,-w/2,-h/2,w,h,14); g.fill(); g.shadowBlur=0; g.shadowOffsetY=0;
+  // Briefmarke mit Bär (rechts oben), Poststempel-Wellen, Linien
+  var sw=h*0.62, sx=w/2-sw-12, sy=-h/2+12;
+  g.fillStyle='#fde3ea'; g.fillRect(sx,sy,sw,sw); g.strokeStyle='#f0a1b4'; g.setLineDash([4,3]); g.lineWidth=3; g.strokeRect(sx+2,sy+2,sw-4,sw-4); g.setLineDash([]);
+  var px=Math.round(sw*(L.dpr||1)); g.drawImage(Art.thumb(C.i,px),sx,sy,sw,sw);
+  g.strokeStyle='rgba(120,90,120,0.35)'; g.lineWidth=2;
+  for(var k=0;k<3;k++){ g.beginPath(); for(var xx=0;xx<=70;xx+=5){ var yy=sy+sw*0.25+k*10+Math.sin(xx*0.2)*3; if(xx===0) g.moveTo(sx-60+xx,yy); else g.lineTo(sx-60+xx,yy); } g.stroke(); }
+  // links: Herzen (Freundschaft) + großes Herz als Gruß, kein Text
+  Art.drawSticker(g,'herz',-w/2+h*0.32,-h*0.08,h*0.2+Math.sin(t*4)*2,'#f0607e');
+  herzReihe(g,-w/2+h*0.32+40,h*0.3,9,C.h*K.P.herz);
+  // Geschenk ab Herz 3: Paket wackelt, nach dem Antippen Funkeln
+  if(C.g){ var gx=w/2-sw/2-12, gy=h/2-h*0.2;
+    if(!C.offen){ g.save(); g.translate(gx,gy); g.rotate(Math.sin(t*9)*0.12); g.font=Math.round(h*0.28)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('🎁',0,0); g.restore(); }
+    else { var oq=Math.min(1,(t-C.offen)/0.6); Art.drawSticker(g,'stern',gx,gy,h*0.12*(1+oq*0.3),'#ffcf4a'); } }
+  g.restore();
+};
+
 // ---------------------------------------------------------------- Einhängen in salon.js
 // Menü-Knöpfe im Kunden-Modus (salon.js buildUI ruft das statt der alten Knöpfe)
 K.menuKnoepfe=function(btn){
@@ -448,6 +594,7 @@ K.menuKnoepfe=function(btn){
   if(S.saved && S.saved.fell){ var hz=K.P.freund?K.herzVon(S.saved.fellIdx||0):0;
     btn(230,500,440,64,'🧸 Weiter mit meinem Bären'+(hz?' '+new Array(hz+1).join('❤️'):''),function(){ K.weiter(); },{big:1,cta:1}); }
   btn(230,570,440,64,'🌟 Bären einladen',function(){ S.setState('wahl'); },{big:1,cta:1});
+  if(K.P.freund) btn(S.VW-150,16,56,56,'📖',function(){ S.setState('album'); },{nav:'album'});
 };
 // jede echte Handlung in einer Station meldet sich bei K.aktion
 var origTap=S.tapBear;
@@ -488,14 +635,15 @@ var origChoose=S.chooseBear;
 S.chooseBear=function(i){
   if(!K.an()){ K.besuch=null; var r=origChoose.apply(this,arguments); if(K.P.freund) K.neuerBesuch(S.baer.fellIdx,{behalten:true}); return r; }
   var surprise=i===Art.MODELS.length-1;
-  K.neuerBesuch(surprise?K.waehleKunde(Math.random,[]):i);
+  K.neuerBesuch(surprise?Math.floor(Math.random()*(Art.MODELS.length-1)):i);
   sfx(surprise?'tada':'chime');
   if(surprise && window.BSGame){ window.BSGame.konfettiBurst(S.VW/2,S.VH*0.4); window.BSGame.sternExplosion(S.VW/2,S.VH*0.5); }
 };
 var origFinale=S.startFinale;
 S.startFinale=function(){
   var B=K.besuch;
-  if(B && !B.fertig){ punkte('finale',{geburtstag:B.geburtstag},true); B.fertig=true; }
+  if(B && !B.fertig){ punkte('finale',{geburtstag:B.geburtstag},true); B.fertig=true;
+    if(K.P.karte && K.P.freund){ var hz=K.herzVon(B.idx); K.store.karte={ i:B.idx, h:hz, g:hz>=K.P.geschenkAb }; K.speichere(); } }   // Postkarte für den nächsten Start
   return origFinale.apply(this,arguments);
 };
 // großer Herz-Moment (neues Herz): Herz-Reihe ploppt über dem Kopf auf, 1,8 s, in jeder Station
